@@ -142,6 +142,6 @@ BUSOS-P1-03 — Business Repository + Feishu Adapter Skeleton（`project-control
 ## closing_evidence (for audit)
 - branch: main
 - baseline_commit: 0ef847da115c5f21ec7a6befc03433858540e45b
-- commit_sha: <set on commit>
+- commit_sha: 4f687211eb12dd79c058041307dec84851c47f44
 - closed_by: WorkBuddy (Craft mode)
 - stopped_after_pass: true (未启动 BUSOS-P1-03)
