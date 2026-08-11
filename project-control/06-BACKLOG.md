@@ -96,3 +96,17 @@ Initial deferred items:
 - Description: Candidate Builder sets `governance.risk_level="R0"` and `missing_fields=[]` by design. The agent's own `risk_level` is reply-safety and a different axis from lead business risk, so it is NOT copied. The real governance rule (reject / review-required / allow-placeholder for null fields like `service_type`) is deferred to the Governance Engine (P1-03 / P2).
 - Why non-blocking: P1-02 scope is "produce candidate only" (D015); governance evaluation is out of scope.
 - Suggested revisit phase: P1-03 / P2 (Governance Engine), linked to BL-005.
+
+## BL-013 Real Feishu E2E blocked (missing credentials / Base config)
+- Type: DEFERRED (blocking only the live create/readback E2E gate; skeleton + fake-verified logic complete)
+- Found in task: BUSOS-P1-03
+- Description: The environment has no `FEISHU_APP_ID` / `FEISHU_APP_SECRET` / `FEISHU_BASE_APP_TOKEN` / `FEISHU_LEAD_TABLE_ID` / `FEISHU_CUSTOMER_TABLE_ID`. The real `FeishuAdapter` is implemented and env-driven (no secrets hardcoded), and its full write->readback->VERIFIED pipeline is proven via a stubbed transport, but the live Feishu create/readback cannot be verified here. Per task §6 / §19 this is reported as PARTIAL / BLOCKED, NOT as PASS.
+- Why non-blocking for the skeleton: repository domain logic, mapping contract, readback verification and error handling are all proven by the explicit `FakeFeishuAdapter` + real-adapter-stubbed-transport tests.
+- Suggested revisit phase: when the user supplies FEISHU_* credentials (and a writable test Base) — re-run `tests/feishu-real.test.ts` live block to flip BLOCKED -> PASS.
+
+## BL-014 A real Feishu Base with a dedicated Lead table must be provisioned
+- Type: DEFERRED
+- Found in task: BUSOS-P1-03
+- Description: The previously validated Collator Base merges lead+customer fields into a single "customer" table (see `lark/src/scripts/temp/customer-fields.json`). P1-03 requires a SEPARATE Lead table and Customer table. The Lead table must carry both a `Customer ID` canonical text field (for round-trip of `lead.customer_id`) AND a `客户关联` link field to the Customer table (feishu-real.test.ts sets both on linkLeadCustomer). The default field map (DEFAULT_FIELD_MAP) is configurable, but the real Base must actually exist with these fields before the live E2E can pass.
+- Why non-blocking: the adapter is configuration-driven; provisioning the Base is an ops step, not a code change.
+- Suggested revisit phase: P1-03 live E2E (with BL-013 credentials).
