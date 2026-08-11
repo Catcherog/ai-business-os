@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "lead_candidate.v1",
+  "type": "object",
+  "required": [
+    "version",
+    "candidate_id",
+    "session_id",
+    "agent_run_id",
+    "intent",
+    "customer_candidate",
+    "requirement",
+    "evidence",
+    "governance",
+    "created_at"
+  ],
+  "properties": {
+    "version": {
+      "const": "lead_candidate.v1"
+    },
+    "candidate_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "agent_run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "intent": {
+      "type": "object",
+      "required": [
+        "type",
+        "confidence"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "customer_candidate": {
+      "type": "object",
+      "required": [
+        "name",
+        "phone",
+        "wechat"
+      ],
+      "properties": {
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "phone": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "wechat": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "requirement": {
+      "type": "object",
+      "required": [
+        "service_type",
+        "budget_min",
+        "budget_max",
+        "preferred_date_text",
+        "notes"
+      ],
+      "properties": {
+        "service_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "budget_min": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "budget_max": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "preferred_date_text": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "field",
+          "source_text"
+        ],
+        "properties": {
+          "field": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_text": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "governance": {
+      "type": "object",
+      "required": [
+        "status",
+        "risk_level",
+        "missing_fields"
+      ],
+      "properties": {
+        "status": {
+          "const": "PENDING_REVIEW"
+        },
+        "risk_level": {
+          "type": "string",
+          "enum": [
+            "R0",
+            "R1",
+            "R2",
+            "R3"
+          ]
+        },
+        "missing_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false
+}

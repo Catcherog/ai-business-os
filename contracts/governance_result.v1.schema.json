@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "governance_result.v1",
+  "type": "object",
+  "required": [
+    "version",
+    "candidate_id",
+    "decision",
+    "issues",
+    "customer_resolution",
+    "normalized_data",
+    "created_at"
+  ],
+  "properties": {
+    "version": {
+      "const": "governance_result.v1"
+    },
+    "candidate_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "decision": {
+      "type": "string",
+      "enum": [
+        "APPROVE",
+        "REVIEW_REQUIRED",
+        "REJECT"
+      ]
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "code",
+          "field"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "field": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "customer_resolution": {
+      "type": "object",
+      "required": [
+        "status",
+        "customer_id"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "RESOLVED",
+            "UNRESOLVED",
+            "NOT_REQUIRED"
+          ]
+        },
+        "customer_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "normalized_data": {
+      "type": "object"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false
+}

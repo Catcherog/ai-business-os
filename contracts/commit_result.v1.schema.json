@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "commit_result.v1",
+  "type": "object",
+  "required": [
+    "version",
+    "status",
+    "domain_object",
+    "domain_id",
+    "storage",
+    "external_record_id",
+    "write_status",
+    "readback_status",
+    "errors"
+  ],
+  "properties": {
+    "version": {
+      "const": "commit_result.v1"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "COMMITTED",
+        "FAILED"
+      ]
+    },
+    "domain_object": {
+      "type": "string",
+      "enum": [
+        "lead",
+        "customer"
+      ]
+    },
+    "domain_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "storage": {
+      "const": "feishu"
+    },
+    "external_record_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "write_status": {
+      "type": "string",
+      "enum": [
+        "SUCCESS",
+        "FAILED"
+      ]
+    },
+    "readback_status": {
+      "type": "string",
+      "enum": [
+        "VERIFIED",
+        "FAILED",
+        "NOT_RUN"
+      ]
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false
+}

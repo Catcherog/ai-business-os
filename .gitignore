@@ -1,0 +1,6 @@
+node_modules/
+.workbuddy/
+*.zip
+.DS_Store
+dist/
+coverage/
