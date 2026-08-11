@@ -1,147 +1,126 @@
-# TASK_PLAN — BUSOS-P1-02
+# TASK_PLAN — BUSOS-P1-03
 
 ## task_id
-BUSOS-P1-02 — Service Agent Candidate Builder
+BUSOS-P1-03 — Business Repository + Feishu Adapter Skeleton
 
 ## phase
 P1 — Foundation Implementation
 
 ## outcome
-PASS. All 8 P1-02 acceptance gates satisfied. No blockers. No Codex usage (bounded, single bounded package + a dev bridge harness; does not meet any 08-WORKBUDDY-OPERATING-RULES trigger). STOP after pass — P1-03 not started.
+PARTIAL / BLOCKED ON REAL FEISHU E2E.
+- Skeleton + domain logic + Fake adapter + Real adapter production code-path (exercised via in-memory Feishu simulator) = PASS. All 7 P1-03 gates satisfied at the skeleton level.
+- Live Feishu create→readback E2E against a real Feishu Base is BLOCKED (BL-013): no `FEISHU_*` credentials / Base app token / table IDs present in this environment. Real adapter is fully implemented and env-driven; only the live network round-trip is unverified.
+- Per spec §19: Fake PASS is NOT reported as P1-03 real E2E PASS. Outcome is accurately PARTIAL.
+- STOP after recording this evidence — P2 NOT started.
 
 ## scope_enforced
-ONLY P1-02. The existing Service Agent now produces `LeadCandidateV1`. Did NOT: start P1-03, implement Governance Engine, implement BusinessRepository, call Feishu, create Lead/Customer, refactor the whole Agent, migrate the old project, or create a new agent framework / orchestrator / event bus.
+ONLY P1-03. Implemented the minimal persistence boundary: canonical Lead/Customer → BusinessRepository → FeishuAdapter → Feishu Base → Readback → canonical domain object / CommitResultV1.
+Did NOT: connect P1-02 Candidate, implement Governance Engine, run GP-001 full chain, review UI, Project/Task, Lumen, multimodal, Memory, observability, full DB migration, refactor old Feishu Collator, redesign 飞书 data platform, modify frozen contracts, touch BOOTSTRAP.md.
 
-## existing_service_agent
-- Location: `D:\360Downloads\Trae 项目\Monorepo\service agent` (Python + LangGraph; git submodule @ `386f21f6`; branches through W48; live source newer than the stale `service-agent-w37` handoff pack which contained only `.pyc`).
-- Consumed interfaces (read-only, no modification): `src/langgraph/types/state.py::create_initial_state` (generates `run_id=run_<16hex>`, `conversation_id=conv_<12hex>`, `customer_id=None`, `created_at` ISO UTC) and `src/langgraph/types/intent.py::classify_intent` (keyword-based I00–I12, no LLM).
-- Canonical message → `classify_intent` returns `("I02", 1.0)` (price intent, keyword "预算").
+## existing_feishu_implementation
+Located via bounded search (reused as reference for field conventions ONLY; NOT re-audited per spec):
+- `D:\360Downloads\Trae 项目\lark\src\scripts\temp\crud-probe.mjs` — validated `tenant_access_token` via `POST /open-apis/auth/v3/tenant_access_token/internal` (FEISHU_APP_ID / FEISHU_APP_SECRET) + bitable CRUD `POST/GET /open-apis/bitable/v1/apps/{appToken}/tables/{tableId}/records`.
+- `D:\360Downloads\Trae 项目\collator-clean-clone\src\data-cleaning\agent\execution\bitable-writer.js` — real bitable client (shells to `lark-cli`).
+- `D:\360Downloads\Trae 项目\lark\src\scripts\temp\customer-fields.json` — real Base field names (客户姓名 / 联系方式 / 微信 / 状态 / 拍摄类型 / 预算区间 …).
+- `D:\360Downloads\Trae 项目\lark\src\scripts\temp\project-customer-link.json` — link field `客户关联` → `tblfaiObU76um03h`.
+- Stack: TypeScript / Node, Feishu OpenAPI.
 
 ## integration_choice
-Prefer existing module + minimal Candidate Builder adapter (D006 / D014 / D015).
-- The Python Service Agent is unchanged. It emits a frozen JSON payload `ConsultationContextV1` (conversation_id, run_id, message, intent, intent_confidence) via `bridge/service_agent_context.py`.
-- `packages/service-agent-candidate` (TS) consumes that context, runs rule-based extraction (D012: every extracted field carries `source_text` evidence), and assembles + validates `LeadCandidateV1` from `@busos/contracts` (`assertLeadCandidateV1`).
-- This keeps a clean cross-language boundary: Python agent output → frozen JSON → TS candidate, no shared runtime, no Feishu/api in the path.
+- Reuse the validated Feishu OpenAPI bitable CRUD pattern (tenant_access_token + bitable records API). No new Feishu SDK introduced.
+- `RealFeishuAdapter` is env-driven (`FEISHU_APP_ID` / `FEISHU_APP_SECRET` / `FEISHU_BASE_APP_TOKEN` / `FEISHU_LEAD_TABLE_ID` / `FEISHU_CUSTOMER_TABLE_ID`); no secrets hard-coded.
+- Cross-language/transport injection: `RealFeishuAdapter` accepts `fetchImpl`, so the REAL production code path (auth → create → readback → verify → commit) is exercised end-to-end by an in-memory Feishu bitable simulator (`makeFeishuStub()`) with NO live credentials. This is the real adapter class under test — not a Fake, not a mock-into-PASS.
+- Live E2E (real `FEISHU_*` env) gated behind `describeLive` and SKIPPED when creds absent.
 
-## files_changed
-新增 `packages/service-agent-candidate/`:
-- `package.json`, `tsconfig.json`, `vitest.config.ts`, `.gitignore`
-- `src/consultation-context.ts` — `ConsultationContextV1Schema` + `AGENT_INTENT_TO_CANDIDATE_INTENT` + `assertConsultationContextV1`
-- `src/extract.ts` — rule-based extractors: `extractServiceType`, `extractBudget`, `extractPreferredDateText`, `extractIdentity`, `extractRequirement` (each returns `{value, source_text}`)
-- `src/candidate-builder.ts` — `buildLeadCandidate(input, options?)`; `generateCandidateId`; initial governance `PENDING_REVIEW`/`R0`/`missing_fields:[]`
-- `src/index.ts` — public API re-exports
-- `bridge/service_agent_context.py` — dev harness: imports only `langgraph.types.*` (stdlib-only), prints `ConsultationContextV1` JSON
-- `scripts/print-candidate.ts` — deterministic canonical-output printer (vite-node)
-- `tests/fixtures.ts` — `CANONICAL_MESSAGE`, `CANONICAL_CONTEXT`, `FIXED_NOW`, `FIXED_CANDIDATE_ID`
-- `tests/extract.test.ts` (21), `tests/p1-02-gate.test.ts` (27), `tests/service-agent-bridge.test.ts` (4), `tests/canonical-golden.test.ts` (1)
-
-修改控制文件:
-- `project-control/02-CURRENT-STATE.md` — P1-02 状态 / 证据 / next task
-- `project-control/06-BACKLOG.md` — BL-010 / BL-011 / BL-012
-- `TASK_PLAN.md` — 本文件（P1-02 关闭证据）
-
-未改动: 任何 `contracts/*.schema.json`、P1-01 契约源码、其他控制文档、P1-03 任务书、Service Agent Python 源码、无架构重构、无 Feishu / Lead / Customer / Repository / Governance 实现。
-
-## canonical_input
-```
-我想下个月拍一套新中式写真，预算大概4000。
-```
-
-## exact_candidate_output (full JSON, deterministic via FIXED_NOW/FIXED_CANDIDATE_ID)
-```json
-{
-  "version": "lead_candidate.v1",
-  "candidate_id": "cand_0123456789abcdef",
-  "session_id": "conv_6f42baebac98",
-  "agent_run_id": "run_e3cb2ca839a543cb",
-  "intent": {
-    "type": "price_consultation",
-    "confidence": 1
-  },
-  "customer_candidate": {
-    "name": null,
-    "phone": null,
-    "wechat": null
-  },
-  "requirement": {
-    "service_type": "新中式写真",
-    "budget_min": null,
-    "budget_max": 4000,
-    "preferred_date_text": "下个月",
-    "notes": null
-  },
-  "evidence": [
-    { "field": "requirement.service_type", "source_text": "新中式写真" },
-    { "field": "requirement.budget_max", "source_text": "预算大概4000" },
-    { "field": "requirement.preferred_date_text", "source_text": "下个月" }
-  ],
-  "governance": {
-    "status": "PENDING_REVIEW",
-    "risk_level": "R0",
-    "missing_fields": []
-  },
-  "created_at": "2026-08-11T15:00:00.000Z"
-}
-```
-判定符合：service_type="新中式写真"（非 "写真"）、budget_max=4000（非 3500/4500）、budget_min=null（"大概" 仅出上限）、preferred_date_text="下个月"（保留原文）、客户身份全 null、evidence 覆盖 service_type 与 budget、governance.status="PENDING_REVIEW"。
-
-## acceptance (gates 1-8)
-| # | 判据 (P1-02 Gate) | 结果 |
+## repository_interface (6 methods, all implemented)
+| # | 方法 | 状态 |
 |---|---|---|
-| 1 | 现有 Service Agent 已定位（bounded search，非 blocker） | PASS |
-| 2 | 产出 LeadCandidateV1 且 `assertLeadCandidateV1` 通过 | PASS |
-| 3 | canonical 用例逐字通过（service_type/budget/date/identity/evidence/status） | PASS |
-| 4 | 提取为规则驱动且有 evidence（D012），非整句匹配 | PASS |
-| 5 | 仅新增 Candidate Builder 适配层，未重构 Agent / 未新建框架（D014/D015） | PASS |
-| 6 | 不调用 Feishu / 不创建 Lead / Customer（边界隔离） | PASS |
-| 7 | 测试覆盖：提取规则 + gate + 真实 Agent 桥接（防硬编码守卫） | PASS |
-| 8 | tsc --noEmit 零错误；Feishu 边界静态证明（无 feishu/lark/网络 IO） | PASS |
+| 1 | `createLead(lead: LeadCreateInput): Promise<CommitResultV1<Lead>>` | PASS |
+| 2 | `getLead(leadId: string): Promise<Lead \| null>` | PASS |
+| 3 | `createCustomer(customer: CustomerCreateInput): Promise<CommitResultV1<Customer>>` | PASS |
+| 4 | `getCustomer(customerId: string): Promise<Customer \| null>` | PASS |
+| 5 | `findCustomerByIdentity(query: CustomerIdentityQuery): Promise<Customer \| null>` | IMPLEMENTED (exact phone / exact WeChat; no fuzzy merge) |
+| 6 | `linkLeadCustomer(leadId: string, customerId: string): Promise<CommitResultV1<void>>` | PASS |
 
-附加守卫（tests/p1-02-gate.test.ts）：源码不含 canonical 整句字面量；换用不同措辞（如 "预约日系写真" / "报价约3000" / "下周三"）仍能正确提取，证明非硬编码。
+- No ORM / DAO / event bus / repository framework. `BusinessRepository` (D017) depends only on the `FeishuAdapter` port (D018).
+- `createLead` accepts canonical Lead; anonymous `customer_id=null` allowed. FAILS CLOSED on contract violation (BL-005) — empty `service_type` throws `ContractValidationError` before any Feishu write.
+- `createCustomer`: canonical Customer → mapping → create → readback → canonical Customer; unknown phone/wechat stay `null` (no fabrication).
+- `findCustomerByIdentity`: V1 only exact phone / exact WeChat; returns `null` if no usable identity. Feasible with current adapter → implemented, NOT deferred.
+- `linkLeadCustomer`: minimal canonical relationship update (leadId + customerId); adapter sets BOTH text `Customer ID` and link `客户关联`.
+
+## adapter_mapping (canonical → Feishu, no secrets)
+`DEFAULT_FIELD_MAP` (Feishu field names owned solely by adapter):
+- Lead: `lead_id` → "Lead ID"; `customer_id` → "Customer ID" (text) **and** "客户关联" (link `record_ids`); `service_type` → "拍摄类型"; `budget_min` → "预算下限"; `budget_max` → "预算上限"; `preferred_date_text` → "期望日期"; `status` → "状态".
+- Customer: `customer_id` → "Customer ID"; `display_name` → "客户姓名"; `phone` → "联系方式"; `wechat` → "微信"; `status` → "状态".
+- Nullable budget/date OMITTED when `null` so round-trip yields `null` (not `0`/`''`).
+- `boundary.test.ts` proves `BusinessRepository` / `types` / `business-repository` source contain NO Feishu specifics (`open.feishu.cn` / `tenant_access_token` / `客户姓名` / `客户关联` etc.); adapter owns URL + token, mapping owns field names.
+
+## real_vs_fake
+- **Fake**: `FakeFeishuAdapter` — explicit in-memory Maps, opt-in corruption hooks (`corruptReadbackLead` / `corruptReadbackCustomer`). Executed in repository/mapping/readback tests. Result: PASS (lead→VERIFIED, customer→VERIFIED, lookup, link, fail-closed).
+- **Real**: `RealFeishuAdapter` driven by `makeFeishuStub()` (in-memory Feishu simulator injected as `fetchImpl`) in `feishu-real.test.ts`. Executed: createLead / getLead / createCustomer + findCustomerByIdentity / linkLeadCustomer through REAL adapter logic. Result: PASS (real code path, stub transport).
+- **Live E2E**: `describeLive` (real `FEISHU_*` env). Result: SKIPPED — no credentials (1 skipped).
+- Honest reporting: Fake + stub-driven real path PASS ≠ live Feishu E2E PASS. Live E2E is the only unverified piece (BL-013).
+
+## readback_evidence (D019)
+Hard readback condition: write → record id → re-read → map back → verify critical fields → VERIFIED.
+- `LEAD_CRITICAL_FIELDS`: lead_id, customer_id, service_type, budget_min, budget_max, preferred_date_text, status.
+- `CUSTOMER_CRITICAL_FIELDS`: customer_id, display_name, phone, wechat, status.
+- Normal path (`feishu-real.test.ts` via stub + `readback.test.ts` via fake): SAMPLE_LEAD_INPUT (service_type=`新中式写真`, budget 3500/4000, date=`下个月`, customer_id=null) → write → record id `rec_lead_…` → re-read → `fromFeishuLeadRecord` → `verifyLeadCriticalFields` equal → `readback_status=VERIFIED`, `write_status=SUCCESS`, `status=COMMITTED`.
+- Negative path: `FakeFeishuAdapter` with `corruptReadbackLead` → critical-field mismatch → `readback_status=FAILED` → `isBusinessCommitSuccess=false` (proven in readback.test.ts).
+- Secrets masked: appToken / table ids are test fixtures, never logged; production reads env vars — no hard-coded secrets.
+
+## acceptance (gates 1-7)
+| # | 判据 (P1-03 Gate) | 结果 |
+|---|---|---|
+| 1 | Lead 经 repo 创建（create→readback→VERIFIED） | PASS |
+| 2 | Customer 经 repo 创建（create→readback→VERIFIED） | PASS |
+| 3 | Feishu 字段映射隔离在 adapter（上层无 Feishu 细节） | PASS |
+| 4 | 提交写后跟随 readback | PASS |
+| 5 | readback 校验关键字段 | PASS |
+| 6 | repo 返回 canonical 领域对象，非 raw Feishu | PASS |
+| 7 | 精确 phone/WeChat 查找已实现（可执行，非 defer） | IMPLEMENTED |
+
+Overall: skeleton 7/7 PASS; REAL Feishu E2E BLOCKED (BL-013) → outcome PARTIAL.
 
 ## tests
-命令（在 `packages/service-agent-candidate`）：
+命令（在 `packages/business-repository`）：
 ```
 npm test        # = tsc --noEmit && vitest run
 npm run verify  # 同 npm test
 ```
 结果：
 - `tsc --noEmit` → exit 0，无类型错误
-- `vitest run` → 4 test files / **53 tests passed**
-  - `extract.test.ts` 21 · `p1-02-gate.test.ts` 27 · `service-agent-bridge.test.ts` 4 · `canonical-golden.test.ts` 1
-- `service-agent-bridge.test.ts` 真实调用 `Monorepo/service agent/src` 的 `classify_intent` + `create_initial_state` → ConsultationContextV1 → buildLeadCandidate → `assertLeadCandidateV1`，4 条全部通过（intent I02 / conf 1.0 / service_type 新中式写真 / budget_max 4000 / date 下个月 / identity 全 null / status PENDING_REVIEW）。
+- `vitest run` → 5 test files / **36 passed | 1 skipped (37 total)**
+  - `repository.test.ts` 13 · `mapping.test.ts` 7 · `readback.test.ts` 8 · `feishu-real.test.ts` 5 (1 skipped live E2E) · `boundary.test.ts` 4
 
 ## contract_validation
-- 消费 `@busos/contracts` 的 `LeadCandidateV1Schema` / `assertLeadCandidateV1`（BL-009：源码消费，无 dist）。
-- 桥接测试与 golden 测试均用 `assertLeadCandidateV1` 二次校验，确保协议未被静默破坏。
-- `ConsultationContextV1` 本身也为严格 zod schema（`assertConsultationContextV1`），跨语言边界有契约约束。
-
-## feishu_boundary_proof
-- `bridge/service_agent_context.py` 仅 `import` `langgraph.types.*`（标准库依赖），无 `feishu` / `lark` / `http` / `requests` / 网络 IO；仅向 stdout 打印 JSON。
-- Candidate Builder（`src/*`）纯函数，无任何 I/O。
-- `tests/p1-02-gate.test.ts` 静态扫描 `src/**` 与 `bridge/**` 源码，断言不含 `feishu|lark|fetch|axios|requests|writeFile|createLead|createCustomer`，全部通过。
-- 结论：P1-02 全程不触碰 Feishu、不创建 Lead/Customer，符合 D015「Service Agent 只产出候选」。
+- 消费 `@busos/contracts`（源码消费，BL-009）：`LeadSchema` / `CustomerSchema` / `CommitResultV1Schema` / `isBusinessCommitSuccess` / `assertCommitResultV1` / `assertWith` / `validateWith`。
+- 仓库在 Feishu 写前 `assertWith(LeadSchema|CustomerSchema, …)`（FAIL CLOSED，BL-005）。
+- 所有 `CommitResultV1` 经 `assertCommitResultV1` 二次校验；`status=COMMITTED` 仅当 `write_status=SUCCESS` 且 `readback_status=VERIFIED`。
+- 冻结契约未被修改（未触碰 `contracts/*.schema.json`）。
 
 ## blockers
-无。非阻塞发现写入 06-BACKLOG.md：BL-005、BL-008、BL-009、BL-010、BL-011、BL-012。
+- **BL-013** — Real Feishu E2E BLOCKED: 本环境缺失 `FEISHU_APP_ID` / `FEISHU_APP_SECRET` / `FEISHU_BASE_APP_TOKEN` / `FEISHU_LEAD_TABLE_ID` / `FEISHU_CUSTOMER_TABLE_ID`。`RealFeishuAdapter` 已完整实现且 env 驱动，仅真实网络往返未验证。提供凭据/Base 后即可跑通 live E2E（或用户显式豁免）。
 
-## backlog_items (non-blocking, written to 06-BACKLOG.md)
-- BL-010 现有 Agent intent 分类器为关键词规则（无 LLM），歧义语料可能误路由（P2）
-- BL-011 service_type 提取依赖策划名词表 + 风格修饰 heuristics，新垂直需维护词表（P2 / 新垂直接入）
-- BL-012 初始 risk_level=R0 / missing_fields=[] 为占位，真实治理规则（含 BL-005 的 service_type 非空约束）推迟到 P1-03/P2
+## backlog_items (written to 06-BACKLOG.md)
+- BL-013 真实 Feishu E2E 阻塞 — 缺失 FEISHU_* 凭据（本任务）
+- BL-014 需开通真实 Feishu Base（含独立 Lead 表）；Lead 需同时具备 `Customer ID` 文本字段与 `客户关联` 链接字段（本任务）
+- （继承）BL-005 service_type 非空约束（已在本任务 fail-closed 落实）、BL-008 npm proxy、BL-009 契约源码消费、BL-010/011/012（P1-02 决策遗留）
 
 ## git_info
 - branch: main
-- baseline HEAD (pre-P1-02): `0ef847da115c5f21ec7a6befc03433858540e45b`
-- working tree: clean before change; new untracked `packages/service-agent-candidate/` + modified `project-control/02-CURRENT-STATE.md`, `project-control/06-BACKLOG.md`, `TASK_PLAN.md`
-- commit: P1-02 提交于 main（见 closing_evidence.commit_sha）；`git status --short` 仅含本次新增/修改文件；`git diff --stat` 仅含控制文件改动 + 新包。
+- baseline HEAD (pre-P1-03): `6dfe651e8ed9f1b663d8dafc75698c5ae06fefd1` (P1-02 closing)
+- impl_commit_sha: `cca176310c632343c3071eeeabe8f97bb3af355d`
+- closing_commit_sha: (见 closing_evidence)
+- working tree: clean before change; new untracked `packages/business-repository/` + modified `02-CURRENT-STATE.md`, `06-BACKLOG.md`, `TASK_PLAN.md`
+- remote main (pre-push): `6dfe651e8ed9f1b663d8dafc75698c5ae06fefd1`
 
 ## nextActor
-BUSOS-P1-03 — Business Repository + Feishu Adapter Skeleton（`project-control/tasks/BUSOS-P1-03-*.md`，若已存在）。前置已就绪：P1-01 契约冻结可用、P1-02 已产出真实 `LeadCandidateV1`。P1-03 应消费本任务产出的候选，并实现 Governance 评估与 Feishu 适配骨架。
+**BLOCKED ON REAL FEISHU E2E (BL-013) — 不启动 P2。**
+P2 — GP-001 Integration 的前置条件：提供 `FEISHU_*` 凭据并开通真实 Feishu Base（含独立 Lead 表，Lead 需 `Customer ID` 文本 + `客户关联` 链接字段，见 BL-014），跑通 live E2E 后 P1-03 方可正式 PASS；届时再启动 P2。除非用户显式豁免真实 Feishu E2E，否则不应视为完整 PASS。
 
 ## closing_evidence (for audit)
 - branch: main
-- baseline_commit: 0ef847da115c5f21ec7a6befc03433858540e45b
-- commit_sha: 4f687211eb12dd79c058041307dec84851c47f44
+- baseline_commit: 6dfe651e8ed9f1b663d8dafc75698c5ae06fefd1
+- impl_commit_sha: cca176310c632343c3071eeeabe8f97bb3af355d
 - closed_by: WorkBuddy (Craft mode)
-- stopped_after_pass: true (未启动 BUSOS-P1-03)
+- stopped_after_partial: true (REAL Feishu E2E BLOCKED; 未启动 BUSOS-P2 / GP-001)
