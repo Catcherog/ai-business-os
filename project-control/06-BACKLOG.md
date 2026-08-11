@@ -75,3 +75,24 @@ Initial deferred items:
 - Description: `packages/contracts` exposes `src/index.ts` directly instead of emitting `dist/`. Consumers must run through a TS-aware runtime (vitest/tsx/bundler). No compile/publish pipeline was added because P1-01 does not require one.
 - Why non-blocking: P1-02 and P1-03 live in the same repository and can import the source.
 - Suggested revisit phase: When a runtime that needs compiled JS appears (e.g. a deployed service or a review UI).
+
+## BL-010 Service Agent intent classifier is keyword-only (no LLM)
+- Type: DEFERRED
+- Found in task: BUSOS-P1-02
+- Description: The existing Service Agent classifies intent via keyword rules (I00–I12) with no LLM. The canonical consultation maps cleanly to `price_consultation` (I02, confidence 1.0), but ambiguous or multi-intent messages may be misrouted. The Candidate Builder maps agent intent → candidate intent through `AGENT_INTENT_TO_CANDIDATE_INTENT`.
+- Why non-blocking: P1-02 only requires the canonical case and rule-based extraction; the classifier is the agent's existing behavior, not new code.
+- Suggested revisit phase: P2 (if consultation routing needs semantic intent).
+
+## BL-011 Service-type extraction relies on a curated noun + style-modifier heuristic
+- Type: DEFERRED
+- Found in task: BUSOS-P1-02
+- Description: `extractServiceType` walks left from a fixed deliverable-noun list (写真 / 婚纱照 / 婚纱 / 全家福 / 证件照 / 艺术照 / 孕妈照 / 宝宝照 / 儿童照 ...) and collects a bounded style modifier (≤6 chars, stop chars prevent date leakage; "日" removed from stop set so "日系写真" keeps its style). New verticals require list maintenance.
+- Why non-blocking: Canonical case and several style generalizations pass; the heuristic is intentionally rule-based per D012 (evidence-backed extraction).
+- Suggested revisit phase: P2 (model-driven extraction) or whenever a new service vertical is onboarded.
+
+## BL-012 Initial risk level / missing_fields are placeholders, not governance output
+- Type: DEFERRED
+- Found in task: BUSOS-P1-02
+- Description: Candidate Builder sets `governance.risk_level="R0"` and `missing_fields=[]` by design. The agent's own `risk_level` is reply-safety and a different axis from lead business risk, so it is NOT copied. The real governance rule (reject / review-required / allow-placeholder for null fields like `service_type`) is deferred to the Governance Engine (P1-03 / P2).
+- Why non-blocking: P1-02 scope is "produce candidate only" (D015); governance evaluation is out of scope.
+- Suggested revisit phase: P1-03 / P2 (Governance Engine), linked to BL-005.

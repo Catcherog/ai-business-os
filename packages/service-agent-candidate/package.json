@@ -1,0 +1,26 @@
+{
+  "name": "@busos/service-agent-candidate",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI Business OS BUSOS-P1-02 — bounded adapter that turns Service Agent consultation context into a frozen LeadCandidateV1",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "verify": "npm run typecheck && npm run test"
+  },
+  "dependencies": {
+    "@busos/contracts": "file:../contracts",
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "5.6.3",
+    "vitest": "2.1.8"
+  }
+}
