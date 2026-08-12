@@ -179,6 +179,7 @@ remain green after the `commitApprovedCandidate` extraction.
 
 ## 10. Commit / push / tree
 
-- Commit SHA: `02188e754339ad3b2266bf736b77ea1465a25739`
-- Push status: **PUSHED** to `origin/main` (`669c720..02188e7`, 22 files, +2012 / −101).
+- Implementation commit SHA: `02188e754339ad3b2266bf736b77ea1465a25739` (+ `deaab0a` evidence fill), pushed to `origin/main`.
+- Live-closure doc commit SHA: `3bb4065486b20ad96760fbecabea42852e5048fe` — flips this doc to COMPLETE / LIVE P3 REVIEW E2E PASS and syncs `02-CURRENT-STATE.md` / `01-MASTER-PLAN.md` / `TASK_PLAN.md`. Pushed to `origin/main`.
+- Push status: **PUSHED** to `origin/main`.
 - Working tree: **clean** after commit (`git status --short` → empty).
