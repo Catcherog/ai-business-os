@@ -2,19 +2,20 @@
 
 PROJECT: AI Business OS
 VERSION: V1
-PHASE: P1 — Foundation Implementation
+PHASE: P2 — GP-001 Integration
 STATUS: ACTIVE
 
 PRIMARY OBJECTIVE:
-Implement the minimum foundations required to run GP-001.
+Run the minimum Golden Path end-to-end: Consultation -> LeadCandidate -> Governance -> Lead / optional Customer -> BusinessRepository -> Feishu -> Readback.
 
 CURRENT GOLDEN PATH:
 GP-001 — Consultation -> LeadCandidate -> Governance -> Lead -> optional Customer -> Feishu -> Readback
 
 CURRENT TASKS:
-1. BUSOS-P1-01 — Contract Package  [DONE — P1-01 gate PASS, 2026-08-11]
-2. BUSOS-P1-02 — Service Agent Candidate Builder  [DONE — P1-02 gate PASS (gates 1-8), 2026-08-11]
-3. BUSOS-P1-03 — Business Repository + Feishu Adapter Skeleton  [DONE — skeleton + fake-verified; REAL Feishu E2E BLOCKED (BL-013)]
+1. BUSOS-P1-01 — Contract Package  [CLOSED — P1-01 gate PASS, 2026-08-11]
+2. BUSOS-P1-02 — Service Agent Candidate Builder  [CLOSED — P1-02 gate PASS (gates 1-8), 2026-08-11]
+3. BUSOS-P1-03 — Business Repository + Feishu Adapter Skeleton  [CLOSED — skeleton + fake-verified; REAL Feishu E2E BLOCKED (BL-013)]
+4. BUSOS-P2-GP-001 — Golden Path Vertical Slice  [IN_PROGRESS → IMPLEMENTATION PASS; LIVE FEishu Gate BLOCKED (BL-013/BL-014)]
 
 EXECUTION ORDER:
 - P1-01 first. [COMPLETE — contracts available at packages/contracts, importable as @busos/contracts]
@@ -49,7 +50,7 @@ P1-03 EVIDENCE:
 - Next: provide FEISHU_* credentials + provision Lead/Customer Base tables to flip real E2E BLOCKED -> PASS; P2 deferred until then.
 
 CURRENT BLOCKERS:
-P1-03 REAL Feishu E2E BLOCKED — FEISHU_APP_ID / FEISHU_APP_SECRET / FEISHU_BASE_APP_TOKEN / FEISHU_LEAD_TABLE_ID / FEISHU_CUSTOMER_TABLE_ID are not present in this environment (BL-013). Skeleton + fake-verified logic complete. Non-blocking findings also in 06-BACKLOG.md (BL-005, BL-008, BL-009, BL-010..BL-012, BL-013, BL-014).
+BUSOS-P2-GP-001 LIVE FEISHU GATE BLOCKED — FEISHU_APP_ID / FEISHU_APP_SECRET / FEISHU_BASE_APP_TOKEN / FEISHU_LEAD_TABLE_ID / FEISHU_CUSTOMER_TABLE_ID are not present in this environment (BL-013/BL-014). GP-001 implementation = PASS (11 tests green via Fake + Real-adapter-with-stub); the live Feishu create/readback E2E is unverified. Non-blocking findings also in 06-BACKLOG.md (BL-005, BL-008, BL-009, BL-010..BL-012, BL-013, BL-014, BL-015).
 
 DO NOT TOUCH:
 - Lumen / Creative Agent

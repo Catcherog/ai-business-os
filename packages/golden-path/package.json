@@ -1,0 +1,28 @@
+{
+  "name": "@busos/golden-path",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI Business OS BUSOS-P2-GP-001 — Golden Path vertical slice: Consultation -> LeadCandidate -> Governance -> BusinessRepository -> FeishuAdapter -> Readback. Thin orchestration only; no Feishu knowledge, no new architecture.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "verify": "npm run typecheck && npm run test"
+  },
+  "dependencies": {
+    "@busos/contracts": "file:../contracts",
+    "@busos/business-repository": "file:../business-repository",
+    "@busos/service-agent-candidate": "file:../service-agent-candidate",
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.2",
+    "typescript": "5.6.3",
+    "vitest": "2.1.8"
+  }
+}

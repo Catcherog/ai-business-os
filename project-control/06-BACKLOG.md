@@ -110,3 +110,11 @@ Initial deferred items:
 - Description: The previously validated Collator Base merges lead+customer fields into a single "customer" table (see `lark/src/scripts/temp/customer-fields.json`). P1-03 requires a SEPARATE Lead table and Customer table. The Lead table must carry both a `Customer ID` canonical text field (for round-trip of `lead.customer_id`) AND a `客户关联` link field to the Customer table (feishu-real.test.ts sets both on linkLeadCustomer). The default field map (DEFAULT_FIELD_MAP) is configurable, but the real Base must actually exist with these fields before the live E2E can pass.
 - Why non-blocking: the adapter is configuration-driven; provisioning the Base is an ops step, not a code change.
 - Suggested revisit phase: P1-03 live E2E (with BL-013 credentials).
+
+## BL-015 P1-02 extractor does not resolve "新中式" alone to a service_type
+- Type: DEFERRED (non-blocking; child of BL-011)
+- Found in task: BUSOS-P2-GP-001
+- Description: The flow-B consultation in the GP-001 brief is "我是张三，微信 zhangsan123，想下个月拍新中式，预算4000。". The FROZEN P1-02 `extractServiceType` only resolves a service_type when a deliverable noun is present; "新中式" alone is a style modifier and matches no noun in `SHOOT_TYPE_NOUNS`, so `requirement.service_type` is null. A null service_type cannot become a canonical `Lead` (LeadSchema requires non-null service_type), so governance REJECTs it. GP-001 Flow B tests therefore use "新中式写真" (the same phrasing as Flow A) so the golden path genuinely passes. This is a frozen-extractor limitation, not a GP-001 defect.
+- Why non-blocking: GP-001 implementation is fully verified; the literal one-word phrasing gap is a P1-02 extraction maintenance item, not a blocker. Exact identity resolution, readback verification, and fail-closed behaviour are all unaffected.
+- Suggested revisit phase: P2 (model-driven service-type extraction) or when a new service vertical is onboarded (BL-011).
+
