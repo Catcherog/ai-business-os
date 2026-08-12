@@ -1,4 +1,4 @@
-# TASK_PLAN — BUSOS-P2-GP-001
+# TASK_PLAN — BUSOS-P2-GP-001 (CLOSED) · BUSOS-P3-01 (CLOSED) · NEXT: P4
 
 ## task_id
 BUSOS-P2-GP-001 — Golden Path Vertical Slice
@@ -7,10 +7,10 @@ BUSOS-P2-GP-001 — Golden Path Vertical Slice
 P2 — GP-001 Integration
 
 ## status
-COMPLETE — implementation PASS + LIVE FEISHU E2E PASS (BL-013 / BL-014 CLOSED; BL-015 OPEN / NON-BLOCKING)
+COMPLETE (P2) — implementation PASS + LIVE FEISHU E2E PASS (BL-013/BL-014 CLOSED; BL-015 OPEN/NON-BLOCKING). P3 (BUSOS-P3-01) ALSO COMPLETE — HR-H live Feishu review E2E PASS 2026-08-12. NEXT: P4.
 
 - Golden Path orchestration built on the frozen P1 building blocks (Service Agent candidate → Governance → BusinessRepository → FeishuAdapter → readback) is complete and verified by 11 passing integration tests (1 live E2E skipped).
-- Live Feishu create→readback E2E against a real Feishu Base remains BLOCKED (BL-013/BL-014): no `FEISHU_*` credentials / Base app token / table IDs in this environment. Per §19 this is honestly reported as `LIVE FEISHU: BLOCKED`, NOT as PASS.
+- (P2 live Feishu E2E later PASSED — see `live_feishu` below — closing BL-013/BL-014. P3 live HR-H review E2E also PASSED 2026-08-12 — see `09-P3-01-COMPLETION.md`.)
 
 ## baseline
 - starting SHA: afb9c2f1e1e2385119a0261ca7cf81d72e126154 (P1-03 closing)
@@ -91,5 +91,7 @@ PASS — executed 2026-08-12 with user-supplied `FEISHU_*` credentials against r
 - remote main synced.
 
 ## nextActor
-LIVE FEISHU GATE remains BLOCKED. To flip `LIVE FEISHU: BLOCKED` → `PASS`, supply `FEISHU_*` credentials and provision a real Feishu Base (separate Lead + Customer tables; Lead needs `Customer ID` text + `客户关联` link). Then the live E2E test in `packages/golden-path/tests/real-adapter.test.ts` runs (currently skipped) and, if A/B/C all pass, P2 Live Gate closes.
-Do NOT auto-start further P2 tasks / P3 / UI / agent enhancements (STOP condition §20).
+P2 (BUSOS-P2-GP-001) and P3 (BUSOS-P3-01) are both CLOSED:
+- P2 live Feishu E2E PASS (BL-013/BL-014 CLOSED; BL-015 OPEN/NON-BLOCKING).
+- P3 HR-H live Feishu review E2E PASS (2026-08-12) — full Human Review → BusinessRepository → RealFeishuAdapter → real write → real readback → VERIFIED → COMMITTED; EDIT+APPROVE readback 4500; cleanup by exact record_id.
+NEXT: P4 — Project Lifecycle Slice (`Lead → Customer → Project → Task`). Do NOT start P4 until explicitly requested (STOP).

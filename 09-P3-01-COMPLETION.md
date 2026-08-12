@@ -2,10 +2,10 @@
 
 **Date:** 2026-08-12
 **Baseline:** `669c7202e502647399ab4978abf18429e237df0f`
-**Final status:** `IMPLEMENTATION PASS / LIVE P3 REVIEW E2E BLOCKED`
-*(Per task §17/§19: P3-01 is NOT reported COMPLETE because HR-H live Feishu E2E is
-blocked in this execution environment — see Blockers. All HR-A..HR-G gates PASS
-and the Fake/Simulator HR-H path PASSes.)*
+**Final status:** `COMPLETE / LIVE P3 REVIEW E2E PASS`
+*(Per task §17/§19: P3-01 is reported COMPLETE because the HR-H live Feishu E2E PASSED
+on 2026-08-12 — see §7/§8. All HR-A..HR-H gates PASS. The earlier reported status was
+`IMPLEMENTATION PASS / LIVE P3 REVIEW E2E BLOCKED` pending this live closure run.)*
 
 ---
 
@@ -101,7 +101,7 @@ behind `BusinessRepository` + `FeishuAdapter`).
 | **HR-E** Invalid edit / hard rejection | **PASS** | (a) EDIT+APPROVE clearing `service_type` → contract-valid but governance REJECT → fail closed, 0 writes. (b) REJECT-governance candidate → APPROVE → fail closed, 0 writes. |
 | **HR-F** Architecture boundary | **PASS** | 34 static assertions: `src/**` + `scripts/**` contain **none** of the forbidden Feishu tokens (credentials, `tenant_access_token`, `open-apis`, `DEFAULT_FIELD_MAP`, `FeishuRecord`, `record_ids`, mapping fns, `RealFeishuAdapter`, concrete Feishu Base field names). Also asserts no direct Feishu/internal import. |
 | **HR-G** Regression | **PASS** | All existing suites green + `tsc --noEmit` clean (see §5). |
-| **HR-H** Live Feishu vertical slice | **FAKE/SIM PASS · LIVE BLOCKED** | `RealFeishuAdapter` via in-memory Feishu simulator: EDIT+APPROVE 4000→4500 → `COMMITTED`/`VERIFIED`, cleanup by exact `record_id` → PASS. **LIVE** block (2 tests: EDIT+APPROVE and APPROVE) **SKIPPED** because `FEISHU_*` env is absent in this environment → `createFeishuAdapterFromEnv()` returns `null`. |
+| **HR-H** Live Feishu vertical slice | **PASS (live)** | LIVE block (2 tests) ran 2026-08-12 with real `FEISHU_*` credentials against real Feishu OpenAPI: (1) EDIT+APPROVE 4000→4500 → `COMMITTED`/`SUCCESS`/`VERIFIED`, readback `lead.budget_max`=4500; (2) APPROVE (no edit) → `COMMITTED`/`VERIFIED`. Both cleaned by exact `record_id` (`deleteLead` returned true). Full chain: Human Review → BusinessRepository → RealFeishuAdapter → real create → real readback → VERIFIED → `commit.status=COMMITTED`. Plus the always-on RealFeishuAdapter-via-simulator test (NOT live) → PASS. |
 
 ---
 
@@ -132,25 +132,39 @@ remain green after the `commitApprovedCandidate` extraction.
 
 ---
 
-## 7. Sanitized live evidence / cleanup
+## 7. Sanitized live evidence / cleanup (LIVE run — 2026-08-12)
 
-- Live run (when credentials present) deletes the generated record by its exact
-  `external_record_id` via `FeishuAdapter.deleteLead`, leaving existing business records
-  untouched. No credential/token is written to logs or evidence.
-- In this execution the live path did not run, so no live record was created and no live
-  evidence is recorded. The cleanup capability (`deleteLead`/`deleteCustomer`) is
-  implemented and exercised by the simulator test.
+- **Config used (sanitized):** App ID `cli_a9257d5b89b95ccb` (matches P2-verified identity);
+  Base app token `X6gHbD3IaakLGQsdFDVcNPqBnbb`; Lead table `tblp9GuLf3nY597F`; Customer table
+  `tblhoSBeBBPDttdn`. **App Secret, tenant access token, and Authorization headers are NEVER
+  written to logs or this evidence.**
+- **Records created / cleaned:** 2 Lead records (one per live test). Both deleted by exact
+  `external_record_id` via `FeishuAdapter.deleteLead` (returned `true`). Zero Customer records
+  created — the canonical reviewable case is anonymous (no customer identity extracted), so
+  `commitApprovedCandidate` set `customer=null` and no customer write occurred. Existing
+  business records untouched.
+- **Verification chain (live):** `HumanReviewService.applyReview` → `BusinessRepository` →
+  `RealFeishuAdapter` (real `tenant_access_token` → real `POST /open-apis/bitable/.../records`
+  → real `GET .../records/{id}` readback) → critical fields semantically equal →
+  `readback_status=VERIFIED` → `commit.status=COMMITTED`, `write_status=SUCCESS`. EDIT+APPROVE
+  `budget_max` 4000→4500 read back as **4500** (not the original 4000); APPROVE (no edit)
+  preserved `budget_max=4000`.
+- **Test command (env-provided, secrets redacted here):** `FEISHU_APP_ID=cli_a9257d5b89b95ccb
+  FEISHU_APP_SECRET=***REDACTED*** FEISHU_BASE_APP_TOKEN=X6gHbD3IaakLGQsdFDVcNPqBnbb
+  FEISHU_LEAD_TABLE_ID=tblp9GuLf3nY597F FEISHU_CUSTOMER_TABLE_ID=tblhoSBeBBPDttdn
+  node node_modules/vitest/vitest.mjs run tests/hr-h.test.ts --testTimeout=60000`
+  → `Test Files 1 passed · Tests 3 passed (3)`.
 
 ---
 
 ## 8. Blockers
 
-- **HR-H LIVE Feishu E2E — BLOCKED.** `FEISHU_*` environment variables are not present in
-  this execution sandbox, so the live write→readback→VERIFIED slice could not be executed
-  here. Prerequisites BL-013 / BL-014 remain CLOSED (the P2 live closure already passed on a
-  credentialed run). Providing `FEISHU_APP_ID/SECRET/BASE_APP_TOKEN/LEAD_TABLE_ID/
-  CUSTOMER_TABLE_ID` and re-running `packages/human-review` HR-H flips this to PASS without
-  any code change (the live tests are already written and gated).
+- **HR-H LIVE Feishu E2E — RESOLVED / PASS (2026-08-12).** The live slice ran with real
+  `FEISHU_*` credentials supplied for this process only (injected inline on the test command,
+  never persisted, never logged). Both live HR-H tests passed and records were cleaned by exact
+  `record_id`. No code change was required — the live tests were already written and gated.
+- Prerequisites **BL-013 / BL-014 remain CLOSED**; **BL-015 remains OPEN / NON-BLOCKING**
+  (unchanged). No code-level blockers. **BUSOS-P3-01 is COMPLETE.**
 
 ---
 

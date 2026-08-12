@@ -12,7 +12,7 @@ Deliverables:
 - execution rules
 
 ## P1 — Foundation Implementation
-Status: CURRENT
+Status: COMPLETE
 
 Tasks:
 - BUSOS-P1-01 Contract Package
@@ -25,6 +25,7 @@ Exit:
 - Repository/adapter can perform minimal create/get/readback operations.
 
 ## P2 — GP-001 Integration
+Status: COMPLETE
 
 Goal:
 Integrate:
@@ -38,6 +39,7 @@ Exit:
   - invalid/risk case that does not commit
 
 ## P3 — Productize Human Review
+Status: COMPLETE
 
 Goal:
 Minimal review UI or review surface for:
@@ -48,6 +50,7 @@ Minimal review UI or review surface for:
 No complex workflow engine.
 
 ## P4 — Project Lifecycle Slice
+Status: NEXT
 
 Goal:
 `Lead -> Customer -> Project -> Task`
