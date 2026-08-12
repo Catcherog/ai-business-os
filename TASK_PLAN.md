@@ -79,9 +79,9 @@ PASS — executed 2026-08-12 with user-supplied `FEISHU_*` credentials against r
 @busos/contracts modified: NO. No schema/type in `contracts/*.schema.json` or `@busos/contracts/src` changed.
 
 ## blockers / backlog
-- BL-013 (open) — Live Feishu E2E blocked, no credentials.
-- BL-014 (open) — Real Feishu Base not provisioned.
-- BL-015 (new, non-blocking) — P1-02 extractor does not resolve "新中式" alone to a service_type (only "新中式写真" matches a deliverable noun). Flow B test uses "新中式写真"; the literal task phrasing would yield null service_type. Child of BL-011.
+- BL-013 (CLOSED 2026-08-12) — Live Feishu E2E executed with user-supplied FEISHU_* credentials; real-adapter LIVE block passed.
+- BL-014 (CLOSED 2026-08-12) — Real Feishu Base provisioned (dedicated Lead table tblp9GuLf3nY597F with required fields); P3 HR-H live E2E also used it.
+- BL-015 (OPEN / NON-BLOCKING) — P1-02 extractor does not resolve "新中式" alone to a service_type (only "新中式写真" matches a deliverable noun). Child of BL-011. Unchanged from P2; not a blocker for P3.
 
 ## git_info
 - branch: main

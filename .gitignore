@@ -4,3 +4,11 @@ node_modules/
 .DS_Store
 dist/
 coverage/
+
+# === secrets / local env (never commit) ===
+env.txt
+.env
+.env.local
+.env.*.local
+!.env.example
+
