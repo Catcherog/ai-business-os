@@ -98,4 +98,4 @@ Plus defensive tests:
 - **fail-closed check:** write SUCCESS + readback FAILED would have yielded `readback_status=FAILED` → not reported SUCCESS (verified by the existing `readback-failure` simulator test, unchanged).
 - **Cleanup result:** the single created Lead record deleted by `record_id` after verification; `AFTER count=0` (no test records remain). Note: 5 pre-existing empty rows in the `数据表` scratch table (all fields blank, no business content) were also removed during an earlier cleanup pass — no business data with values was affected.
 - **Minimal fix (task step 9):** `business-repository/src/mapping.ts` `toFeishuLeadFields` no longer emits the `客户关联` link field when `customer_id` is null (previously `[]` → `TextFieldConvFail` on a text-modeled link field). `business-repository` suite: 36 passed / 1 skipped. `@busos/contracts` unchanged.
-- **Commit SHA:** (recorded by the live-closure git commit, pushed to `origin/main` — see final report).
+- **Commit SHA:** `c6787ea7788fefb060544f88f7410d6ddfadb4a7` (pushed to `origin/main`).
