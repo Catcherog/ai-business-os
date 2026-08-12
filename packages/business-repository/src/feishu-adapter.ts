@@ -362,6 +362,26 @@ export class RealFeishuAdapter implements FeishuAdapter {
     if (!rec) throw new Error(`linkLeadCustomer: readback failed for lead: ${leadId}`);
     return fromFeishuLeadRecord(rec, this.fm);
   }
+
+  /* --------------------------------------------------- test-hygiene deletion */
+
+  private async deleteRecord(tableId: string, recordId: string): Promise<boolean> {
+    const path = `/open-apis/bitable/v1/apps/${this.baseAppToken}/tables/${tableId}/records/${recordId}`;
+    try {
+      const resp = await this.feishuCall('DELETE', path);
+      return resp.code === 0;
+    } catch {
+      return false;
+    }
+  }
+
+  async deleteLead(recordId: string): Promise<boolean> {
+    return this.deleteRecord(this.leadTableId, recordId);
+  }
+
+  async deleteCustomer(recordId: string): Promise<boolean> {
+    return this.deleteRecord(this.customerTableId, recordId);
+  }
 }
 
 export function createFeishuAdapter(config: FeishuAdapterConfig): FeishuAdapter {

@@ -94,6 +94,26 @@ export class FakeFeishuAdapter implements FeishuAdapter {
     this.leads.set(leadId, updated);
     return updated;
   }
+
+  async deleteLead(recordId: string): Promise<boolean> {
+    // The fake stores by canonical lead_id, not Feishu record_id. The fake's
+    // createLead returns a synthetic record id, so we key by canonical id.
+    return this.leads.delete(recordId);
+  }
+
+  async deleteCustomer(recordId: string): Promise<boolean> {
+    return this.customers.delete(recordId);
+  }
+
+  /** Test-support: number of lead records currently held (Feishu write probe). */
+  get leadCount(): number {
+    return this.leads.size;
+  }
+
+  /** Test-support: number of customer records currently held. */
+  get customerCount(): number {
+    return this.customers.size;
+  }
 }
 
 export function createFakeFeishuAdapter(opts: FakeFeishuAdapterOptions = {}): FeishuAdapter {

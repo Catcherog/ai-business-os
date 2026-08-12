@@ -83,3 +83,120 @@ FAIL
 - Minimal fix required
 
 No open-ended recommendations.
+
+## P3-01 Gate — Human Review
+
+PASS only if all gates below pass.
+
+### HR-A — Review interception
+
+Given a valid candidate whose governance decision is:
+
+`REVIEW_REQUIRED`
+
+Expected:
+- review case/surface available;
+- candidate and governance issues visible;
+- trace IDs retained;
+- BusinessRepository write count = 0;
+- Feishu write count = 0.
+
+### HR-B — Approve
+
+Given a REVIEW_REQUIRED candidate and human APPROVE:
+
+Expected:
+- approval explicitly recorded;
+- hard REJECT/invalid data cannot be overridden;
+- domain object created;
+- repository write succeeds;
+- readback verifies critical fields;
+- final commit status is COMMITTED.
+
+### HR-C — Edit + approve
+
+Given a REVIEW_REQUIRED candidate:
+
+Reviewer changes at least one critical business field.
+
+Example:
+
+```text
+budget_max:
+4000 → 4500
+```
+
+Expected:
+- original AI candidate snapshot retained;
+- human before/after edit retained;
+- edited value validated;
+- committed business value = 4500;
+- readback business value = 4500;
+- stale AI evidence is not presented as evidence for the human-edited value.
+
+### HR-D — Reject
+
+Human REJECT:
+
+Expected:
+- zero repository writes;
+- zero Feishu writes;
+- no COMMITTED result.
+
+### HR-E — Invalid edit / hard rejection
+
+Invalid edited candidate or governance REJECT:
+
+Expected:
+- fail closed;
+- zero business writes;
+- no COMMITTED result.
+
+### HR-F — Architecture boundary
+
+PASS if Human Review/application/presentation code has no direct dependency on:
+- Feishu table IDs;
+- Feishu field mappings;
+- credentials;
+- raw Feishu record structures;
+- direct Feishu API calls.
+
+### HR-G — Regression
+
+Existing:
+- contracts tests;
+- service-agent-candidate tests;
+- business-repository tests;
+- golden-path tests;
+
+must remain PASS.
+
+TypeScript compile/typecheck must remain clean.
+
+### HR-H — Live Feishu vertical slice
+
+Run at least one reviewed APPROVE or EDIT + APPROVE case through:
+
+```text
+Human Review
+→ BusinessRepository
+→ RealFeishuAdapter
+→ real Feishu write
+→ real Feishu readback
+→ VERIFIED
+```
+
+Requirements:
+- do not print credentials;
+- record sanitized evidence only;
+- clean generated test records by exact `record_id`;
+- cleanup must not affect existing business records.
+
+If live credentials unexpectedly become unavailable:
+mark:
+
+`IMPLEMENTATION PASS / LIVE P3 REVIEW E2E BLOCKED`
+
+Do not substitute Fake/Simulator PASS for Live PASS.
+
+P3-01 is not COMPLETE until HR-H passes.

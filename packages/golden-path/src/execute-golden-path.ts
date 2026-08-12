@@ -44,18 +44,30 @@ function errMsg(e: unknown): string {
 }
 
 /**
- * BUSOS-P2-GP-001 — Golden Path Vertical Slice orchestration.
+ * Result of committing an *already-approved* candidate through the repository.
  *
- * The single, very thin application entry point. It wires the four frozen
- * building blocks into one deterministic chain:
- *
- *   Candidate (P1-02) -> Governance (this pkg) -> BusinessRepository (P1-03)
- *   -> FeishuAdapter (P1-03) -> Readback (P1-03) -> VERIFIED / FAILED
+ * The caller (golden-path orchestration or the P3 human-review service) is
+ * responsible for the governance gate that authorises the write. This function
+ * only runs the canonical commit path: customer resolution/create -> lead
+ * create -> link. It is the single reuse point so no business logic is
+ * duplicated in P3 (task §9).
+ */
+export interface CommitApprovedResult {
+  status: 'SUCCESS' | 'FAILED';
+  candidate: LeadCandidateV1;
+  customer: Customer | null;
+  customerCommit: import('@busos/contracts').CommitResultV1 | null;
+  lead: import('@busos/contracts').Lead | null;
+  leadCommit: import('@busos/contracts').CommitResultV1 | null;
+  writes: WriteCounts;
+  failureReason?: string;
+}
+
+/**
+ * Commit an already-authorised candidate through the `GoldenPathRepository`.
  *
  * Fail-closed: any of the following yields a non-SUCCESS result with NO
  * repository write having been allowed to "succeed" the business commit:
- *   - candidate contract invalid (builder throws)
- *   - governance decision != APPROVE
  *   - customer lookup / create failure
  *   - customer readback not VERIFIED
  *   - lead create failure
@@ -63,47 +75,26 @@ function errMsg(e: unknown): string {
  *   - lead-customer link failure / readback failure
  *
  * A write that succeeds but whose readback fails is a business FAILURE, never a
- * SUCCESS (D019). The orchestration depends only on the canonical repository
- * port — it never imports Feishu tokens, table ids, field names, or SDK types
+ * SUCCESS (D019). This function depends only on the canonical repository port —
+ * it never imports Feishu tokens, table ids, field names, or SDK types
  * (D017/D018).
  */
-export async function executeGoldenPath(
-  input: GoldenPathInput,
-  deps: GoldenPathDeps,
-): Promise<GoldenPathResult> {
+export async function commitApprovedCandidate(
+  candidate: LeadCandidateV1,
+  repo: GoldenPathRepository,
+): Promise<CommitApprovedResult> {
   const writes = zeroWrites();
-  const result: GoldenPathResult = { status: 'BLOCKED', writes, customer: null };
+  const result: CommitApprovedResult = {
+    status: 'FAILED',
+    candidate,
+    customer: null,
+    customerCommit: null,
+    lead: null,
+    leadCommit: null,
+    writes,
+  };
 
-  // 1) Candidate — built by the injected builder (P1-02). Fail closed on error.
-  let candidate: LeadCandidateV1;
-  try {
-    candidate = deps.candidateBuilder(input);
-  } catch (e) {
-    result.status = 'BLOCKED';
-    result.failureReason = `candidate build rejected: ${errMsg(e)}`;
-    return result;
-  }
-  result.candidate = candidate;
-
-  // 2) Governance — fail closed: any non-APPROVE blocks the write outright.
-  let governance;
-  try {
-    governance = deps.governance(candidate);
-  } catch (e) {
-    result.status = 'BLOCKED';
-    result.failureReason = `governance error: ${errMsg(e)}`;
-    return result;
-  }
-  result.governance = governance;
-  if (!governancePermitsWrite(governance)) {
-    result.status = 'BLOCKED';
-    result.failureReason = `governance decision=${governance.decision}`;
-    return result;
-  }
-
-  const repo: GoldenPathRepository = deps.businessRepository;
-
-  // 3) Customer resolution — exact phone/wechat only. No create when absent.
+  // 1) Customer resolution — exact phone/wechat only. No create when absent.
   let customer: Customer | null = null;
   const identity = identityFromCandidate(candidate);
   if (identity.phone || identity.wechat) {
@@ -140,14 +131,13 @@ export async function executeGoldenPath(
   }
   result.customer = customer;
 
-  // 4) Lead create — customer_id null when anonymous (D010).
-  let lead;
+  // 2) Lead create — customer_id null when anonymous (D010).
   try {
     const out = await repo.createLead({
       customer_id: customer?.customer_id ?? null,
       source_session_id: candidate.session_id,
       source_candidate_id: candidate.candidate_id,
-      // Guaranteed non-null by the governance gate above.
+      // Guaranteed non-null by the governance gate upstream.
       service_type: candidate.requirement.service_type as string,
       budget_min: candidate.requirement.budget_min,
       budget_max: candidate.requirement.budget_max,
@@ -160,8 +150,7 @@ export async function executeGoldenPath(
       result.leadCommit = out.commit;
       return result;
     }
-    lead = out.lead;
-    result.lead = lead;
+    result.lead = out.lead;
     result.leadCommit = out.commit;
   } catch (e) {
     result.status = 'FAILED';
@@ -169,10 +158,10 @@ export async function executeGoldenPath(
     return result;
   }
 
-  // 5) Link Lead -> Customer (exact id; no overwrite/auto-merge).
+  // 3) Link Lead -> Customer (exact id; no overwrite/auto-merge).
   if (customer) {
     try {
-      await repo.linkLeadCustomer(lead.lead_id, customer.customer_id);
+      await repo.linkLeadCustomer(result.lead!.lead_id, customer.customer_id);
       writes.link += 1;
     } catch (e) {
       result.status = 'FAILED';
@@ -182,5 +171,79 @@ export async function executeGoldenPath(
   }
 
   result.status = 'SUCCESS';
+  return result;
+}
+
+/**
+ * BUSOS-P2-GP-001 — Golden Path Vertical Slice orchestration.
+ *
+ * The single, very thin application entry point. It wires the four frozen
+ * building blocks into one deterministic chain:
+ *
+ *   Candidate (P1-02) -> Governance (this pkg) -> BusinessRepository (P1-03)
+ *   -> FeishuAdapter (P1-03) -> Readback (P1-03) -> VERIFIED / FAILED
+ *
+ * Fail-closed: any of the following yields a non-SUCCESS result with NO
+ * repository write having been allowed to "succeed" the business commit:
+ *   - candidate contract invalid (builder throws)
+ *   - governance decision != APPROVE
+ *   - customer lookup / create failure
+ *   - customer readback not VERIFIED
+ *   - lead create failure
+ *   - lead readback not VERIFIED
+ *   - lead-customer link failure / readback failure
+ *
+ * A write that succeeds but whose readback fails is a business FAILURE, never a
+ * SUCCESS (D019). The orchestration depends only on the canonical repository
+ * port — it never imports Feishu tokens, table ids, field names, or SDK types
+ * (D017/D018).
+ */
+export async function executeGoldenPath(
+  input: GoldenPathInput,
+  deps: GoldenPathDeps,
+): Promise<GoldenPathResult> {
+  const result: GoldenPathResult = {
+    status: 'BLOCKED',
+    writes: zeroWrites(),
+    customer: null,
+  };
+
+  // 1) Candidate — built by the injected builder (P1-02). Fail closed on error.
+  let candidate: LeadCandidateV1;
+  try {
+    candidate = deps.candidateBuilder(input);
+  } catch (e) {
+    result.status = 'BLOCKED';
+    result.failureReason = `candidate build rejected: ${errMsg(e)}`;
+    return result;
+  }
+  result.candidate = candidate;
+
+  // 2) Governance — fail closed: any non-APPROVE blocks the write outright.
+  let governance;
+  try {
+    governance = deps.governance(candidate);
+  } catch (e) {
+    result.status = 'BLOCKED';
+    result.failureReason = `governance error: ${errMsg(e)}`;
+    return result;
+  }
+  result.governance = governance;
+  if (!governancePermitsWrite(governance)) {
+    result.status = 'BLOCKED';
+    result.failureReason = `governance decision=${governance.decision}`;
+    return result;
+  }
+
+  // 3-5) Commit through the canonical repository path (shared with P3 review).
+  const commit = await commitApprovedCandidate(candidate, deps.businessRepository);
+  result.customer = commit.customer;
+  result.customerCommit = commit.customerCommit ?? undefined;
+  result.lead = commit.lead;
+  result.leadCommit = commit.leadCommit ?? undefined;
+  result.writes = commit.writes;
+  result.status = commit.status === 'SUCCESS' ? 'SUCCESS' : 'FAILED';
+  if (commit.failureReason) result.failureReason = commit.failureReason;
+
   return result;
 }

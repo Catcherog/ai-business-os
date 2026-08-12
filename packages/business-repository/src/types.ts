@@ -44,6 +44,13 @@ export interface FeishuAdapter {
   getCustomer(customerId: string): Promise<Customer | null>;
   findCustomerByIdentity(identity: CustomerIdentityQuery): Promise<Customer | null>;
   linkLeadCustomer(leadId: string, customerId: string): Promise<Lead>;
+  /**
+   * Test-hygiene only: delete a single record by its exact Feishu `record_id`.
+   * Used by the live E2E to clean up generated test records without touching
+   * existing business data. Feishu-specific knowledge stays in the adapter.
+   */
+  deleteLead(recordId: string): Promise<boolean>;
+  deleteCustomer(recordId: string): Promise<boolean>;
 }
 
 /* ----------------------------------------------------------------- input DTOs */

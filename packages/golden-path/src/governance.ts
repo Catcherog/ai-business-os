@@ -23,12 +23,20 @@ import type { GovernanceFn } from './types.js';
  * - Exact customer identity (phone/wechat) is recorded as UNRESOLVED; the
  *   repository resolves it by exact match. Absent identity is NOT_REQUIRED
  *   (anonymous lead is allowed, D010).
- * - Only `APPROVE` permits the orchestration to write. `REJECT` (and any future
- *   `REVIEW_REQUIRED`) blocks the write with zero repository side effects.
+ * - Intent confidence below a threshold downgrades an otherwise-APPROVE
+ *   candidate to `REVIEW_REQUIRED` (issue INTENT_CONFIDENCE_LOW). This is the
+ *   minimum deterministic rule that exposes an R1 human-review scenario
+ *   (BUSOS-P3-01 Case 1); it reuses the contract's existing issue code and does
+ *   NOT redesign governance. It can only soften APPROVE -> REVIEW_REQUIRED,
+ *   never promote REJECT -> anything else.
+ * - Only `APPROVE` / human-resolved `REVIEW_REQUIRED` permit a write. `REJECT`
+ *   blocks the write with zero repository side effects.
  *
  * The result is validated against the frozen `governance_result.v1` contract on
  * the way out, so a malformed governance object can never escape.
  */
+export const INTENT_CONFIDENCE_REVIEW_THRESHOLD = 0.6;
+
 export const govern: GovernanceFn = (candidate: LeadCandidateV1): GovernanceResultV1 => {
   const issues: { code: string; field: string | null }[] = [];
   let decision: GovernanceDecision = 'APPROVE';
@@ -39,6 +47,17 @@ export const govern: GovernanceFn = (candidate: LeadCandidateV1): GovernanceResu
     issues.push({
       code: GOVERNANCE_ISSUE_CODES.SERVICE_TYPE_MISSING,
       field: 'requirement.service_type',
+    });
+  }
+
+  // Minimum deterministic human-review trigger (BUSOS-P3-01): a low-confidence
+  // intent needs a human eye. Only softens APPROVE -> REVIEW_REQUIRED.
+  const confidence = candidate.intent?.confidence;
+  if (typeof confidence === 'number' && confidence < INTENT_CONFIDENCE_REVIEW_THRESHOLD) {
+    if (decision === 'APPROVE') decision = 'REVIEW_REQUIRED';
+    issues.push({
+      code: GOVERNANCE_ISSUE_CODES.INTENT_CONFIDENCE_LOW,
+      field: 'intent.confidence',
     });
   }
 

@@ -1,0 +1,29 @@
+{
+  "name": "@busos/human-review",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI Business OS BUSOS-P3-01 — Minimal Human Review Surface. Approve / Edit+Approve / Reject of REVIEW_REQUIRED Lead candidates, reusing the P2 golden-path commit path. No Feishu knowledge (D018).",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "verify": "npm run typecheck && npm run test",
+    "serve": "vite-node scripts/review-server.ts"
+  },
+  "dependencies": {
+    "@busos/contracts": "file:../contracts",
+    "@busos/business-repository": "file:../business-repository",
+    "@busos/golden-path": "file:../golden-path",
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.2",
+    "typescript": "5.6.3",
+    "vitest": "2.1.8"
+  }
+}

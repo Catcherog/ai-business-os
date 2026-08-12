@@ -24,6 +24,10 @@ export {
   DEFAULT_INTENT_CONFIDENCE,
 } from './candidate.js';
 
-export { govern, governancePermitsWrite } from './governance.js';
+export { govern, governancePermitsWrite, INTENT_CONFIDENCE_REVIEW_THRESHOLD } from './governance.js';
 
-export { executeGoldenPath } from './execute-golden-path.js';
+export {
+  executeGoldenPath,
+  commitApprovedCandidate,
+  type CommitApprovedResult,
+} from './execute-golden-path.js';
