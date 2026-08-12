@@ -165,6 +165,6 @@ remain green after the `commitApprovedCandidate` extraction.
 
 ## 10. Commit / push / tree
 
-- Commit SHA: _(recorded after `git commit`)_
-- Push status: _(recorded after `git push origin main`)_
-- Working tree: clean after commit (`git status` → nothing to commit).
+- Commit SHA: `02188e754339ad3b2266bf736b77ea1465a25739`
+- Push status: **PUSHED** to `origin/main` (`669c720..02188e7`, 22 files, +2012 / −101).
+- Working tree: **clean** after commit (`git status --short` → empty).
