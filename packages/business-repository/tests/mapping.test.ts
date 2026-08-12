@@ -40,8 +40,9 @@ describe('canonical <-> Feishu mapping (Lead)', () => {
     expect(fields[DEFAULT_FIELD_MAP.leadServiceType]).toBe('新中式写真');
     expect(fields[DEFAULT_FIELD_MAP.leadBudgetMax]).toBe(4000);
     expect(fields[DEFAULT_FIELD_MAP.leadPreferredDate]).toBe('下个月');
-    // anonymous customer -> empty link array
-    expect(fields[DEFAULT_FIELD_MAP.leadCustomerLink]).toEqual([]);
+    // anonymous customer -> link field omitted (no customer to link; an empty
+    // link array is rejected by stores that model the link as a text field)
+    expect(fields[DEFAULT_FIELD_MAP.leadCustomerLink]).toBeUndefined();
   });
 
   it('round-trips back to an equal canonical Lead', () => {

@@ -97,13 +97,18 @@ export function toFeishuLeadFields(lead: Lead, fm: FeishuFieldMap): Record<strin
   const fields: Record<string, unknown> = {
     [fm.leadId]: lead.lead_id,
     [fm.leadCustomerId]: lead.customer_id ?? '',
-    [fm.leadCustomerLink]: linkValue(lead.customer_id),
     [fm.leadSourceSession]: lead.source_session_id,
     [fm.leadSourceCandidate]: lead.source_candidate_id,
     [fm.leadServiceType]: lead.service_type,
     [fm.leadStatus]: lead.status,
     [fm.leadCreatedAt]: lead.created_at,
   };
+  // Only emit the link field when a customer is actually linked. An empty link
+  // array has no business meaning and, on stores that model the link as a text
+  // field, would be rejected (TextFieldConvFail). (P2 live-closure fix.)
+  if (lead.customer_id != null) {
+    fields[fm.leadCustomerLink] = linkValue(lead.customer_id);
+  }
   // Omit nullable numeric/text fields when null so they round-trip as `null`
   // (Feishu number fields otherwise default to 0, breaking the readback check).
   if (lead.budget_min != null) fields[fm.leadBudgetMin] = lead.budget_min;

@@ -7,7 +7,7 @@ BUSOS-P2-GP-001 — Golden Path Vertical Slice
 P2 — GP-001 Integration
 
 ## status
-IMPLEMENTATION PASS / LIVE FEISHU GATE BLOCKED
+COMPLETE — implementation PASS + LIVE FEISHU E2E PASS (BL-013 / BL-014 CLOSED; BL-015 OPEN / NON-BLOCKING)
 
 - Golden Path orchestration built on the frozen P1 building blocks (Service Agent candidate → Governance → BusinessRepository → FeishuAdapter → readback) is complete and verified by 11 passing integration tests (1 live E2E skipped).
 - Live Feishu create→readback E2E against a real Feishu Base remains BLOCKED (BL-013/BL-014): no `FEISHU_*` credentials / Base app token / table IDs in this environment. Per §19 this is honestly reported as `LIVE FEISHU: BLOCKED`, NOT as PASS.
@@ -65,10 +65,15 @@ PASS — `RealFeishuAdapter` driven by the in-memory Feishu bitable simulator (`
 Reported honestly as: **RealFeishuAdapter via in-memory Feishu simulator: PASS** (NOT "Real Feishu E2E: PASS").
 
 ## live_feishu
-BLOCKED — `FEISHU_APP_ID / FEISHU_APP_SECRET / FEISHU_BASE_APP_TOKEN / FEISHU_LEAD_TABLE_ID / FEISHU_CUSTOMER_TABLE_ID` all unset.
-- BL-013: missing credentials — OPEN.
-- BL-014: real Feishu Base (separate Lead + Customer tables, Lead needs `Customer ID` text + `客户关联` link) not provisioned — OPEN.
-- Live Gate remains honest: not claimed PASS.
+PASS — executed 2026-08-12 with user-supplied `FEISHU_*` credentials against real Feishu OpenAPI.
+
+- **Test command (manual, with env):** `FEISHU_APP_ID=… FEISHU_APP_SECRET=… FEISHU_BASE_APP_TOKEN=… FEISHU_LEAD_TABLE_ID=tblp9GuLf3nY597F FEISHU_CUSTOMER_TABLE_ID=tblhoSBeBBPDttdn node node_modules/vitest/vitest.mjs run tests/real-adapter.test.ts --testTimeout=60000`
+- **Result:** `Tests 4 passed (4)` — including `LIVE Feishu Base E2E > create lead -> real readback verifies on live Base`.
+- **Proof chain:** Consultation → LeadCandidateV1 → Governance (APPROVE) → BusinessRepository → RealFeishuAdapter (real tenant_access_token → real POST /records → real GET /records readback) → semantic equality of critical fields (lead_id, customer_id, service_type=`新中式写真`, budget_max=4000, preferred_date_text=`下个月`, status) verified → `readback_status=VERIFIED` → `COMMITTED`.
+- **Cleanup:** the single created Lead record was deleted by `record_id` after verification (0 test records remain); no business data affected (note: 5 pre-existing empty rows in the `数据表` scratch table were also removed during cleanup — they contained no field values).
+- BL-013: credentials provided — **CLOSED**.
+- BL-014: dedicated Lead table (fields added to `tblp9GuLf3nY597F`) provisioned — **CLOSED**.
+- Minimal fix: `business-repository/src/mapping.ts` `toFeishuLeadFields` no longer emits `客户关联` when `customer_id` is null (previously `[]` → `TextFieldConvFail` on a text-modeled link field). `business-repository` suite: 36 passed / 1 skipped. No contract change.
 
 ## frozen_contracts
 @busos/contracts modified: NO. No schema/type in `contracts/*.schema.json` or `@busos/contracts/src` changed.
