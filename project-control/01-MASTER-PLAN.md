@@ -62,7 +62,12 @@ Only after GP-001 is stable.
 Goal:
 `Project -> Creative Task -> Lumen -> Asset`
 
-Later phase. Not current scope.
+Status: COMPLETE (IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED — 2026-08-13).
+Implemented as `@busos/creative-production` + `@busos/lumen-adapter` behind the
+canonical `LumenPort` (only Lumen `AUTH_PASSWORD` + base URL held; provider key
+stays in Lumen, §19). P5-A..P5-H PASS via fake + real-adapter(stubbed) gates; P5-I
+REAL E2E BLOCKED (no Vercel Lumen URL+`AUTH_PASSWORD`, no `FEISHU_*`+
+`FEISHU_ASSET_TABLE_ID`). STOP — no automatic P6.
 
 ## P6+ — Deferred
 

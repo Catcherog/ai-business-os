@@ -116,3 +116,17 @@ Initial deferred items:
 - Why non-blocking: GP-001 implementation is fully verified; the literal one-word phrasing gap is a P1-02 extraction maintenance item, not a blocker. Exact identity resolution, readback verification, and fail-closed behaviour are all unaffected.
 - Suggested revisit phase: P2 (model-driven service-type extraction) or when a new service vertical is onboarded (BL-011).
 
+## BL-016 LIVE Creative E2E blocked (missing Lumen Vercel + Feishu Asset credentials)
+- Type: **DEFERRED (non-blocking — gated on deployment secrets)**
+- Found in task: BUSOS-P5-01
+- Description: The REAL end-to-end creative slice (live Feishu Asset write/readback + live Vercel Lumen generation) requires `LUMEN_BASE_URL` + `LUMEN_AUTH_PASSWORD` (the Lumen `AUTH_PASSWORD`, NOT the provider key) and `FEISHU_*` + `FEISHU_ASSET_TABLE_ID`. Neither set was provided in this environment. The implementation is COMPLETE and verified by fake + real-adapter(stubbed) gates (P5-A..P5-H PASS); only the live run is blocked.
+- Why non-blocking: Implementation is fully verified without live credentials; the slice is reported honestly as `IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED`. No production behaviour depends on the live run having executed.
+- Suggested revisit phase: When the user supplies the Vercel Lumen URL + `AUTH_PASSWORD` and `FEISHU_*` + `FEISHU_ASSET_TABLE_ID`; run `packages/creative-production/tests/live-e2e.test.ts` (already wired to `executeCreativeProduction`) — or open a P5-lifecycle closure task per the P4 precedent.
+
+## BL-002 Creative Agent / Lumen integration — status updated by BUSOS-P5-01
+- Type: DEFERRED → **IMPLEMENTATION COMPLETE (live E2E still deferred, see BL-016)**
+- Found in task: Architecture planning / BUSOS-P5-01
+- Description: `Project -> Creative Task -> Lumen -> Asset` is now implemented as a bounded vertical slice in `@busos/creative-production` + `@busos/lumen-adapter`, behind the canonical `LumenPort` (only Lumen `AUTH_PASSWORD` + base URL held; provider key stays in Lumen, §19). The additive `Asset` contract (`asset_type=IMAGE`, `source=LUMEN`) and Asset/Task-status repository operations are in place.
+- Why non-blocking for live: only the REAL Feishu+Lumen E2E is deferred (BL-016). The fake + real-adapter(stubbed) gates all PASS.
+- Suggested revisit phase: P5 live closure (BL-016) — do NOT auto-start P6.
+

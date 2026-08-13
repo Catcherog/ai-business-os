@@ -2,6 +2,41 @@
 
 These interfaces define module boundaries. Implementations may vary, contracts may not be silently changed.
 
+## 0. Lumen Port (BUSOS-P5-01)
+
+Lumen (光砚 / Lumen Ink) is an external multi-provider AI image-editing service.
+The application layer (`@busos/creative-production`) depends ONLY on `LumenPort`
+(`@busos/lumen-adapter`):
+
+```ts
+interface LumenPort {
+  generate(input: {
+    prompt: string;
+    project_name: string;
+    source_image_base64: string;
+    source_image_mime_type: string;
+  }): Promise<{
+    status: 'GENERATED' | 'FAILED';
+    asset_uri?: string;
+    mime_type?: string | null;
+    lumen_project_id?: string;
+    error_code?: string;
+    error_message?: string;
+  }>;
+  release(lumenProjectId: string): Promise<void>;
+}
+```
+
+- `RealLumenAdapter` maps the deployed Lumen HTTP API and owns all Lumen HTTP +
+  auth knowledge. `FakeLumenAdapter` is the in-memory stand-in.
+- **Security boundary (§19):** AI Business OS holds at most Lumen's `AUTH_PASSWORD`
+  + base URL. The image-provider credential (Seedream / Volcengine Ark) lives
+  exclusively inside Lumen and is never read or forwarded. `business-repository`
+  never imports Lumen (the `Asset.source` is the frozen enum `LUMEN`, not a live
+  client).
+- Lumen requires a source image (V0 becomes the project `activeVersionId`); the app
+  layer sends exactly one `source_image_base64` + `mime_type` per P5 §16.
+
 ## 1. LeadCandidateV1
 
 Required version:

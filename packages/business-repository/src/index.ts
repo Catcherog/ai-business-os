@@ -18,6 +18,7 @@ export type {
   CustomerCreateInput,
   ProjectCreateInput,
   TaskCreateInput,
+  AssetCreateInput,
 } from './types.js';
 
 export {
@@ -40,6 +41,8 @@ export {
   fromFeishuProjectRecord,
   toFeishuTaskFields,
   fromFeishuTaskRecord,
+  toFeishuAssetFields,
+  fromFeishuAssetRecord,
 } from './mapping.js';
 export type { FeishuFieldMap } from './mapping.js';
 
@@ -48,10 +51,12 @@ export {
   verifyCustomerCriticalFields,
   verifyProjectCriticalFields,
   verifyTaskCriticalFields,
+  verifyAssetCriticalFields,
   LEAD_CRITICAL_FIELDS,
   CUSTOMER_CRITICAL_FIELDS,
   PROJECT_CRITICAL_FIELDS,
   TASK_CRITICAL_FIELDS,
+  ASSET_CRITICAL_FIELDS,
 } from './verify.js';
 
 export { generateDomainId, nowIso, generateRecordId } from './util.js';

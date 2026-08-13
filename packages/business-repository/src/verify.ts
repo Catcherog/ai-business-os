@@ -1,4 +1,4 @@
-import type { Lead, Customer, Project, Task } from '@busos/contracts';
+import type { Lead, Customer, Project, Task, Asset } from '@busos/contracts';
 
 /**
  * Readback verification (D019). A successful API write is NOT business success;
@@ -74,6 +74,25 @@ export function verifyProjectCriticalFields(written: Project, read: Project): bo
 
 export function verifyTaskCriticalFields(written: Task, read: Task): boolean {
   for (const k of TASK_CRITICAL_FIELDS) {
+    if (written[k] !== read[k]) return false;
+  }
+  return true;
+}
+
+/* --------------------------------------------------------------- Asset (P5) */
+
+export const ASSET_CRITICAL_FIELDS = [
+  'asset_id',
+  'project_id',
+  'task_id',
+  'asset_type',
+  'source',
+  'asset_uri',
+  'mime_type',
+] as const;
+
+export function verifyAssetCriticalFields(written: Asset, read: Asset): boolean {
+  for (const k of ASSET_CRITICAL_FIELDS) {
     if (written[k] !== read[k]) return false;
   }
   return true;

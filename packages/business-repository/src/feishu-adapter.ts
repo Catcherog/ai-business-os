@@ -9,7 +9,9 @@ import {
   type Customer,
   type Project,
   type Task,
+  type Asset,
   type LeadStatus,
+  type TaskStatus,
 } from '@busos/contracts';
 import type { FeishuAdapter, FeishuRecord, FeishuWriteOutcome, CustomerIdentityQuery } from './types.js';
 import {
@@ -23,8 +25,10 @@ import {
   fromFeishuProjectRecord,
   toFeishuTaskFields,
   fromFeishuTaskRecord,
+  toFeishuAssetFields,
+  fromFeishuAssetRecord,
 } from './mapping.js';
-import { verifyLeadCriticalFields, verifyCustomerCriticalFields, verifyProjectCriticalFields, verifyTaskCriticalFields } from './verify.js';
+import { verifyLeadCriticalFields, verifyCustomerCriticalFields, verifyProjectCriticalFields, verifyTaskCriticalFields, verifyAssetCriticalFields } from './verify.js';
 
 /**
  * Real Feishu Base adapter (P1-03).
@@ -52,6 +56,9 @@ export interface FeishuAdapterConfig {
   projectTableId?: string;
   /** P4 (BUSOS-P4-01) Task table id. Optional at construction (see above). */
   taskTableId?: string;
+  /** P5 (BUSOS-P5-01) Asset table id. Optional at construction; Asset methods
+   *  throw if unset. Required for the live P5 gate via `createFeishuAdapterFromEnv`. */
+  assetTableId?: string;
   fieldMap?: Partial<FeishuFieldMap>;
   baseUrl?: string;
   /** Injectable transport (defaults to global fetch). Used for tests. */
@@ -105,6 +112,7 @@ export class RealFeishuAdapter implements FeishuAdapter {
   private readonly customerTableId: string;
   private readonly projectTableId: string | undefined;
   private readonly taskTableId: string | undefined;
+  private readonly assetTableId: string | undefined;
   private readonly fm: FeishuFieldMap;
   private readonly baseUrl: string;
   private readonly fetchFn: typeof fetch;
@@ -123,6 +131,7 @@ export class RealFeishuAdapter implements FeishuAdapter {
     this.customerTableId = config.customerTableId;
     this.projectTableId = config.projectTableId;
     this.taskTableId = config.taskTableId;
+    this.assetTableId = config.assetTableId;
     this.fm = { ...DEFAULT_FIELD_MAP, ...(config.fieldMap ?? {}) };
     this.baseUrl = (config.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, '');
     this.fetchFn = config.fetchImpl ?? globalThis.fetch;
@@ -248,7 +257,7 @@ export class RealFeishuAdapter implements FeishuAdapter {
   /* ------------------------------------------------------ write + readback core */
 
   private buildCommit(params: {
-    domainObject: 'lead' | 'customer' | 'project' | 'task';
+    domainObject: 'lead' | 'customer' | 'project' | 'task' | 'asset';
     domainId: string;
     externalRecordId: string | null;
     writeStatus: WriteStatus;
@@ -480,6 +489,11 @@ export class RealFeishuAdapter implements FeishuAdapter {
     return this.taskTableId;
   }
 
+  private requireAssetTable(): string {
+    if (!this.assetTableId) throw new Error('FeishuAdapter requires assetTableId for Asset operations');
+    return this.assetTableId;
+  }
+
   async createProject(project: Project): Promise<FeishuWriteOutcome<Project>> {
     const tableId = this.requireProjectTable();
     const fields = toFeishuProjectFields(project, this.fm);
@@ -594,6 +608,116 @@ export class RealFeishuAdapter implements FeishuAdapter {
     return fromFeishuTaskRecord(recs[0], this.fm);
   }
 
+  /* ---------------------------------------------- P5: Task status update */
+
+  async updateTaskStatus(taskId: string, status: TaskStatus): Promise<FeishuWriteOutcome<Task>> {
+    const taskRecordId = await this.recordIdByCanonicalId(this.taskTableId!, this.fm.taskId, taskId);
+    const errors: string[] = [];
+    let externalRecordId: string | null = null;
+    let writeStatus: WriteStatus = 'FAILED';
+    let readbackStatus: ReadbackStatus = 'NOT_RUN';
+    let read: Task | null = null;
+
+    if (!taskRecordId) {
+      errors.push(`updateTaskStatus: task not found in Feishu: ${taskId}`);
+    } else {
+      const ok = await this.updateRecord(this.taskTableId!, taskRecordId, {
+        [this.fm.taskStatus]: status,
+        [this.fm.taskCreatedAt]: new Date().toISOString(),
+      });
+      if (!ok) {
+        errors.push('feishu update task status failed');
+      } else {
+        externalRecordId = taskRecordId;
+        writeStatus = 'SUCCESS';
+        try {
+          const rec = await this.getRecord(this.taskTableId!, taskRecordId);
+          if (rec) {
+            read = fromFeishuTaskRecord(rec, this.fm);
+            const okStatus = read.status === status;
+            readbackStatus = okStatus ? 'VERIFIED' : 'FAILED';
+            if (!okStatus) errors.push(`task status readback mismatch: expected ${status}, got ${read.status}`);
+          } else {
+            readbackStatus = 'FAILED';
+            errors.push('task status readback record not found');
+          }
+        } catch (e) {
+          readbackStatus = 'FAILED';
+          errors.push(`feishu readback failed: ${e instanceof Error ? e.message : String(e)}`);
+        }
+      }
+    }
+
+    const commit = this.buildCommit({
+      domainObject: 'task',
+      domainId: taskId,
+      externalRecordId,
+      writeStatus,
+      readbackStatus,
+      errors,
+    });
+    return { domain: read ?? ({ task_id: taskId, status } as unknown as Task), commit };
+  }
+
+  /* ----------------------------------------------- P5: Asset writes */
+
+  async createAsset(asset: Asset): Promise<FeishuWriteOutcome<Asset>> {
+    const tableId = this.requireAssetTable();
+    const fields = toFeishuAssetFields(asset, this.fm);
+    const errors: string[] = [];
+    let externalRecordId: string | null = null;
+    let writeStatus: WriteStatus = 'FAILED';
+    let readbackStatus: ReadbackStatus = 'NOT_RUN';
+    let read: Asset | null = null;
+
+    try {
+      const recordId = await this.createRecord(tableId, fields);
+      if (recordId) {
+        externalRecordId = recordId;
+        writeStatus = 'SUCCESS';
+      } else {
+        errors.push('feishu create asset returned no record');
+      }
+    } catch (e) {
+      errors.push(`feishu write failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+
+    if (writeStatus === 'SUCCESS' && externalRecordId) {
+      try {
+        const rec = await this.getRecord(tableId, externalRecordId);
+        if (rec) {
+          read = fromFeishuAssetRecord(rec, this.fm);
+          const ok = verifyAssetCriticalFields(asset, read);
+          readbackStatus = ok ? 'VERIFIED' : 'FAILED';
+          if (!ok) errors.push('asset readback critical field mismatch');
+        } else {
+          readbackStatus = 'FAILED';
+          errors.push('asset readback record not found');
+        }
+      } catch (e) {
+        readbackStatus = 'FAILED';
+        errors.push(`feishu readback failed: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+
+    const commit = this.buildCommit({
+      domainObject: 'asset',
+      domainId: asset.asset_id,
+      externalRecordId,
+      writeStatus,
+      readbackStatus,
+      errors,
+    });
+    return { domain: read ?? asset, commit };
+  }
+
+  async getAsset(assetId: string): Promise<Asset | null> {
+    const tableId = this.requireAssetTable();
+    const recs = await this.findRecordsByField(tableId, this.fm.assetId, assetId);
+    if (recs.length === 0) return null;
+    return fromFeishuAssetRecord(recs[0], this.fm);
+  }
+
   /* --------------------------------------------------- test-hygiene deletion */
 
   private async deleteRecord(tableId: string, recordId: string): Promise<boolean> {
@@ -623,6 +747,11 @@ export class RealFeishuAdapter implements FeishuAdapter {
     if (!this.taskTableId) return false;
     return this.deleteRecord(this.taskTableId, recordId);
   }
+
+  async deleteAsset(recordId: string): Promise<boolean> {
+    if (!this.assetTableId) return false;
+    return this.deleteRecord(this.assetTableId, recordId);
+  }
 }
 
 export function createFeishuAdapter(config: FeishuAdapterConfig): FeishuAdapter {
@@ -642,6 +771,7 @@ export function createFeishuAdapterFromEnv(env: NodeJS.ProcessEnv = process.env)
   const customerTableId = env.FEISHU_CUSTOMER_TABLE_ID;
   const projectTableId = env.FEISHU_PROJECT_TABLE_ID;
   const taskTableId = env.FEISHU_TASK_TABLE_ID;
+  const assetTableId = env.FEISHU_ASSET_TABLE_ID;
   if (
     !appId ||
     !appSecret ||
@@ -649,7 +779,8 @@ export function createFeishuAdapterFromEnv(env: NodeJS.ProcessEnv = process.env)
     !leadTableId ||
     !customerTableId ||
     !projectTableId ||
-    !taskTableId
+    !taskTableId ||
+    !assetTableId
   ) {
     return null;
   }
@@ -661,5 +792,6 @@ export function createFeishuAdapterFromEnv(env: NodeJS.ProcessEnv = process.env)
     customerTableId,
     projectTableId,
     taskTableId,
+    assetTableId,
   });
 }

@@ -16,3 +16,6 @@ _trash_hr_nm/
 .p4_live.env
 .p4_*.mjs
 
+# vitest/vite cache dirs (local, relative to each package)
+.vitest-tmp/
+

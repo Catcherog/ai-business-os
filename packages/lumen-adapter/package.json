@@ -1,8 +1,8 @@
 {
-  "name": "@busos/contracts",
+  "name": "@busos/lumen-adapter",
   "version": "1.0.0",
   "private": true,
-  "description": "AI Business OS shared contract and domain package (P1-01)",
+  "description": "AI Business OS BUSOS-P5-01 — Lumen (光砚) generation port + adapters. Real adapter maps the deployed Lumen HTTP API; the app layer depends only on the LumenPort interface (D018).",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -14,12 +14,8 @@
     "test": "vitest run --no-cache",
     "verify": "npm run typecheck && npm run test"
   },
-  "dependencies": {
-    "zod": "3.23.8"
-  },
   "devDependencies": {
-    "ajv": "8.17.1",
-    "ajv-formats": "3.0.1",
+    "@types/node": "22.10.2",
     "typescript": "5.6.3",
     "vitest": "2.1.8"
   }

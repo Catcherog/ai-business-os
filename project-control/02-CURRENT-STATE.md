@@ -2,11 +2,11 @@
 
 PROJECT: AI Business OS
 VERSION: V1
-PHASE: P4 — Project Lifecycle Slice [COMPLETE / LIVE E2E PASS]
-STATUS: P4 COMPLETE (live Feishu E2E PASS 2026-08-13)
-CURRENT TASK: BUSOS-P4-01 — Project Lifecycle Vertical Slice  [COMPLETE — LIVE P4 LIFECYCLE E2E PASS]
-BASELINE: bcfa102
-CURRENT BLOCKERS: none (PL-H live Feishu E2E PASS 2026-08-13; BL-015 OPEN/NON-BLOCKING)
+PHASE: P5 — Creative Production Slice [IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED]
+STATUS: P5 COMPLETE (IMPLEMENTATION PASS 2026-08-13; LIVE CREATIVE E2E BLOCKED — secrets absent)
+CURRENT TASK: BUSOS-P5-01 — Creative Production Vertical Slice  [COMPLETE — IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED]
+BASELINE: 842d91e8b90e99919d577be4d4490937989223d4
+CURRENT BLOCKERS: LIVE CREATIVE E2E BLOCKED (no Vercel Lumen URL+`AUTH_PASSWORD`, no `FEISHU_*`+`FEISHU_ASSET_TABLE_ID`); BL-015 OPEN/NON-BLOCKING.
 
 PRIMARY OBJECTIVE:
 Productize the minimum human-review vertical slice required by R1:
@@ -25,6 +25,7 @@ EXECUTION ORDER:
 - P2 COMPLETE. [done — GP-001 vertical slice, live Feishu E2E PASS]
 - BUSOS-P3-01. [COMPLETE — live HR-H Feishu E2E PASS 2026-08-12]
 - BUSOS-P4-01. [COMPLETE — LIVE P4 LIFECYCLE E2E PASS 2026-08-13; PL-A..PL-H all PASS. NEXT: none — STOP per task §15.]
+- BUSOS-P5-01. [COMPLETE — IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED 2026-08-13; P5-A..P5-H all PASS (fake + real-adapter-stubbed), P5-I real E2E BLOCKED. NEXT: none — STOP per task §15/§49.]
 
 P1-01 EVIDENCE:
 - Package: packages/contracts (TypeScript + zod runtime validation).
@@ -80,12 +81,26 @@ P4-01 EVIDENCE:
 - PL-H live Feishu E2E: PASS (2026-08-13) — executed via BUSOS-P4-01-LIVE-CLOSURE with user-supplied `FEISHU_*` + `FEISHU_PROJECT_TABLE_ID`/`FEISHU_TASK_TABLE_ID`; full real chain VERIFIED + exact-record-id cleanup. Reported honestly as `Real Feishu E2E: PASS` (distinct from the in-memory-simulator PASS).
 - Completion evidence: 10-P4-01-COMPLETION.md — status `COMPLETE / LIVE P4 LIFECYCLE E2E PASS` (PL-A..PL-H all PASS).
 
+P5-01 PLAN:
+- New package: packages/lumen-adapter (name @busos/lumen-adapter). Lumen `LumenPort` + `RealLumenAdapter` (maps deployed Lumen HTTP API) + `FakeLumenAdapter` (in-memory). Holds ONLY Lumen `AUTH_PASSWORD` + base URL — never the provider key (§19).
+- New package: packages/creative-production (name @busos/creative-production). `executeCreativeProduction(input, deps)`: Project → eligibility (fail closed, 0 writes) → create Creative Task (TODO) → readback VERIFIED → Lumen.generate → create Asset (IMAGE/LUMEN) → readback VERIFIED → update Task DONE → readback VERIFIED → CREATIVE_SUCCESS, with exact-record-id compensation on each failure point.
+- Additive contract delta: canonical `Asset` (asset_type ∈ {IMAGE}, source ∈ {LUMEN}); `COMMIT_DOMAIN_OBJECTS` gains `asset`. BusinessRepository/FeishuAdapter increment: `updateTaskStatus`, `createAsset`, `getAsset`, `deleteAsset`; `createFeishuAdapterFromEnv` now requires `FEISHU_ASSET_TABLE_ID`.
+- Architecture boundaries strict: creative-production depends only on `CreativeProductionRepository` + `LumenPort`; never imports Feishu/Lumen secrets, `RealFeishuAdapter`, `/api/auth`, `signedUrls`. business-repository never imports Lumen.
+
+P5-01 EVIDENCE:
+- Packages: @busos/lumen-adapter (tsc clean; 7 tests PASS), @busos/creative-production (tsc clean; 19 passed / 1 skipped).
+- Full slice verified through Fake + RealLumenAdapter-via-stub: Project(DRAFT) → Creative Task(TODO) → Lumen generate → Asset(IMAGE/LUMEN, uri from Lumen signedUrls) → Task DONE, readback VERIFIED at every step. Eligibility cases (missing/CANCELLED/DELIVERED/empty prompt/empty image) fail closed with 0 writes. Compensation E1–E4 delete by exact record id. P5-G static scan PASS (4 source files, 18 forbidden-token assertions).
+- Regression P5-H green across all 5 packages (contracts 85 / br 36+1skip / pl 20+1skip / la 7 / cp 19+1skip). tsc --noEmit clean on all.
+- P5-I REAL end-to-end BLOCKED (no Vercel Lumen URL+`AUTH_PASSWORD`, no `FEISHU_*`+`FEISHU_ASSET_TABLE_ID`). Reported honestly as `IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED`.
+- Completion evidence: 11-P5-01-COMPLETION.md — status `IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED` (P5-A..P5-H PASS; P5-I BLOCKED).
+
 CURRENT BLOCKERS:
 - **BL-013 CLOSED (2026-08-12)** — Live Feishu E2E executed with provided FEISHU_* credentials; real-adapter LIVE block passed.
 - **BL-014 CLOSED (2026-08-12)** — Dedicated Lead table provisioned in the real Base.
 - **BL-015 OPEN / NON-BLOCKING** — P1-02 extractor does not resolve bare "新中式" to a service_type. Unchanged; not a blocker for the live gate.
 - **HR-H LIVE E2E — PASS (2026-08-12)** — BUSOS-P3-01 live Feishu review slice executed with real FEISHU_* credentials; both live HR-H tests PASSED and records were cleaned by exact record_id. HR-H gate CLOSED. (See 09-P3-01-COMPLETION.md §7/§8.)
 - **PL-H LIVE P4 LIFECYCLE E2E — PASS (2026-08-13)** — executed via BUSOS-P4-01-LIVE-CLOSURE with user-supplied `FEISHU_*` + `FEISHU_PROJECT_TABLE_ID`/`FEISHU_TASK_TABLE_ID`; full real chain (Customer → Lead QUALIFIED → link → Project DRAFT → Task TODO → Lead CONVERTED) wrote + read-back VERIFIED, `LIFECYCLE_SUCCESS`, and cleaned all four generated records by exact `record_id`. PL-H gate CLOSED; BUSOS-P4-01 is `COMPLETE / LIVE P4 LIFECYCLE E2E PASS`. (See 10-P4-01-COMPLETION.md §4/§7/§10.)
+- **LIVE CREATIVE E2E (P5-I) — BLOCKED** — BUSOS-P5-01 REAL end-to-end (live Feishu Asset write/readback + live Vercel Lumen generation) could not execute: no `LUMEN_BASE_URL`/`LUMEN_AUTH_PASSWORD` (Vercel Lumen) and no `FEISHU_*` + `FEISHU_ASSET_TABLE_ID` were provided. Implementation is COMPLETE and verified by fake + real-adapter(stubbed) gates (P5-A..P5-H PASS). Reported honestly as `IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED`; the task STOPS at commit + push + clean tree (no automatic P6). (See 11-P5-01-COMPLETION.md §4/§6.)
 
 LATEST CONTROL DECISIONS:
 See `03-DECISIONS.md` (D001..D020 FROZEN).

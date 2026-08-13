@@ -6,7 +6,9 @@ import {
   type Customer,
   type Project,
   type Task,
+  type Asset,
   type LeadStatus,
+  type TaskStatus,
 } from '@busos/contracts';
 import type { FeishuAdapter, FeishuWriteOutcome, CustomerIdentityQuery } from './types.js';
 import {
@@ -14,6 +16,7 @@ import {
   verifyCustomerCriticalFields,
   verifyProjectCriticalFields,
   verifyTaskCriticalFields,
+  verifyAssetCriticalFields,
 } from './verify.js';
 import { generateRecordId, nowIso } from './util.js';
 
@@ -35,8 +38,12 @@ export interface FakeFeishuAdapterOptions {
   corruptReadbackProject?: Partial<Project>;
   /** When set, the task readback returns these overrides -> readback FAILED. */
   corruptReadbackTask?: Partial<Task>;
+  /** When set, the asset readback returns these overrides -> readback FAILED. */
+  corruptReadbackAsset?: Partial<Asset>;
   /** When set, updateLeadStatus reports a FAILED readback (CONVERTED not applied). */
   failLeadStatusUpdate?: boolean;
+  /** When set, updateTaskStatus reports a FAILED readback (DONE not applied). */
+  failTaskStatusUpdate?: boolean;
   now?: () => Date;
 }
 
@@ -45,6 +52,7 @@ export class FakeFeishuAdapter implements FeishuAdapter {
   private readonly customers = new Map<string, Customer>();
   private readonly projects = new Map<string, Project>();
   private readonly tasks = new Map<string, Task>();
+  private readonly assets = new Map<string, Asset>();
   /** Record id -> canonical id, so deletes can be issued by exact Feishu record id. */
   private readonly recordToCanonical = new Map<string, string>();
   private readonly opts: FakeFeishuAdapterOptions;
@@ -54,7 +62,7 @@ export class FakeFeishuAdapter implements FeishuAdapter {
   }
 
   private commit(
-    domainObject: 'lead' | 'customer' | 'project' | 'task',
+    domainObject: 'lead' | 'customer' | 'project' | 'task' | 'asset',
     domainId: string,
     recordId: string,
     verified: boolean,
@@ -174,6 +182,49 @@ export class FakeFeishuAdapter implements FeishuAdapter {
     return this.tasks.get(taskId) ?? null;
   }
 
+  /* ---------------------------------------------- P5: Task status update */
+
+  async updateTaskStatus(taskId: string, status: TaskStatus): Promise<FeishuWriteOutcome<Task>> {
+    const task = this.tasks.get(taskId);
+    const recordId = generateRecordId('rec_task');
+    this.recordToCanonical.set(recordId, taskId);
+    if (!task) {
+      const commit = this.commit('task', taskId, recordId, false);
+      commit.write_status = 'FAILED';
+      commit.errors = ['fake updateTaskStatus: task not found'];
+      return { domain: { task_id: taskId, status } as unknown as Task, commit };
+    }
+    const appliedStatus = this.opts.failTaskStatusUpdate ? task.status : status;
+    const updated: Task = { ...task, status: appliedStatus };
+    if (!this.opts.failTaskStatusUpdate) {
+      updated.updated_at = nowIso(this.opts.now?.() ?? new Date());
+      this.tasks.set(taskId, updated);
+    }
+    const verified = !this.opts.failTaskStatusUpdate && updated.status === status;
+    const commit = this.commit('task', taskId, recordId, verified);
+    if (this.opts.failTaskStatusUpdate) {
+      commit.write_status = 'SUCCESS';
+      commit.readback_status = 'FAILED';
+      commit.errors = ['fake updateTaskStatus: injected failure'];
+    }
+    return { domain: updated, commit };
+  }
+
+  /* ------------------------------------------------- P5: Asset */
+
+  async createAsset(asset: Asset): Promise<FeishuWriteOutcome<Asset>> {
+    this.assets.set(asset.asset_id, asset);
+    const recordId = generateRecordId('rec_asset');
+    this.recordToCanonical.set(recordId, asset.asset_id);
+    const read = this.opts.corruptReadbackAsset ? { ...asset, ...this.opts.corruptReadbackAsset } : asset;
+    const verified = verifyAssetCriticalFields(asset, read);
+    return { domain: read, commit: this.commit('asset', asset.asset_id, recordId, verified) };
+  }
+
+  async getAsset(assetId: string): Promise<Asset | null> {
+    return this.assets.get(assetId) ?? null;
+  }
+
   /* --------------------------------------------------- test-hygiene deletion */
 
   async deleteLead(recordId: string): Promise<boolean> {
@@ -204,6 +255,14 @@ export class FakeFeishuAdapter implements FeishuAdapter {
     const cid = this.recordToCanonical.get(recordId) ?? recordId;
     const existed = this.tasks.has(cid);
     this.tasks.delete(cid);
+    this.recordToCanonical.delete(recordId);
+    return existed;
+  }
+
+  async deleteAsset(recordId: string): Promise<boolean> {
+    const cid = this.recordToCanonical.get(recordId) ?? recordId;
+    const existed = this.assets.has(cid);
+    this.assets.delete(cid);
     this.recordToCanonical.delete(recordId);
     return existed;
   }

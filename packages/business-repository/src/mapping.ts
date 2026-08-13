@@ -1,4 +1,4 @@
-import type { Lead, Customer, Project, Task, LeadStatus, CustomerStatus, ProjectStatus, TaskStatus } from '@busos/contracts';
+import type { Lead, Customer, Project, Task, Asset, AssetType, AssetSource, LeadStatus, CustomerStatus, ProjectStatus, TaskStatus } from '@busos/contracts';
 import type { FeishuRecord } from './types.js';
 
 /**
@@ -52,6 +52,15 @@ export interface FeishuFieldMap {
   taskStatus: string;
   taskDueDate: string;
   taskCreatedAt: string;
+  /* Asset (P5 additive) */
+  assetId: string;
+  assetProjectId: string;
+  assetTaskId: string;
+  assetType: string;
+  assetSource: string;
+  assetUri: string;
+  assetMimeType: string;
+  assetCreatedAt: string;
 }
 
 export const DEFAULT_FIELD_MAP: FeishuFieldMap = {
@@ -87,6 +96,14 @@ export const DEFAULT_FIELD_MAP: FeishuFieldMap = {
   taskStatus: 'Status',
   taskDueDate: 'Due Date',
   taskCreatedAt: 'Created At',
+  assetId: 'Asset ID',
+  assetProjectId: 'Project ID',
+  assetTaskId: 'Task ID',
+  assetType: 'Asset Type',
+  assetSource: 'Source',
+  assetUri: 'Asset URI',
+  assetMimeType: 'MIME Type',
+  assetCreatedAt: 'Created At',
 };
 
 /* ------------------------------------------------------------- coercion utils */
@@ -294,6 +311,42 @@ export function fromFeishuTaskRecord(rec: FeishuRecord, fm: FeishuFieldMap): Tas
     title: asString(f[fm.taskTitle]),
     status: (status || 'TODO') as TaskStatus,
     due_date: asStringOrNull(f[fm.taskDueDate]),
+    created_at: createdAt,
+    updated_at: createdAt,
+  };
+}
+
+/* ------------------------------------------------------------- Asset mapping */
+
+export function toFeishuAssetFields(asset: Asset, fm: FeishuFieldMap): Record<string, unknown> {
+  const fields: Record<string, unknown> = {
+    [fm.assetId]: asset.asset_id,
+    [fm.assetProjectId]: asset.project_id,
+    [fm.assetTaskId]: asset.task_id,
+    [fm.assetType]: asset.asset_type,
+    [fm.assetSource]: asset.source,
+    [fm.assetUri]: asset.asset_uri,
+    [fm.assetMimeType]: asset.mime_type ?? '',
+  };
+  // `Created At` is a DateTime field: write epoch ms (Feishu rejects ISO).
+  const createdAtMs = toFeishuDateTime(asset.created_at);
+  if (createdAtMs !== undefined) fields[fm.assetCreatedAt] = createdAtMs;
+  return fields;
+}
+
+export function fromFeishuAssetRecord(rec: FeishuRecord, fm: FeishuFieldMap): Asset {
+  const f = rec.fields;
+  const type = asString(f[fm.assetType]) as AssetType;
+  const source = asString(f[fm.assetSource]) as AssetSource;
+  const createdAt = feishuDateTimeToIso(f[fm.assetCreatedAt]);
+  return {
+    asset_id: asString(f[fm.assetId]),
+    project_id: asString(f[fm.assetProjectId]),
+    task_id: asString(f[fm.assetTaskId]),
+    asset_type: (type || 'IMAGE') as AssetType,
+    source: (source || 'LUMEN') as AssetSource,
+    asset_uri: asString(f[fm.assetUri]),
+    mime_type: asStringOrNull(f[fm.assetMimeType]),
     created_at: createdAt,
     updated_at: createdAt,
   };

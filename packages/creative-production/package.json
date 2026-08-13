@@ -1,8 +1,8 @@
 {
-  "name": "@busos/project-lifecycle",
+  "name": "@busos/creative-production",
   "version": "1.0.0",
   "private": true,
-  "description": "AI Business OS BUSOS-P4-01 — Project Lifecycle vertical slice: convertLeadToProject (Lead -> Customer -> Project -> Task) with readback verification and minimal compensation. No Feishu knowledge (D017/D018).",
+  "description": "AI Business OS BUSOS-P5-01 — Creative Production vertical slice: executeCreativeProduction (Project -> Creative Task -> Lumen -> Asset) with readback verification and minimal compensation. No Feishu/Lumen secrets (D018).",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -17,7 +17,7 @@
   "dependencies": {
     "@busos/contracts": "file:../contracts",
     "@busos/business-repository": "file:../business-repository",
-    "zod": "3.23.8"
+    "@busos/lumen-adapter": "file:../lumen-adapter"
   },
   "devDependencies": {
     "@types/node": "22.10.2",

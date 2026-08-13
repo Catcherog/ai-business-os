@@ -4,16 +4,18 @@ import {
   CustomerSchema,
   ProjectSchema,
   TaskSchema,
+  AssetSchema,
   type Lead,
   type Customer,
   type Project,
   type Task,
+  type Asset,
   type LeadStatus,
   type ProjectStatus,
   type TaskStatus,
   type CommitResultV1,
 } from '@busos/contracts';
-import type { FeishuAdapter, LeadCreateInput, CustomerCreateInput, ProjectCreateInput, TaskCreateInput, CustomerIdentityQuery } from './types.js';
+import type { FeishuAdapter, LeadCreateInput, CustomerCreateInput, ProjectCreateInput, TaskCreateInput, AssetCreateInput, CustomerIdentityQuery } from './types.js';
 import { generateDomainId, nowIso } from './util.js';
 
 /**
@@ -162,6 +164,41 @@ export class BusinessRepository {
     return this.adapter.getTask(taskId);
   }
 
+  /* --------------------------------------------- P5: Task status update */
+
+  async updateTaskStatus(
+    taskId: string,
+    status: TaskStatus,
+  ): Promise<{ task: Task; commit: CommitResultV1 }> {
+    const outcome = await this.adapter.updateTaskStatus(taskId, status);
+    return { task: outcome.domain, commit: outcome.commit };
+  }
+
+  /* ------------------------------------------------------------ Asset */
+
+  async createAsset(input: AssetCreateInput): Promise<{ asset: Asset; commit: CommitResultV1 }> {
+    const now = nowIso(this.now());
+    const asset: Asset = {
+      asset_id: this.newId('asset'),
+      project_id: input.project_id,
+      task_id: input.task_id,
+      asset_type: input.asset_type,
+      source: input.source,
+      asset_uri: input.asset_uri,
+      mime_type: input.mime_type ?? null,
+      created_at: now,
+      updated_at: now,
+    };
+    // Fail closed: an invalid canonical (e.g. empty asset_uri) never reaches Feishu.
+    assertWith(AssetSchema, asset, 'Asset');
+    const outcome = await this.adapter.createAsset(asset);
+    return { asset: outcome.domain, commit: outcome.commit };
+  }
+
+  async getAsset(assetId: string): Promise<Asset | null> {
+    return this.adapter.getAsset(assetId);
+  }
+
   /* ------------------------------------------- test-hygiene / compensation */
 
   async deleteProject(recordId: string): Promise<boolean> {
@@ -170,5 +207,9 @@ export class BusinessRepository {
 
   async deleteTask(recordId: string): Promise<boolean> {
     return this.adapter.deleteTask(recordId);
+  }
+
+  async deleteAsset(recordId: string): Promise<boolean> {
+    return this.adapter.deleteAsset(recordId);
   }
 }

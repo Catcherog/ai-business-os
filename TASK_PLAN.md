@@ -1,21 +1,21 @@
-# TASK_PLAN — BUSOS-P2-GP-001 (CLOSED) · BUSOS-P3-01 (CLOSED) · BUSOS-P4-01 (CLOSED — LIVE P4 LIFECYCLE E2E PASS)
+# TASK_PLAN — BUSOS-P2-GP-001 (CLOSED) · BUSOS-P3-01 (CLOSED) · BUSOS-P4-01 (CLOSED — LIVE P4 LIFECYCLE E2E PASS) · BUSOS-P5-01 (IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED)
 
 ## task_id
-BUSOS-P4-01 — Project Lifecycle Vertical Slice
+BUSOS-P5-01 — Creative Production Vertical Slice
 
 ## phase
-P4 — Project Lifecycle Slice
+P5 — Creative Production Slice
 
 ## status
-COMPLETE (P4) — LIVE P4 LIFECYCLE E2E PASS (PL-A..PL-H all PASS 2026-08-13 via BUSOS-P4-01-LIVE-CLOSURE). P2 (GP-001) COMPLETE — LIVE FEISHU E2E PASS (BL-013/BL-014 CLOSED; BL-015 OPEN/NON-BLOCKING). P3 (BUSOS-P3-01) COMPLETE — HR-H live Feishu review E2E PASS 2026-08-12. NEXT: none — STOP per task §15.
+COMPLETE (P5) — IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED. P5-A..P5-H all PASS via fake + real-adapter(stubbed) gates; P5-I REAL end-to-end BLOCKED (no Vercel Lumen URL+`AUTH_PASSWORD`, no `FEISHU_*`+`FEISHU_ASSET_TABLE_ID`). P4 (BUSOS-P4-01) COMPLETE — LIVE P4 LIFECYCLE E2E PASS. P3/P2 COMPLETE. NEXT: none — STOP per task §15/§49.
 
 - Golden Path orchestration built on the frozen P1 building blocks (Service Agent candidate → Governance → BusinessRepository → FeishuAdapter → readback) is complete and verified by 11 passing integration tests (1 live E2E skipped).
 - (P2 live Feishu E2E later PASSED — see `live_feishu` below — closing BL-013/BL-014. P3 live HR-H review E2E also PASSED 2026-08-12 — see `09-P3-01-COMPLETION.md`.)
 
 ## baseline
-- starting SHA: afb9c2f1e1e2385119a0261ca7cf81d72e126154 (P1-03 closing)
+- starting SHA: 842d91e8b90e99919d577be4d4490937989223d4 (frozen; working tree clean at start)
 - branch: main
-- P1-03 outcome (unchanged): CLOSED / PASS at skeleton level; live Feishu E2E BLOCKED.
+- P5 outcome: IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED.
 
 ## scope_enforced
 ONLY BUSOS-P2-GP-001. Built one thin application orchestration layer (`packages/golden-path`) that wires the existing P1 components into a deterministic chain. Did NOT:
@@ -193,4 +193,12 @@ P2 (BUSOS-P2-GP-001), P3 (BUSOS-P3-01), and P4 (BUSOS-P4-01) are all CLOSED:
 - P2 live Feishu E2E PASS (BL-013/BL-014 CLOSED; BL-015 OPEN/NON-BLOCKING).
 - P3 HR-H live Feishu review E2E PASS (2026-08-12) — full Human Review → BusinessRepository → RealFeishuAdapter → real write → real readback → VERIFIED → COMMITTED; EDIT+APPROVE readback 4500; cleanup by exact record_id.
 - P4 LIVE P4 LIFECYCLE E2E PASS (2026-08-13) — full lifecycle `Lead(QUALIFIED) → Customer → Project(DRAFT) → Task(TODO) → Lead CONVERTED → LIFECYCLE_SUCCESS` verified on the REAL Base (real write + readback VERIFIED for Project/Task/Lead, LIFECYCLE_SUCCESS) and cleaned by exact record_id; PL-A..PL-H all PASS.
-NEXT: none — STOP per task §15. Do NOT start P5 until explicitly requested.
+NEXT: none — STOP per task §15/§49. P5 (BUSOS-P5-01) is now CLOSED (IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED). Do NOT start P6 until explicitly requested.
+
+## P5-01 — Creative Production Slice (current task)
+- New packages: `@busos/lumen-adapter` (Lumen `LumenPort` + Real/Fake adapters; holds only Lumen `AUTH_PASSWORD` + base URL — never the provider key, §19), `@busos/creative-production` (`executeCreativeProduction` orchestration; depends only on canonical `CreativeProductionRepository` + `LumenPort`; no Feishu/Lumen secrets).
+- Additive contract delta: canonical `Asset` (`asset_type=IMAGE`, `source=LUMEN`), `COMMIT_DOMAIN_OBJECTS += 'asset'`; BusinessRepository/FeishuAdapter increment with `updateTaskStatus` + Asset ops.
+- Bounded path: Project → Creative Task (TODO) → Lumen.generate → Asset (IMAGE/LUMEN) → Task DONE, with readback verification (D019) + exact-record-id compensation.
+- Gates: P5-A1/P5-A2 MAPPED (real source read + real-adapter-via-stub); P5-B PASS; P5-C/D/E/F/G/H PASS; P5-I REAL E2E BLOCKED (secrets absent).
+- Tests (per package `npm run verify`): contracts 85 · business-repository 36+1skip · project-lifecycle 20+1skip · lumen-adapter 7 · creative-production 19+1skip.
+- Completion evidence: `11-P5-01-COMPLETION.md` — status `IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED`.

@@ -311,3 +311,128 @@ Do not substitute Fake/Simulator PASS for Live PASS.
 P4-01 is not COMPLETE (live) until PL-H passes; it is reported
 `IMPLEMENTATION PASS / LIVE P4 LIFECYCLE E2E BLOCKED` and the task STOPS at
 commit + push + clean tree (no automatic P5).
+
+---
+
+## P5-01 Gate — Creative Production Slice
+
+PASS only if all gates below pass. Status as of 2026-08-13: **IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED**.
+
+### P5-A1 — Lumen real-dependency capability probe
+
+MAPPED + validated via stubbed transport. The real Lumen HTTP boundary was read
+from `github.com/Catcherog/lumen-ink` (`D:\360Downloads\Trae 项目\picture-edit`):
+`POST /api/auth` → `POST /api/projects` → `POST /api/projects/:id/jobs`
+(`Idempotency-Key` + `prompt` + `inputVersionId`) → `GET /api/jobs/:id` poll →
+`GET /api/projects/:id` (`signedUrls`) → `DELETE /api/projects/:id`.
+`RealLumenAdapter` is validated against a faithful stub (happy + release-on-failure).
+**REAL invocation BLOCKED** (no Vercel `LUMEN_BASE_URL` + `LUMEN_AUTH_PASSWORD`).
+
+### P5-A2 — Feishu Asset storage probe
+
+Validated via `FakeFeishuAdapter` (in-memory Asset store, `corruptReadbackAsset` /
+`failTaskStatusUpdate` injectors) + `RealFeishuAdapter`-via-stub (same simulator as
+P4). Asset write → readback `VERIFIED` (`verifyAssetCriticalFields`) → delete by
+exact `record_id` all proven. **REAL invocation BLOCKED** (no `FEISHU_*`
++ `FEISHU_ASSET_TABLE_ID`).
+
+### P5-B — Additive Asset contract
+
+PASS if:
+- canonical `Asset` schema exists (`asset_id`, `project_id`, `task_id`,
+  `asset_type` ∈ {`IMAGE`}, `source` ∈ {`LUMEN`}, `asset_uri`, `mime_type` nullable,
+  `created_at`, `updated_at`) and validates;
+- `COMMIT_DOMAIN_OBJECTS` includes `asset`;
+- no breaking change to existing contract types.
+
+### P5-C — Fake happy path
+
+Given a Project (DRAFT/IN_PROGRESS) + prompt + single source image base64:
+
+Expected:
+- `executeCreativeProduction` returns `CREATIVE_SUCCESS`;
+- Creative Task created (`task_type = CREATIVE_GENERATION`, `status = TODO`) then
+  advanced to `DONE`;
+- Asset created (`asset_type = IMAGE`, `source = LUMEN`, `asset_uri` from Lumen);
+- all commits `readback_status = VERIFIED`;
+- `businessRepository` write counts: task = 1, asset = 1, taskStatusUpdate = 1;
+- `compensation` all false.
+
+### P5-D — Eligibility fails closed, ZERO writes
+
+Expected:
+- missing Project → `BLOCKED`, `reason = PROJECT_NOT_FOUND`, 0 writes;
+- `CANCELLED` Project → `BLOCKED`, `reason = PROJECT_CANCELLED`, 0 writes;
+- `DELIVERED` Project → `BLOCKED`, `reason = PROJECT_DELIVERED`, 0 writes;
+- empty prompt → `BLOCKED`, `reason = PROMPT_EMPTY`, 0 writes;
+- empty source image → `BLOCKED`, `reason = SOURCE_IMAGE_EMPTY`, 0 writes;
+- `lumen.generate` is never called in any BLOCKED case.
+
+### P5-E — Failure & exact-record-id compensation
+
+Expected (each compensation path deletes by exact record id, no saga/retry):
+- E1 Lumen FAILED → Task deleted, Asset never written, `LUMEN_GENERATION_FAILED`;
+- E2 Task create/readback failed → Task deleted, `TASK_WRITE_FAILED`;
+- E3 Asset create/readback failed → Asset + Task deleted, `ASSET_WRITE_FAILED`;
+- E4 Task DONE update failed → Asset + Task deleted, `TASK_DONE_UPDATE_FAILED`;
+- the created records are physically gone after compensation (verified by
+  `getTask`/`getAsset` returning null).
+
+### P5-F — Real Lumen adapter through orchestration (stubbed transport)
+
+PASS if the REAL `RealLumenAdapter` driven through `executeCreativeProduction`
+against a faithful Lumen stub yields `CREATIVE_SUCCESS` with `asset_uri` exactly
+equal to the Lumen `signedUrls` entry, and on a Lumen job failure propagates
+`LUMEN_GENERATION_FAILED` + invokes `release()` (cascade cleanup).
+
+### P5-G — Architecture boundary
+
+PASS if `packages/creative-production/src/**` has no direct dependency on:
+- Feishu table IDs / field mappings / credentials / raw Feishu records /
+  `RealFeishuAdapter` / `open-apis` / `FEISHU_`;
+- Lumen HTTP paths (`/api/auth`), `signedUrls`, Lumen secrets (`AUTH_PASSWORD`,
+  `JWT_SECRET`, `PROVIDER_ENCRYPTION_KEY`), `RealLumenAdapter`, `fetchImpl`.
+(Only the `LumenPort` interface and `BusinessRepository` are allowed.)
+
+### P5-H — Regression
+
+Existing suites for:
+- contracts
+- business-repository
+- project-lifecycle
+- lumen-adapter
+- creative-production
+
+must remain PASS. TypeScript compile/typecheck must remain clean.
+
+**Status: PASS** — contracts 85 · business-repository 36+1skip · project-lifecycle
+20+1skip · lumen-adapter 7 · creative-production 19+1skip (all tsc clean).
+
+### P5-I — Live Creative vertical slice
+
+Run the full path through:
+
+```text
+Existing Project
+→ BusinessRepository.createTask (CREATIVE_GENERATION / TODO)
+→ Lumen.generate (prompt + single source image)
+→ BusinessRepository.createAsset (IMAGE / LUMEN)
+→ BusinessRepository.updateTaskStatus (DONE)
+→ RealFeishuAdapter + Real Lumen (Vercel)
+→ real write + real readback
+→ VERIFIED
+```
+
+Requirements:
+- do not print credentials (Lumen `AUTH_PASSWORD` only; never the provider key);
+- record sanitized evidence only;
+- clean generated test records by exact `record_id`;
+- cleanup must not affect existing business records;
+- gated on `LUMEN_BASE_URL` + `LUMEN_AUTH_PASSWORD` (Vercel Lumen) and `FEISHU_*`
+  + `FEISHU_ASSET_TABLE_ID`.
+
+**Status: BLOCKED** (secrets absent in this environment). Per the STOP rule the
+task is reported `IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED` and STOPS at
+commit + push + clean tree — **no automatic P6**. Do not substitute
+Fake/Simulator PASS for Live PASS; the `live-e2e.test.ts` sketch remains gated and
+skipped until secrets are supplied.

@@ -3,6 +3,9 @@ import type {
   Customer,
   Project,
   Task,
+  Asset,
+  AssetType,
+  AssetSource,
   CommitResultV1,
   LeadStatus,
   CustomerStatus,
@@ -61,8 +64,20 @@ export interface FeishuAdapter {
   createTask(task: Task): Promise<FeishuWriteOutcome<Task>>;
   getTask(taskId: string): Promise<Task | null>;
   /**
-   * Test-hygiene / P4 compensation only: delete a single record by its exact
-   * Feishu `record_id`. Used by the live E2E and by partial-failure
+   * Update a Task's `status` and readback-verify the new status (D019).
+   * Used by P5 creative production: `TODO -> DONE`. Feishu readback
+   * knowledge stays inside the adapter.
+   */
+  updateTaskStatus(taskId: string, status: TaskStatus): Promise<FeishuWriteOutcome<Task>>;
+  /**
+   * Create an Asset record (P5 additive) and readback-verify (D008/D019).
+   * `asset_type` is fixed to `IMAGE` and `source` to `LUMEN` in V1.
+   */
+  createAsset(asset: Asset): Promise<FeishuWriteOutcome<Asset>>;
+  getAsset(assetId: string): Promise<Asset | null>;
+  /**
+   * Test-hygiene / P4-P5 compensation only: delete a single record by its
+   * exact Feishu `record_id`. Used by the live E2E and by partial-failure
    * compensation to clean up generated records without touching existing
    * business data. Feishu-specific knowledge stays in the adapter.
    */
@@ -70,6 +85,7 @@ export interface FeishuAdapter {
   deleteCustomer(recordId: string): Promise<boolean>;
   deleteProject(recordId: string): Promise<boolean>;
   deleteTask(recordId: string): Promise<boolean>;
+  deleteAsset(recordId: string): Promise<boolean>;
 }
 
 /* ----------------------------------------------------------------- input DTOs */
@@ -107,4 +123,15 @@ export interface TaskCreateInput {
   title: string;
   status?: TaskStatus;
   due_date?: string | null;
+}
+
+/** P5 (BUSOS-P5-01) Asset write DTO. Frozen V1: only IMAGE from LUMEN. */
+export interface AssetCreateInput {
+  project_id: string;
+  task_id: string;
+  asset_type: AssetType;
+  source: AssetSource;
+  asset_uri: string;
+  /** `null` when the producing source does not advertise a MIME type. */
+  mime_type?: string | null;
 }
