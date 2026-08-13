@@ -71,6 +71,32 @@ interface FeishuApiResponse {
 
 const DEFAULT_BASE_URL = 'https://open.feishu.cn';
 
+/**
+ * The live `/records/search` endpoint wraps text (and other) field values as
+ * `[{ text, type }]` arrays, unlike the `GET`/list endpoints which return plain
+ * values. Unwrap them so the canonical mapping (which expects plain values)
+ * works regardless of which lookup path produced the record. (BUSOS-P4-01
+ * live-closure fix: list `?filter=` returns InvalidFilter on the live Base, so
+ * lookups go through /search.)
+ */
+function unwrapFeishuValue(v: unknown): unknown {
+  if (Array.isArray(v) && v.length > 0) {
+    const first = v[0] as Record<string, unknown> | null;
+    if (first && typeof first === 'object' && 'text' in first) return first.text;
+    return first;
+  }
+  if (v && typeof v === 'object' && 'text' in (v as Record<string, unknown>)) {
+    return (v as Record<string, unknown>).text;
+  }
+  return v;
+}
+
+function unwrapFeishuFields(fields: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(fields)) out[k] = unwrapFeishuValue(v);
+  return out;
+}
+
 export class RealFeishuAdapter implements FeishuAdapter {
   private readonly appId: string;
   private readonly appSecret: string;
@@ -180,11 +206,17 @@ export class RealFeishuAdapter implements FeishuAdapter {
       conjunction: 'and',
       conditions: [{ field_name: fieldName, operator: 'is', value: [value] }],
     };
-    const path = `/open-apis/bitable/v1/apps/${this.baseAppToken}/tables/${tableId}/records?page_size=10&filter=${encodeURIComponent(JSON.stringify(filter))}`;
-    const resp = await this.feishuCall('GET', path);
+    // Use the /records/search endpoint: the list endpoint's `?filter=` query
+    // param returns InvalidFilter (1254018) on the live Base, while /search
+    // accepts the same filter body and works. (BUSOS-P4-01 live-closure fix.)
+    const path = `/open-apis/bitable/v1/apps/${this.baseAppToken}/tables/${tableId}/records/search`;
+    const resp = await this.feishuCall('POST', path, { filter });
     if (resp.code !== 0) return [];
     const data = resp.data as { items?: FeishuRecord[] } | undefined;
-    return data?.items ?? [];
+    return (data?.items ?? []).map((rec) => ({
+      record_id: rec.record_id,
+      fields: unwrapFeishuFields(rec.fields ?? {}),
+    }));
   }
 
   private async findCustomerByExactIdentity(identity: CustomerIdentityQuery): Promise<FeishuRecord | null> {
@@ -197,11 +229,14 @@ export class RealFeishuAdapter implements FeishuAdapter {
     }
     if (conditions.length === 0) return null;
     const filter = { conjunction: 'or', conditions };
-    const path = `/open-apis/bitable/v1/apps/${this.baseAppToken}/tables/${this.customerTableId}/records?page_size=10&filter=${encodeURIComponent(JSON.stringify(filter))}`;
-    const resp = await this.feishuCall('GET', path);
+    // /records/search (see findRecordsByField): the list `?filter=` query fails
+    // with InvalidFilter on the live Base. (BUSOS-P4-01 live-closure fix.)
+    const path = `/open-apis/bitable/v1/apps/${this.baseAppToken}/tables/${this.customerTableId}/records/search`;
+    const resp = await this.feishuCall('POST', path, { filter });
     if (resp.code !== 0) return null;
     const data = resp.data as { items?: FeishuRecord[] } | undefined;
-    return data?.items && data.items.length > 0 ? data.items[0] : null;
+    const rec = data?.items && data.items.length > 0 ? data.items[0] : null;
+    return rec ? { record_id: rec.record_id, fields: unwrapFeishuFields(rec.fields ?? {}) } : null;
   }
 
   private recordIdByCanonicalId(tableId: string, idField: string, canonicalId: string): Promise<string | null> {
@@ -369,9 +404,9 @@ export class RealFeishuAdapter implements FeishuAdapter {
     if (!customerRecordId) throw new Error(`linkLeadCustomer: customer not found in Feishu: ${customerId}`);
 
     const ok = await this.updateRecord(this.leadTableId, leadRecordId, {
-      // canonical customer id (text) + Feishu link field
+      // canonical customer id (text) + customer-association text field
       [this.fm.leadCustomerId]: customerId,
-      [this.fm.leadCustomerLink]: [{ record_ids: [customerRecordId] }],
+      [this.fm.leadCustomerLink]: customerId,
     });
     if (!ok) throw new Error(`linkLeadCustomer: failed to update lead link: ${leadId}`);
 

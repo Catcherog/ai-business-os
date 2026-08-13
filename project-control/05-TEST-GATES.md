@@ -278,6 +278,8 @@ must remain PASS. TypeScript compile/typecheck must remain clean.
 
 ### PL-H — Live Feishu vertical slice
 
+**Status: PASS (2026-08-13).** Executed via BUSOS-P4-01-LIVE-CLOSURE with user-supplied `FEISHU_*` + `FEISHU_PROJECT_TABLE_ID`/`FEISHU_TASK_TABLE_ID`; the real chain wrote + read-back VERIFIED and cleaned all generated records by exact `record_id`. See `10-P4-01-COMPLETION.md` §4/§10.
+
 Run the full lifecycle through:
 
 ```text

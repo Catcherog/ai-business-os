@@ -2,11 +2,11 @@
 
 PROJECT: AI Business OS
 VERSION: V1
-PHASE: P4 — Project Lifecycle Slice [IMPLEMENTATION PASS / LIVE E2E BLOCKED]
-STATUS: P4 IMPLEMENTATION PASS (live Feishu E2E BLOCKED — env absent)
-CURRENT TASK: BUSOS-P4-01 — Project Lifecycle Vertical Slice  [COMPLETE — IMPLEMENTATION PASS / LIVE P4 LIFECYCLE E2E BLOCKED]
+PHASE: P4 — Project Lifecycle Slice [COMPLETE / LIVE E2E PASS]
+STATUS: P4 COMPLETE (live Feishu E2E PASS 2026-08-13)
+CURRENT TASK: BUSOS-P4-01 — Project Lifecycle Vertical Slice  [COMPLETE — LIVE P4 LIFECYCLE E2E PASS]
 BASELINE: bcfa102
-CURRENT BLOCKERS: PL-H live Feishu E2E BLOCKED (FEISHU_* + FEISHU_PROJECT_TABLE_ID/FEISHU_TASK_TABLE_ID absent)
+CURRENT BLOCKERS: none (PL-H live Feishu E2E PASS 2026-08-13; BL-015 OPEN/NON-BLOCKING)
 
 PRIMARY OBJECTIVE:
 Productize the minimum human-review vertical slice required by R1:
@@ -24,7 +24,7 @@ EXECUTION ORDER:
 - P1 COMPLETE. [done — contracts + candidate builder + business repository/adapter]
 - P2 COMPLETE. [done — GP-001 vertical slice, live Feishu E2E PASS]
 - BUSOS-P3-01. [COMPLETE — live HR-H Feishu E2E PASS 2026-08-12]
-- BUSOS-P4-01. [COMPLETE — IMPLEMENTATION PASS; PL-A..PL-G PASS; PL-H live Feishu E2E BLOCKED (env absent). NEXT: none — STOP per task §15.]
+- BUSOS-P4-01. [COMPLETE — LIVE P4 LIFECYCLE E2E PASS 2026-08-13; PL-A..PL-H all PASS. NEXT: none — STOP per task §15.]
 
 P1-01 EVIDENCE:
 - Package: packages/contracts (TypeScript + zod runtime validation).
@@ -77,15 +77,15 @@ P4-01 EVIDENCE:
 - Package: packages/project-lifecycle (TypeScript; name @busos/project-lifecycle).
 - Full lifecycle implemented and verified through Fake + RealFeishuAdapter-via-simulator: Lead(QUALIFIED) → verify Customer → createProject(DRAFT) → createTask(TODO, default PROJECT_SETUP) → readback VERIFIED (Project+Task+Lead CONVERTED) → LIFECYCLE_SUCCESS. Eligibility cases (Anonymous/Dangling/Already-Converted/Lost) fail closed with 0 writes. Partial-failure compensation deletes by exact record id; Lead never reported CONVERTED on failure. PL-F static scan PASS (6 assertions: no forbidden Feishu tokens in src/).
 - Tests: 20 passed / 1 skipped (vitest) + tsc --noEmit clean. Regression PL-G green across all 5 affected packages (contracts 85 / br 36+1skip / gp 11+1skip / hr 42+2skip / pl 20+1skip).
-- PL-H live Feishu E2E: BLOCKED (FEISHU_* + FEISHU_PROJECT_TABLE_ID/FEISHU_TASK_TABLE_ID absent in sandbox). Reported honestly as `RealFeishuAdapter via in-memory Feishu simulator: PASS`, NOT "Real Feishu E2E: PASS".
-- Completion evidence: 10-P4-01-COMPLETION.md — status `IMPLEMENTATION PASS / LIVE P4 LIFECYCLE E2E BLOCKED` (PL-A..PL-G PASS; PL-H live E2E BLOCKED pending env).
+- PL-H live Feishu E2E: PASS (2026-08-13) — executed via BUSOS-P4-01-LIVE-CLOSURE with user-supplied `FEISHU_*` + `FEISHU_PROJECT_TABLE_ID`/`FEISHU_TASK_TABLE_ID`; full real chain VERIFIED + exact-record-id cleanup. Reported honestly as `Real Feishu E2E: PASS` (distinct from the in-memory-simulator PASS).
+- Completion evidence: 10-P4-01-COMPLETION.md — status `COMPLETE / LIVE P4 LIFECYCLE E2E PASS` (PL-A..PL-H all PASS).
 
 CURRENT BLOCKERS:
 - **BL-013 CLOSED (2026-08-12)** — Live Feishu E2E executed with provided FEISHU_* credentials; real-adapter LIVE block passed.
 - **BL-014 CLOSED (2026-08-12)** — Dedicated Lead table provisioned in the real Base.
 - **BL-015 OPEN / NON-BLOCKING** — P1-02 extractor does not resolve bare "新中式" to a service_type. Unchanged; not a blocker for the live gate.
 - **HR-H LIVE E2E — PASS (2026-08-12)** — BUSOS-P3-01 live Feishu review slice executed with real FEISHU_* credentials; both live HR-H tests PASSED and records were cleaned by exact record_id. HR-H gate CLOSED. (See 09-P3-01-COMPLETION.md §7/§8.)
-- **PL-H LIVE P4 LIFECYCLE E2E — BLOCKED (2026-08-13)** — `FEISHU_*` + `FEISHU_PROJECT_TABLE_ID`/`FEISHU_TASK_TABLE_ID` absent in this sandbox. Implementation complete and gated; will run when the user provisions the Project/Task tables + credentials. BUSOS-P4-01 reported as `IMPLEMENTATION PASS / LIVE P4 LIFECYCLE E2E BLOCKED`. (See 10-P4-01-COMPLETION.md §4/§7.)
+- **PL-H LIVE P4 LIFECYCLE E2E — PASS (2026-08-13)** — executed via BUSOS-P4-01-LIVE-CLOSURE with user-supplied `FEISHU_*` + `FEISHU_PROJECT_TABLE_ID`/`FEISHU_TASK_TABLE_ID`; full real chain (Customer → Lead QUALIFIED → link → Project DRAFT → Task TODO → Lead CONVERTED) wrote + read-back VERIFIED, `LIFECYCLE_SUCCESS`, and cleaned all four generated records by exact `record_id`. PL-H gate CLOSED; BUSOS-P4-01 is `COMPLETE / LIVE P4 LIFECYCLE E2E PASS`. (See 10-P4-01-COMPLETION.md §4/§7/§10.)
 
 LATEST CONTROL DECISIONS:
 See `03-DECISIONS.md` (D001..D020 FROZEN).

@@ -54,9 +54,10 @@ describe('canonical <-> Feishu mapping (Lead)', () => {
   it('maps a linked customer to a Feishu link field', () => {
     const linked: Lead = { ...lead, customer_id: 'customer_aaaabbbbccccdddd' };
     const fields = toFeishuLeadFields(linked, DEFAULT_FIELD_MAP);
-    expect(fields[DEFAULT_FIELD_MAP.leadCustomerLink]).toEqual([
-      { record_ids: ['customer_aaaabbbbccccdddd'] },
-    ]);
+    // The live Base models `客户关联` as a text field, so the canonical customer
+    // id is written as a plain string (a link object is rejected with
+    // TextFieldConvFail). (BUSOS-P4-01 live-closure fix.)
+    expect(fields[DEFAULT_FIELD_MAP.leadCustomerLink]).toBe('customer_aaaabbbbccccdddd');
   });
 });
 

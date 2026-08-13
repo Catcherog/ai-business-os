@@ -11,4 +11,8 @@ env.txt
 .env.local
 .env.*.local
 !.env.example
+# temp diagnostic probes / trash (may contain secrets — never track)
+_trash_hr_nm/
+.p4_live.env
+.p4_*.mjs
 

@@ -83,11 +83,12 @@ describe('RealFeishuAdapter via in-memory Feishu simulator (Project/Task)', () =
 
 /**
  * PL-H — LIVE Feishu vertical slice (requires FEISHU_* + FEISHU_PROJECT_TABLE_ID
- * + FEISHU_TASK_TABLE_ID env). Only runs when those are present. In this
- * sandbox they are NOT set, so this block is SKIPPED and the live gate remains
- * BLOCKED (IMPLEMENTATION PASS / LIVE P4 LIFECYCLE E2E BLOCKED). When the user
- * provides credentials and the Project/Task tables are provisioned, this test
- * exercises the real Base end-to-end and cleans up by exact record id.
+ * + FEISHU_TASK_TABLE_ID env). Runs only when those are present. The real
+ * Base's Project/Task tables must satisfy DEFAULT_FIELD_MAP (missing fields are
+ * additively provisioned, never renamed/deleted). Exercises the real Base
+ * end-to-end (Lead -> Customer -> Project(DRAFT) -> Task(TODO) -> Lead
+ * CONVERTED) with real readback VERIFIED, then cleans up every record this run
+ * created by its exact record id.
  */
 const liveAdapter = createFeishuAdapterFromEnv();
 const describeLive = liveAdapter ? describe : describe.skip;
@@ -138,12 +139,26 @@ describeLive('LIVE Feishu Base E2E (requires FEISHU_* + Project/Task tables)', (
     expect(r.taskCommit!.readback_status).toBe('VERIFIED');
     expect(r.leadCommit!.readback_status).toBe('VERIFIED');
 
-    // 4) Cleanup by exact record id — only this run's generated records.
-    // P4 repository increment only added deleteProject/deleteTask (compensation
-    // / test hygiene); deleteLead/deleteCustomer are intentionally out of scope,
-    // so the test-dedicated Lead/Customer created above are left for the user to
-    // remove from the dedicated test Base.
+    // 4) Cleanup by exact record id — ONLY this run's generated records (Section D).
+    // Project/Task via the BusinessRepository compensation API; the test-dedicated
+    // Lead/Customer via the adapter's existing deleteLead/deleteCustomer (exact
+    // record id, no new domain API added). No delete-all / truncate / fuzzy delete.
     if (r.taskCommit) await repo.deleteTask(r.taskCommit.external_record_id!);
     if (r.projectCommit) await repo.deleteProject(r.projectCommit.external_record_id!);
-  });
+    const delLead = await liveAdapter!.deleteLead(leadRecordId!);
+    const delCust = await liveAdapter!.deleteCustomer(custRecordId!);
+    console.log(
+      '[LIVE-CLEANUP]',
+      JSON.stringify({
+        project: r.projectCommit?.external_record_id ?? null,
+        task: r.taskCommit?.external_record_id ?? null,
+        lead: leadRecordId,
+        customer: custRecordId,
+        delLead,
+        delCust,
+      }),
+    );
+    expect(delLead).toBe(true);
+    expect(delCust).toBe(true);
+  }, 60000);
 });

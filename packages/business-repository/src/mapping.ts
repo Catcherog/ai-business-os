@@ -108,8 +108,37 @@ function asNumberOrNull(v: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/**
+ * Feishu DateTime fields are written as epoch-millisecond numbers and read back
+ * as the same number. Canonical `created_at` is an ISO string, so we convert on
+ * the way out and back on the way in. (BUSOS-P4-01 live-closure fix: the live
+ * Projects/Tasks `Created At` field is DateTime type=5; writing an ISO string
+ * fails with DatetimeFieldConvFail.)
+ */
+function toFeishuDateTime(v: unknown): number | undefined {
+  if (v == null || v === '') return undefined;
+  if (typeof v === 'number') return v;
+  const t = new Date(String(v)).getTime();
+  return Number.isFinite(t) ? t : undefined;
+}
+
+function feishuDateTimeToIso(v: unknown): string {
+  if (typeof v === 'number') {
+    const d = new Date(v);
+    return Number.isFinite(d.getTime()) ? d.toISOString() : new Date().toISOString();
+  }
+  const s = asString(v).trim();
+  if (!s) return new Date().toISOString();
+  const parsed = new Date(s);
+  return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : s;
+}
+
 /** Feishu link field -> first linked canonical record id (or null). */
 function asLinkIdOrNull(v: unknown): string | null {
+  if (typeof v === 'string') {
+    const s = v.trim();
+    return s.length > 0 ? s : null;
+  }
   if (Array.isArray(v) && v.length > 0) {
     const first = v[0] as { record_ids?: unknown };
     if (first && Array.isArray(first.record_ids) && first.record_ids.length > 0) {
@@ -119,8 +148,13 @@ function asLinkIdOrNull(v: unknown): string | null {
   return null;
 }
 
-function linkValue(id: string | null): { record_ids: string[] }[] {
-  return id ? [{ record_ids: [id] }] : [];
+function linkValue(id: string | null): string {
+  // Stored as the canonical id string. The live Base models the customer
+  // association as a text field; writing a link object fails with
+  // TextFieldConvFail ("the value of 'Multiline' must be a string"). Storing the
+  // canonical id as text keeps both the real text field and the in-memory
+  // simulator consistent.
+  return id ?? '';
 }
 
 /* -------------------------------------------------------------- Lead mapping */
@@ -206,8 +240,10 @@ export function toFeishuProjectFields(project: Project, fm: FeishuFieldMap): Rec
     [fm.projectType]: project.project_type,
     [fm.projectTitle]: project.title,
     [fm.projectStatus]: project.status,
-    [fm.projectCreatedAt]: project.created_at,
   };
+  // `Created At` is a DateTime field: write epoch ms (Feishu rejects ISO).
+  const createdAtMs = toFeishuDateTime(project.created_at);
+  if (createdAtMs !== undefined) fields[fm.projectCreatedAt] = createdAtMs;
   // scheduled_date is a nullable string; omit when null so it round-trips as null.
   if (project.scheduled_date != null) fields[fm.projectScheduledDate] = project.scheduled_date;
   return fields;
@@ -216,7 +252,7 @@ export function toFeishuProjectFields(project: Project, fm: FeishuFieldMap): Rec
 export function fromFeishuProjectRecord(rec: FeishuRecord, fm: FeishuFieldMap): Project {
   const f = rec.fields;
   const status = asString(f[fm.projectStatus]) as ProjectStatus;
-  const createdAt = asString(f[fm.projectCreatedAt]) || new Date().toISOString();
+  const createdAt = feishuDateTimeToIso(f[fm.projectCreatedAt]);
   return {
     project_id: asString(f[fm.projectId]),
     customer_id: asString(f[fm.projectCustomerId]),
@@ -239,8 +275,10 @@ export function toFeishuTaskFields(task: Task, fm: FeishuFieldMap): Record<strin
     [fm.taskType]: task.task_type,
     [fm.taskTitle]: task.title,
     [fm.taskStatus]: task.status,
-    [fm.taskCreatedAt]: task.created_at,
   };
+  // `Created At` is a DateTime field: write epoch ms (Feishu rejects ISO).
+  const createdAtMs = toFeishuDateTime(task.created_at);
+  if (createdAtMs !== undefined) fields[fm.taskCreatedAt] = createdAtMs;
   if (task.due_date != null) fields[fm.taskDueDate] = task.due_date;
   return fields;
 }
@@ -248,7 +286,7 @@ export function toFeishuTaskFields(task: Task, fm: FeishuFieldMap): Record<strin
 export function fromFeishuTaskRecord(rec: FeishuRecord, fm: FeishuFieldMap): Task {
   const f = rec.fields;
   const status = asString(f[fm.taskStatus]) as TaskStatus;
-  const createdAt = asString(f[fm.taskCreatedAt]) || new Date().toISOString();
+  const createdAt = feishuDateTimeToIso(f[fm.taskCreatedAt]);
   return {
     task_id: asString(f[fm.taskId]),
     project_id: asString(f[fm.taskProjectId]),

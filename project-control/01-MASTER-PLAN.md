@@ -50,7 +50,7 @@ Minimal review UI or review surface for:
 No complex workflow engine.
 
 ## P4 — Project Lifecycle Slice
-Status: NEXT
+Status: COMPLETE
 
 Goal:
 `Lead -> Customer -> Project -> Task`

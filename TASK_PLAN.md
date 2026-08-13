@@ -1,4 +1,4 @@
-# TASK_PLAN — BUSOS-P2-GP-001 (CLOSED) · BUSOS-P3-01 (CLOSED) · BUSOS-P4-01 (CLOSED — IMPL PASS / LIVE E2E BLOCKED)
+# TASK_PLAN — BUSOS-P2-GP-001 (CLOSED) · BUSOS-P3-01 (CLOSED) · BUSOS-P4-01 (CLOSED — LIVE P4 LIFECYCLE E2E PASS)
 
 ## task_id
 BUSOS-P4-01 — Project Lifecycle Vertical Slice
@@ -7,7 +7,7 @@ BUSOS-P4-01 — Project Lifecycle Vertical Slice
 P4 — Project Lifecycle Slice
 
 ## status
-COMPLETE (P4) — IMPLEMENTATION PASS; PL-A..PL-G PASS; PL-H live Feishu E2E BLOCKED (FEISHU_* + FEISHU_PROJECT_TABLE_ID/FEISHU_TASK_TABLE_ID absent in sandbox). P2 (GP-001) COMPLETE — LIVE FEISHU E2E PASS (BL-013/BL-014 CLOSED; BL-015 OPEN/NON-BLOCKING). P3 (BUSOS-P3-01) COMPLETE — HR-H live Feishu review E2E PASS 2026-08-12. NEXT: none — STOP per task §15.
+COMPLETE (P4) — LIVE P4 LIFECYCLE E2E PASS (PL-A..PL-H all PASS 2026-08-13 via BUSOS-P4-01-LIVE-CLOSURE). P2 (GP-001) COMPLETE — LIVE FEISHU E2E PASS (BL-013/BL-014 CLOSED; BL-015 OPEN/NON-BLOCKING). P3 (BUSOS-P3-01) COMPLETE — HR-H live Feishu review E2E PASS 2026-08-12. NEXT: none — STOP per task §15.
 
 - Golden Path orchestration built on the frozen P1 building blocks (Service Agent candidate → Governance → BusinessRepository → FeishuAdapter → readback) is complete and verified by 11 passing integration tests (1 live E2E skipped).
 - (P2 live Feishu E2E later PASSED — see `live_feishu` below — closing BL-013/BL-014. P3 live HR-H review E2E also PASSED 2026-08-12 — see `09-P3-01-COMPLETION.md`.)
@@ -125,9 +125,9 @@ command (in `packages/project-lifecycle`): `npm run verify`  # tsc --noEmit && v
 - vitest: **20 passed | 1 skipped** (21 total)
   - lifecycle.test.ts (13: PL-B/C/D/E + BL-006 unit) · architecture-boundary.test.ts
     (6: PL-F) · real-adapter.test.ts (2 · 1 skipped = PL-H LIVE E2E)
-- PL-H LIVE block SKIPPED — `createFeishuAdapterFromEnv()` returns null (no FEISHU_* +
-  FEISHU_PROJECT_TABLE_ID/FEISHU_TASK_TABLE_ID). Reported as `RealFeishuAdapter via
-  in-memory Feishu simulator: PASS` (NOT "Real Feishu E2E: PASS").
+- PL-H LIVE block is gated on `createFeishuAdapterFromEnv()`; SKIPPED without env
+  (reported as `RealFeishuAdapter via in-memory Feishu simulator: PASS`, NOT
+  "Real Feishu E2E: PASS"). With env sourced (2026-08-13) it PASSED — see `live_feishu:` below.
 
 fake_adapter:
 PASS — `FakeFeishuAdapter` proves the full lifecycle + all eligibility/compensation
@@ -141,10 +141,21 @@ for Project and Task. Reported honestly as: **RealFeishuAdapter via in-memory Fe
 simulator: PASS** (NOT "Real Feishu E2E: PASS").
 
 live_feishu:
-BLOCKED — not executed. `FEISHU_*` + `FEISHU_PROJECT_TABLE_ID`/`FEISHU_TASK_TABLE_ID`
-absent in sandbox. The LIVE block is written, gated, and will run when the user
-supplies the Project/Task tables + credentials (App Secret rotation NOT required —
-"key 就保持不变即可"). Implementation is complete.
+PASS — executed 2026-08-13 via BUSOS-P4-01-LIVE-CLOSURE with user-supplied
+`FEISHU_*` + `FEISHU_PROJECT_TABLE_ID`/`FEISHU_TASK_TABLE_ID` (App Secret
+unchanged per user note — "key 就保持不变即可"). Command (in
+`packages/project-lifecycle`, env sourced):
+`node node_modules/vitest/vitest.mjs run tests/real-adapter.test.ts --testTimeout=60000`.
+Result: `Tests 2 passed (2)` — the PL-H LIVE block ran the full chain
+Customer → Lead(QUALIFIED) → Project(DRAFT) real write → readback VERIFIED →
+Task(TODO) real write → readback VERIFIED → Lead CONVERTED real write → readback
+VERIFIED → `LIFECYCLE_SUCCESS`. Proof chain: real tenant_access_token → real
+POST /records → real GET /records readback → semantic equality of critical fields
+verified → `readback_status=VERIFIED` → `COMMITTED`. Cleanup: the four generated
+records (Project/Task/Lead/Customer) deleted by exact `record_id` (`delLead=true`,
+`delCust=true`, Project+Task deleted); no business data affected. No `FEISHU_*`
+secret printed or committed (`_trash_hr_nm/` holds the local `.p4_live.env` and is
+git-ignored). PL-H gate CLOSED.
 
 regression_plg:
 | Package | tsc | Tests |
@@ -181,7 +192,5 @@ change).
 P2 (BUSOS-P2-GP-001), P3 (BUSOS-P3-01), and P4 (BUSOS-P4-01) are all CLOSED:
 - P2 live Feishu E2E PASS (BL-013/BL-014 CLOSED; BL-015 OPEN/NON-BLOCKING).
 - P3 HR-H live Feishu review E2E PASS (2026-08-12) — full Human Review → BusinessRepository → RealFeishuAdapter → real write → real readback → VERIFIED → COMMITTED; EDIT+APPROVE readback 4500; cleanup by exact record_id.
-- P4 IMPLEMENTATION PASS — full lifecycle `Lead(QUALIFIED) → Customer → Project(DRAFT) → Task(TODO) → Lead CONVERTED → LIFECYCLE_SUCCESS` verified via Fake + RealFeishuAdapter-via-simulator; PL-A..PL-G PASS; PL-H live Feishu E2E BLOCKED (env absent).
-NEXT: none — STOP per task §15. Do NOT start P5 until explicitly requested. When the
-user provisions `FEISHU_*` + `FEISHU_PROJECT_TABLE_ID`/`FEISHU_TASK_TABLE_ID` and runs
-the PL-H LIVE block, P4-01 flips to fully CLOSED (live E2E PASS).
+- P4 LIVE P4 LIFECYCLE E2E PASS (2026-08-13) — full lifecycle `Lead(QUALIFIED) → Customer → Project(DRAFT) → Task(TODO) → Lead CONVERTED → LIFECYCLE_SUCCESS` verified on the REAL Base (real write + readback VERIFIED for Project/Task/Lead, LIFECYCLE_SUCCESS) and cleaned by exact record_id; PL-A..PL-H all PASS.
+NEXT: none — STOP per task §15. Do NOT start P5 until explicitly requested.

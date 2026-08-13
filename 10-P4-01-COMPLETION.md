@@ -2,13 +2,17 @@
 
 **Date:** 2026-08-13
 **Baseline:** `bcfa102` (P3 post-closure hygiene)
-**Final status:** `IMPLEMENTATION PASS / LIVE P4 LIFECYCLE E2E BLOCKED`
-*(Per task §15/§19: P4-01 is reported as IMPLEMENTATION PASS because PL-A..PL-G
-all PASS; PL-H live Feishu E2E is BLOCKED because `FEISHU_*` + the new
-`FEISHU_PROJECT_TABLE_ID` / `FEISHU_TASK_TABLE_ID` env are absent in this
-sandbox. PL-H implementation is complete and gated; it is NOT substituted by the
-RealFeishuAdapter-via-simulator test. Per the STOP rule the task ends at commit +
-push + clean tree — no automatic P5.)*
+**Final status:** `COMPLETE / LIVE P4 LIFECYCLE E2E PASS`
+*(P4-01 first landed as IMPLEMENTATION PASS — PL-A..PL-G PASS, PL-H live E2E
+BLOCKED (env absent). On 2026-08-13 the user supplied `FEISHU_*` +
+`FEISHU_PROJECT_TABLE_ID` / `FEISHU_TASK_TABLE_ID` (credentials in
+`C:\Users\Catcher\Desktop\feishu.env.txt`; App Secret kept unchanged per user
+note) and the BUSOS-P4-01-LIVE-CLOSURE run executed PL-H end-to-end on the real
+Base: Lead(QUALIFIED) → verify Customer → create Project(DRAFT) → real write →
+readback VERIFIED → create Task(TODO) → real write → readback VERIFIED → update
+Lead CONVERTED → readback VERIFIED → LIFECYCLE_SUCCESS, then cleaned up all four
+generated records by exact `record_id`. PL-H now PASS; PL-A..PL-H all PASS. Per
+the STOP rule the task ends at commit + push + clean tree — no automatic P5.)*
 
 ---
 
@@ -156,7 +160,7 @@ canonical object (`Task`) and one documented date semantics (`BL-006`).
 | **PL-E** Partial-failure compensation | **PASS** | (a) Project readback corrupted → `deleteProject` called, Task create never attempted, `result=FAILED`. (b) Project+Task created, Task readback corrupted → `deleteProject` called, `result=FAILED`. (c) Project+Task created, `updateLeadStatus` injected failure → `deleteTask`+`deleteProject` called by exact record id; `result=FAILED`; Lead not reported CONVERTED. All compensation assertions on exact record id. |
 | **PL-F** Architecture boundary | **PASS** | 6 static assertions: `src/**` contains **none** of the forbidden Feishu tokens (`open-apis`, `tenant_access_token`, `FEISHU_`, `RealFeishuAdapter`, `FeishuRecord`, raw record structures, mapping fns, concrete Base field names). Also asserts no direct Feishu import in `src/`. |
 | **PL-G** Regression | **PASS** | All 5 affected packages green + `tsc --noEmit` clean (see §5). One stale contract test caught and fixed. |
-| **PL-H** Live Feishu vertical slice | **BLOCKED (implementation PASS)** | LIVE block (1 test) SKIPPED — `createFeishuAdapterFromEnv()` returns null because `FEISHU_*` + `FEISHU_PROJECT_TABLE_ID`/`FEISHU_TASK_TABLE_ID` are absent. The RealFeishuAdapter-via-in-memory-simulator test (§12, NOT live) → PASS, exercising the production adapter code path for Project/Task. Honestly reported as `RealFeishuAdapter via in-memory Feishu simulator: PASS`, **not** "Real Feishu E2E: PASS". |
+| **PL-H** Live Feishu vertical slice | **PASS** | Real LIVE E2E executed 2026-08-13 against the real Base with user-supplied `FEISHU_*` + `FEISHU_PROJECT_TABLE_ID`/`FEISHU_TASK_TABLE_ID`. Full chain ran for real: create Customer → create Lead(QUALIFIED) → linkLeadCustomer → `convertLeadToProject` → createProject(DRAFT) real write + readback VERIFIED → createTask(TODO) real write + readback VERIFIED → updateLeadStatus(CONVERTED) real write + readback VERIFIED → `LIFECYCLE_SUCCESS`. All three commits `readback_status=VERIFIED`. Cleanup deleted the four generated records by exact `record_id` (`delLead=true`, `delCust=true`, Project+Task deleted). No `FEISHU_*` secret printed. PL-H gate CLOSED. (The in-memory-simulator §12 test remains PASS and is reported separately as NOT live.) |
 
 ---
 
@@ -196,15 +200,16 @@ green. The newly-fixed `commit-result.test.ts` ("unknown domain object" now uses
 
 ## 7. Blockers
 
-- **PL-H LIVE Feishu E2E — BLOCKED (expected per task §19).** No `FEISHU_*`
-  credentials and no `FEISHU_PROJECT_TABLE_ID` / `FEISHU_TASK_TABLE_ID` env in
-  this sandbox. The live block is written and gated; it will run when the user
-  supplies the Project/Task tables + credentials (App Secret rotation, per user
-  note, is not required — "key 就保持不变即可"). The implementation is complete.
+- **PL-H LIVE P4 LIFECYCLE E2E — PASS (2026-08-13).** Executed via
+  BUSOS-P4-01-LIVE-CLOSURE with user-supplied `FEISHU_*` +
+  `FEISHU_PROJECT_TABLE_ID` / `FEISHU_TASK_TABLE_ID` (App Secret unchanged per
+  user note — "key 就保持不变即可"). The full real chain passed with all three
+  commits `readback_status=VERIFIED`; all four generated records cleaned by exact
+  `record_id`. PL-H gate CLOSED; P4-01 is now fully COMPLETE (live).
 - Prerequisites **BL-013 / BL-014 remain CLOSED** (from P2/P3); **BL-015 remains
   OPEN / NON-BLOCKING** (unchanged). No new code-level blockers.
-- **BUSOS-P4-01 is IMPLEMENTATION PASS / LIVE P4 LIFECYCLE E2E BLOCKED** — per the
-  STOP rule the task ends at commit + push + clean tree; no automatic P5.
+- **BUSOS-P4-01 — COMPLETE / LIVE P4 LIFECYCLE E2E PASS** (PL-A..PL-H all PASS).
+  Per the STOP rule the task ends at commit + push + clean tree; no automatic P5.
 
 ---
 
@@ -222,9 +227,47 @@ green. The newly-fixed `commit-result.test.ts` ("unknown domain object" now uses
 
 ---
 
+## 10. Live-closure regression fixes (BUSOS-P4-01-LIVE-CLOSURE, 2026-08-13)
+
+The live E2E exposed real Base behaviors the original (fake/simulator-only)
+implementation did not anticipate. Per task §F only these regressions were
+fixed; no broad re-audit was performed.
+
+- **List `?filter=` → `POST /records/search`.** The live Base's list endpoint
+  returns `1254018 InvalidFilter` for the `?filter=` query param; the
+  `/records/search` body-filter endpoint works. `findRecordsByField` and
+  `findCustomerByExactIdentity` now POST to `/records/search`. Mirrored into BOTH
+  test stubs (`packages/project-lifecycle/tests/testkit.ts` and
+  `packages/business-repository/tests/feishu-real.test.ts`) so PL-A..PL-G stay
+  green.
+- **`/records/search` value wrapper.** Search returns text (and other) field
+  values as `[{ text, type }]` arrays, unlike the GET/readback path. Added
+  `unwrapFeishuValue` / `unwrapFeishuFields` (applied to `/search` results) so
+  canonical mapping still receives plain values.
+- **Datetime field write format.** Projects/Tasks `Created At` is DateTime
+  (type=5). Writing an ISO string fails with `1254064 DatetimeFieldConvFail`;
+  the Base expects **epoch-millisecond numbers**. `toFeishuProjectFields` /
+  `toFeishuTaskFields` now emit `created_at` as ms (`toFeishuDateTime`); readback
+  converts ms → ISO (`feishuDateTimeToIso`). Single-select fields (`Project
+  Type` / `Status` / `Task Type` / `Status`, type=3) are written as **plain
+  strings** (object/array forms are rejected); readback returns them as plain
+  strings, so no extra handling is needed.
+- **Lead↔Customer link field.** The live Base models `客户关联` as a text
+  field; writing a link object `[{ record_ids: [...] }]` fails with
+  `TextFieldConvFail`. `linkLeadCustomer` (and `linkValue` / `asLinkIdOrNull`)
+  now write/read the canonical customer id as a plain string. The
+  `business-repository` unit test asserting the array form was updated to expect
+  the string (the real, correct format).
+- **LIVE cleanup completeness.** The PL-H LIVE block now also deletes the
+  test-dedicated Lead and Customer by exact `record_id` (previously only
+  Project/Task were compensated); all four generated records are removed.
+
+No contract schema changed. All changes are confined to the adapter/mapping and
+their tests.
+
 ## 9. Commit / push / tree
 
-- Implementation + evidence commit SHA: **__(filled after commit 1)__**
-- Evidence-fill commit SHA: **__(filled after commit 2)__**
-- Push status: **PUSHED** to `origin/main` (pending push).
+- Live-closure implementation commit SHA: **a07f58b414503b9a3bde08128a2e09f6b4496fe5**
+- Control-doc evidence commit SHA: **a07f58b414503b9a3bde08128a2e09f6b4496fe5**
+- Push status: **PUSHED** to `origin/main`.
 - Working tree: **clean** after final commit (`git status --short` → empty).

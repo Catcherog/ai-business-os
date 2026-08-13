@@ -118,6 +118,16 @@ function makeFeishuStub() {
       store.set(rid, { ...body.fields });
       return json({ code: 0, msg: 'ok', data: { record: { record_id: rid, fields: body.fields } } });
     }
+    if (method === 'POST' && recordId === 'search') {
+      // Mirrors the live /records/search endpoint used by findRecordsByField
+      // and findCustomerByExactIdentity (list `?filter=` returns InvalidFilter
+      // on the live Base). Filter lives in the request body.
+      const parsed = body?.filter ?? null;
+      const items = [...store.entries()]
+        .filter(([, f]) => matchFilter(f, parsed))
+        .map(([rid, f]) => ({ record_id: rid, fields: f }));
+      return json({ code: 0, msg: 'ok', data: { items } });
+    }
     if (method === 'GET' && recordId) {
       const fields = store.get(recordId);
       if (!fields) return json({ code: 1, msg: 'not found' }, 404);
