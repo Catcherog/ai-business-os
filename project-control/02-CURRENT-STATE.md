@@ -17,7 +17,7 @@ BusinessRepository -> FeishuAdapter -> write -> readback -> VERIFIED.
 This task productizes Human Review only. It does NOT build a general workflow engine.
 
 CURRENT P4 TASK:
-- BUSOS-P4-01 — Project Lifecycle Vertical Slice  [COMPLETE — IMPLEMENTATION PASS / LIVE P4 LIFECYCLE E2E BLOCKED]
+- BUSOS-P4-01 — Project Lifecycle Vertical Slice  [COMPLETE — LIVE P4 LIFECYCLE E2E PASS]
 
 EXECUTION ORDER:
 - P0 VERIFIED. [done]

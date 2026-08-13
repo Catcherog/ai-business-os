@@ -184,8 +184,8 @@ change).
 ## git_info
 - branch: main
 - baseline HEAD: bcfa102 (P3 post-closure hygiene)
-- closing SHA: (filled after commit 1 + evidence-fill commit 2)
-- pushed: pending (origin/main)
+- closing SHA: f14b21fd13a6ef48c49b4891aa57309ecc6a4035
+- pushed: YES / origin/main
 - remote main synced.
 
 ## nextActor
