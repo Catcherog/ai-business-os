@@ -7,6 +7,9 @@ import {
   type ReadbackStatus,
   type Lead,
   type Customer,
+  type Project,
+  type Task,
+  type LeadStatus,
 } from '@busos/contracts';
 import type { FeishuAdapter, FeishuRecord, FeishuWriteOutcome, CustomerIdentityQuery } from './types.js';
 import {
@@ -16,8 +19,12 @@ import {
   fromFeishuLeadRecord,
   toFeishuCustomerFields,
   fromFeishuCustomerRecord,
+  toFeishuProjectFields,
+  fromFeishuProjectRecord,
+  toFeishuTaskFields,
+  fromFeishuTaskRecord,
 } from './mapping.js';
-import { verifyLeadCriticalFields, verifyCustomerCriticalFields } from './verify.js';
+import { verifyLeadCriticalFields, verifyCustomerCriticalFields, verifyProjectCriticalFields, verifyTaskCriticalFields } from './verify.js';
 
 /**
  * Real Feishu Base adapter (P1-03).
@@ -39,6 +46,12 @@ export interface FeishuAdapterConfig {
   baseAppToken: string;
   leadTableId: string;
   customerTableId: string;
+  /** P4 (BUSOS-P4-01) Project table id. Optional at construction so the P1-03
+   *  surface keeps working; Project/Task methods throw if unset. Required for
+   *  the live P4 gate via `createFeishuAdapterFromEnv`. */
+  projectTableId?: string;
+  /** P4 (BUSOS-P4-01) Task table id. Optional at construction (see above). */
+  taskTableId?: string;
   fieldMap?: Partial<FeishuFieldMap>;
   baseUrl?: string;
   /** Injectable transport (defaults to global fetch). Used for tests. */
@@ -64,6 +77,8 @@ export class RealFeishuAdapter implements FeishuAdapter {
   private readonly baseAppToken: string;
   private readonly leadTableId: string;
   private readonly customerTableId: string;
+  private readonly projectTableId: string | undefined;
+  private readonly taskTableId: string | undefined;
   private readonly fm: FeishuFieldMap;
   private readonly baseUrl: string;
   private readonly fetchFn: typeof fetch;
@@ -80,6 +95,8 @@ export class RealFeishuAdapter implements FeishuAdapter {
     this.baseAppToken = config.baseAppToken;
     this.leadTableId = config.leadTableId;
     this.customerTableId = config.customerTableId;
+    this.projectTableId = config.projectTableId;
+    this.taskTableId = config.taskTableId;
     this.fm = { ...DEFAULT_FIELD_MAP, ...(config.fieldMap ?? {}) };
     this.baseUrl = (config.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, '');
     this.fetchFn = config.fetchImpl ?? globalThis.fetch;
@@ -196,7 +213,7 @@ export class RealFeishuAdapter implements FeishuAdapter {
   /* ------------------------------------------------------ write + readback core */
 
   private buildCommit(params: {
-    domainObject: 'lead' | 'customer';
+    domainObject: 'lead' | 'customer' | 'project' | 'task';
     domainId: string;
     externalRecordId: string | null;
     writeStatus: WriteStatus;
@@ -363,6 +380,185 @@ export class RealFeishuAdapter implements FeishuAdapter {
     return fromFeishuLeadRecord(rec, this.fm);
   }
 
+  /* ----------------------------------------------- P4: Lead status update */
+
+  async updateLeadStatus(leadId: string, status: LeadStatus): Promise<FeishuWriteOutcome<Lead>> {
+    const leadRecordId = await this.recordIdByCanonicalId(this.leadTableId, this.fm.leadId, leadId);
+    const errors: string[] = [];
+    let externalRecordId: string | null = null;
+    let writeStatus: WriteStatus = 'FAILED';
+    let readbackStatus: ReadbackStatus = 'NOT_RUN';
+    let read: Lead | null = null;
+
+    if (!leadRecordId) {
+      errors.push(`updateLeadStatus: lead not found in Feishu: ${leadId}`);
+    } else {
+      const ok = await this.updateRecord(this.leadTableId, leadRecordId, {
+        [this.fm.leadStatus]: status,
+        [this.fm.leadCreatedAt]: new Date().toISOString(),
+      });
+      if (!ok) {
+        errors.push('feishu update lead status failed');
+      } else {
+        externalRecordId = leadRecordId;
+        writeStatus = 'SUCCESS';
+        try {
+          const rec = await this.getRecord(this.leadTableId, leadRecordId);
+          if (rec) {
+            read = fromFeishuLeadRecord(rec, this.fm);
+            const okStatus = read.status === status;
+            readbackStatus = okStatus ? 'VERIFIED' : 'FAILED';
+            if (!okStatus) errors.push(`lead status readback mismatch: expected ${status}, got ${read.status}`);
+          } else {
+            readbackStatus = 'FAILED';
+            errors.push('lead status readback record not found');
+          }
+        } catch (e) {
+          readbackStatus = 'FAILED';
+          errors.push(`feishu readback failed: ${e instanceof Error ? e.message : String(e)}`);
+        }
+      }
+    }
+
+    const commit = this.buildCommit({
+      domainObject: 'lead',
+      domainId: leadId,
+      externalRecordId,
+      writeStatus,
+      readbackStatus,
+      errors,
+    });
+    // When the readback failed, surface a minimal lead so the caller can reason
+    // about the failure; the FAILED commit is the source of truth.
+    return { domain: read ?? ({ lead_id: leadId, status } as unknown as Lead), commit };
+  }
+
+  /* ---------------------------------------------- P4: Project / Task writes */
+
+  private requireProjectTable(): string {
+    if (!this.projectTableId) throw new Error('FeishuAdapter requires projectTableId for Project operations');
+    return this.projectTableId;
+  }
+
+  private requireTaskTable(): string {
+    if (!this.taskTableId) throw new Error('FeishuAdapter requires taskTableId for Task operations');
+    return this.taskTableId;
+  }
+
+  async createProject(project: Project): Promise<FeishuWriteOutcome<Project>> {
+    const tableId = this.requireProjectTable();
+    const fields = toFeishuProjectFields(project, this.fm);
+    const errors: string[] = [];
+    let externalRecordId: string | null = null;
+    let writeStatus: WriteStatus = 'FAILED';
+    let readbackStatus: ReadbackStatus = 'NOT_RUN';
+    let read: Project | null = null;
+
+    try {
+      const recordId = await this.createRecord(tableId, fields);
+      if (recordId) {
+        externalRecordId = recordId;
+        writeStatus = 'SUCCESS';
+      } else {
+        errors.push('feishu create project returned no record');
+      }
+    } catch (e) {
+      errors.push(`feishu write failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+
+    if (writeStatus === 'SUCCESS' && externalRecordId) {
+      try {
+        const rec = await this.getRecord(tableId, externalRecordId);
+        if (rec) {
+          read = fromFeishuProjectRecord(rec, this.fm);
+          const ok = verifyProjectCriticalFields(project, read);
+          readbackStatus = ok ? 'VERIFIED' : 'FAILED';
+          if (!ok) errors.push('project readback critical field mismatch');
+        } else {
+          readbackStatus = 'FAILED';
+          errors.push('project readback record not found');
+        }
+      } catch (e) {
+        readbackStatus = 'FAILED';
+        errors.push(`feishu readback failed: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+
+    const commit = this.buildCommit({
+      domainObject: 'project',
+      domainId: project.project_id,
+      externalRecordId,
+      writeStatus,
+      readbackStatus,
+      errors,
+    });
+    return { domain: read ?? project, commit };
+  }
+
+  async getProject(projectId: string): Promise<Project | null> {
+    const tableId = this.requireProjectTable();
+    const recs = await this.findRecordsByField(tableId, this.fm.projectId, projectId);
+    if (recs.length === 0) return null;
+    return fromFeishuProjectRecord(recs[0], this.fm);
+  }
+
+  async createTask(task: Task): Promise<FeishuWriteOutcome<Task>> {
+    const tableId = this.requireTaskTable();
+    const fields = toFeishuTaskFields(task, this.fm);
+    const errors: string[] = [];
+    let externalRecordId: string | null = null;
+    let writeStatus: WriteStatus = 'FAILED';
+    let readbackStatus: ReadbackStatus = 'NOT_RUN';
+    let read: Task | null = null;
+
+    try {
+      const recordId = await this.createRecord(tableId, fields);
+      if (recordId) {
+        externalRecordId = recordId;
+        writeStatus = 'SUCCESS';
+      } else {
+        errors.push('feishu create task returned no record');
+      }
+    } catch (e) {
+      errors.push(`feishu write failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+
+    if (writeStatus === 'SUCCESS' && externalRecordId) {
+      try {
+        const rec = await this.getRecord(tableId, externalRecordId);
+        if (rec) {
+          read = fromFeishuTaskRecord(rec, this.fm);
+          const ok = verifyTaskCriticalFields(task, read);
+          readbackStatus = ok ? 'VERIFIED' : 'FAILED';
+          if (!ok) errors.push('task readback critical field mismatch');
+        } else {
+          readbackStatus = 'FAILED';
+          errors.push('task readback record not found');
+        }
+      } catch (e) {
+        readbackStatus = 'FAILED';
+        errors.push(`feishu readback failed: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+
+    const commit = this.buildCommit({
+      domainObject: 'task',
+      domainId: task.task_id,
+      externalRecordId,
+      writeStatus,
+      readbackStatus,
+      errors,
+    });
+    return { domain: read ?? task, commit };
+  }
+
+  async getTask(taskId: string): Promise<Task | null> {
+    const tableId = this.requireTaskTable();
+    const recs = await this.findRecordsByField(tableId, this.fm.taskId, taskId);
+    if (recs.length === 0) return null;
+    return fromFeishuTaskRecord(recs[0], this.fm);
+  }
+
   /* --------------------------------------------------- test-hygiene deletion */
 
   private async deleteRecord(tableId: string, recordId: string): Promise<boolean> {
@@ -382,6 +578,16 @@ export class RealFeishuAdapter implements FeishuAdapter {
   async deleteCustomer(recordId: string): Promise<boolean> {
     return this.deleteRecord(this.customerTableId, recordId);
   }
+
+  async deleteProject(recordId: string): Promise<boolean> {
+    if (!this.projectTableId) return false;
+    return this.deleteRecord(this.projectTableId, recordId);
+  }
+
+  async deleteTask(recordId: string): Promise<boolean> {
+    if (!this.taskTableId) return false;
+    return this.deleteRecord(this.taskTableId, recordId);
+  }
 }
 
 export function createFeishuAdapter(config: FeishuAdapterConfig): FeishuAdapter {
@@ -399,8 +605,26 @@ export function createFeishuAdapterFromEnv(env: NodeJS.ProcessEnv = process.env)
   const baseAppToken = env.FEISHU_BASE_APP_TOKEN;
   const leadTableId = env.FEISHU_LEAD_TABLE_ID;
   const customerTableId = env.FEISHU_CUSTOMER_TABLE_ID;
-  if (!appId || !appSecret || !baseAppToken || !leadTableId || !customerTableId) {
+  const projectTableId = env.FEISHU_PROJECT_TABLE_ID;
+  const taskTableId = env.FEISHU_TASK_TABLE_ID;
+  if (
+    !appId ||
+    !appSecret ||
+    !baseAppToken ||
+    !leadTableId ||
+    !customerTableId ||
+    !projectTableId ||
+    !taskTableId
+  ) {
     return null;
   }
-  return new RealFeishuAdapter({ appId, appSecret, baseAppToken, leadTableId, customerTableId });
+  return new RealFeishuAdapter({
+    appId,
+    appSecret,
+    baseAppToken,
+    leadTableId,
+    customerTableId,
+    projectTableId,
+    taskTableId,
+  });
 }

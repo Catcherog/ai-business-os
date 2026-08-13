@@ -1,9 +1,13 @@
 import type {
   Lead,
   Customer,
+  Project,
+  Task,
   CommitResultV1,
   LeadStatus,
   CustomerStatus,
+  ProjectStatus,
+  TaskStatus,
 } from '@busos/contracts';
 
 /**
@@ -45,12 +49,27 @@ export interface FeishuAdapter {
   findCustomerByIdentity(identity: CustomerIdentityQuery): Promise<Customer | null>;
   linkLeadCustomer(leadId: string, customerId: string): Promise<Lead>;
   /**
-   * Test-hygiene only: delete a single record by its exact Feishu `record_id`.
-   * Used by the live E2E to clean up generated test records without touching
-   * existing business data. Feishu-specific knowledge stays in the adapter.
+   * Update a Lead's `status` and readback-verify the new status (D019).
+   * Used by P4 conversion: `QUALIFIED/NEW -> CONVERTED`. Feishu readback
+   * knowledge stays inside the adapter.
+   */
+  updateLeadStatus(leadId: string, status: LeadStatus): Promise<FeishuWriteOutcome<Lead>>;
+  /** Create a Project record and readback-verify (D011/D019). */
+  createProject(project: Project): Promise<FeishuWriteOutcome<Project>>;
+  getProject(projectId: string): Promise<Project | null>;
+  /** Create a Task record and readback-verify (P4 additive). */
+  createTask(task: Task): Promise<FeishuWriteOutcome<Task>>;
+  getTask(taskId: string): Promise<Task | null>;
+  /**
+   * Test-hygiene / P4 compensation only: delete a single record by its exact
+   * Feishu `record_id`. Used by the live E2E and by partial-failure
+   * compensation to clean up generated records without touching existing
+   * business data. Feishu-specific knowledge stays in the adapter.
    */
   deleteLead(recordId: string): Promise<boolean>;
   deleteCustomer(recordId: string): Promise<boolean>;
+  deleteProject(recordId: string): Promise<boolean>;
+  deleteTask(recordId: string): Promise<boolean>;
 }
 
 /* ----------------------------------------------------------------- input DTOs */
@@ -71,4 +90,21 @@ export interface CustomerCreateInput {
   phone?: string | null;
   wechat?: string | null;
   status?: CustomerStatus;
+}
+
+export interface ProjectCreateInput {
+  customer_id: string;
+  lead_id: string;
+  project_type: string;
+  title: string;
+  status?: ProjectStatus;
+  scheduled_date?: string | null;
+}
+
+export interface TaskCreateInput {
+  project_id: string;
+  task_type: string;
+  title: string;
+  status?: TaskStatus;
+  due_date?: string | null;
 }

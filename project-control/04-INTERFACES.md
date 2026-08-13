@@ -189,3 +189,83 @@ Only this module may know:
 - Base token
 - table IDs
 - field IDs / actual Feishu field names
+
+---
+
+## 7. Addendum — P4 Project Lifecycle (BUSOS-P4-01, ADDITIVE)
+
+This section is additive to the frozen R1 interfaces above. It does not modify
+any existing Lead / Customer / Project contract or decision. It only introduces
+the canonical `Task` object (D011: created only after conversion) and the
+minimal repository/adapter surface required for the `Lead → Customer → Project →
+Task` vertical slice.
+
+Frozen decisions respected: D008 (storage abstraction), D009 (Lead !=
+Customer), D010 (anonymous Lead allowed), D011 (Project/Task only after
+conversion), D014 (contract-based interaction), D017 (BusinessRepository is the
+persistence boundary), D018 (FeishuAdapter owns Feishu knowledge), D019 (write
+!= success until readback VERIFIED).
+
+### 7.1 Task (canonical, additive)
+
+```json
+{
+  "task_id": "task_xxx",
+  "project_id": "proj_xxx",
+  "task_type": "PROJECT_SETUP",
+  "title": "Project setup",
+  "status": "TODO | IN_PROGRESS | DONE | CANCELLLED",
+  "due_date": "string | null",
+  "created_at": "ISO-8601",
+  "updated_at": "ISO-8601"
+}
+```
+
+Explicitly OUT of scope for P4 (per task §2 "禁止加入"): assignee system,
+priority engine, dependencies, subtasks, comments, attachments, workflow DSL,
+event bus, RBAC, notifications, recurrence, generic task platform. `Task` exists
+only to serve the current P4 lifecycle slice.
+
+### 7.2 BL-006 — V1 `scheduled_date` semantics (now fixed)
+
+`Project.scheduled_date` remains a nullable string at the contract layer (no
+breaking change). The V1 *resolution* rule, applied by the project-lifecycle
+package at conversion time, is:
+
+- An **explicitly confirmed calendar date** is stored verbatim as `YYYY-MM-DD`.
+- A **relative-only expression** ("下个月" / "周末" / "最近") resolves to `null`.
+- The original Lead `preferred_date_text` (e.g. "下个月") is **preserved as-is**
+  and is **never** auto-hallucinated into a concrete date.
+- Any non-explicit string supplied as `scheduled_date` is rejected (BLOCKED),
+  never silently coerced.
+
+This is a documented semantic decision, not a redesign of the date system.
+
+### 7.3 BusinessRepository additional interface (P4)
+
+Existing V1 methods (`createLead`, `getLead`, `createCustomer`, `getCustomer`,
+`findCustomerByIdentity`, `linkLeadCustomer`) are unchanged. Added for P4:
+
+- `updateLeadStatus(leadId, status) -> { lead: Lead; commit: CommitResultV1 }`
+- `createProject(input) -> { project: Project; commit: CommitResultV1 }`
+- `getProject(projectId) -> Project | null`
+- `createTask(input) -> { task: Task; commit: CommitResultV1 }`
+- `getTask(taskId) -> Task | null`
+- `deleteProject(exactRecordId) -> boolean`  (test-hygiene / compensation only)
+- `deleteTask(exactRecordId) -> boolean`     (test-hygiene / compensation only)
+
+Upper layers (project-lifecycle) must not receive raw Feishu record structures;
+only the canonical domain objects + `CommitResultV1`.
+
+### 7.4 FeishuAdapter additional responsibilities (P4)
+
+- create / read / delete Project records in the Project table
+- create / read / delete Task records in the Task table
+- update a Lead's status (and readback-verify the new status)
+- map canonical Project/Task fields <-> Feishu-specific fields
+
+Only this module may know the Project/Task **table IDs**, field names, and the
+new env vars `FEISHU_PROJECT_TABLE_ID` / `FEISHU_TASK_TABLE_ID` (added
+alongside the existing `FEISHU_APP_ID` / `FEISHU_APP_SECRET` /
+`FEISHU_BASE_APP_TOKEN` / `FEISHU_LEAD_TABLE_ID` / `FEISHU_CUSTOMER_TABLE_ID`).
+No secret is ever written to the repository.

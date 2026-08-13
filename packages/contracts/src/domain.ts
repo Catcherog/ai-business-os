@@ -145,3 +145,37 @@ export const ProjectSchema = z
   .strict();
 
 export type Project = z.infer<typeof ProjectSchema>;
+
+/* --------------------------------------------------------------------- Task */
+
+export const TASK_STATUSES = [
+  'TODO',
+  'IN_PROGRESS',
+  'DONE',
+  'CANCELLED',
+] as const;
+export const TaskStatusSchema = z.enum(TASK_STATUSES);
+export type TaskStatus = z.infer<typeof TaskStatusSchema>;
+
+/**
+ * Task is ADDITIVE (P4, BUSOS-P4-01). It is created only after a Lead converts
+ * into a Project (D011) and serves the current P4 lifecycle slice ONLY.
+ *
+ * Deliberately out of scope for V1 (per task §2 "禁止加入"): assignee, priority,
+ * dependencies, subtasks, comments, attachments, workflow DSL, event bus, RBAC,
+ * notifications, recurrence, and any generic task platform.
+ */
+export const TaskSchema = z
+  .object({
+    task_id: IdSchema,
+    project_id: IdSchema,
+    task_type: z.string().min(1),
+    title: z.string().min(1),
+    status: TaskStatusSchema,
+    due_date: z.string().nullable(),
+    created_at: IsoDateTimeSchema,
+    updated_at: IsoDateTimeSchema,
+  })
+  .strict();
+
+export type Task = z.infer<typeof TaskSchema>;

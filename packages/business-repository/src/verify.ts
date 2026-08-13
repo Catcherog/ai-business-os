@@ -1,4 +1,4 @@
-import type { Lead, Customer } from '@busos/contracts';
+import type { Lead, Customer, Project, Task } from '@busos/contracts';
 
 /**
  * Readback verification (D019). A successful API write is NOT business success;
@@ -39,6 +39,41 @@ export function verifyLeadCriticalFields(written: Lead, read: Lead): boolean {
 
 export function verifyCustomerCriticalFields(written: Customer, read: Customer): boolean {
   for (const k of CUSTOMER_CRITICAL_FIELDS) {
+    if (written[k] !== read[k]) return false;
+  }
+  return true;
+}
+
+/* ----------------------------------------------------------- Project/Task */
+
+export const PROJECT_CRITICAL_FIELDS = [
+  'project_id',
+  'customer_id',
+  'lead_id',
+  'project_type',
+  'title',
+  'status',
+  'scheduled_date',
+] as const;
+
+export const TASK_CRITICAL_FIELDS = [
+  'task_id',
+  'project_id',
+  'task_type',
+  'title',
+  'status',
+  'due_date',
+] as const;
+
+export function verifyProjectCriticalFields(written: Project, read: Project): boolean {
+  for (const k of PROJECT_CRITICAL_FIELDS) {
+    if (written[k] !== read[k]) return false;
+  }
+  return true;
+}
+
+export function verifyTaskCriticalFields(written: Task, read: Task): boolean {
+  for (const k of TASK_CRITICAL_FIELDS) {
     if (written[k] !== read[k]) return false;
   }
   return true;

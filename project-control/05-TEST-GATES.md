@@ -200,3 +200,112 @@ mark:
 Do not substitute Fake/Simulator PASS for Live PASS.
 
 P3-01 is not COMPLETE until HR-H passes.
+
+---
+
+## P4-01 Gate — Project Lifecycle Slice
+
+PASS only if all gates below pass.
+
+### PL-A — Contract delta (additive)
+
+PASS if:
+- A canonical `Task` schema exists (`task_id`, `project_id`, `task_type`, `title`,
+  `status` ∈ {TODO, IN_PROGRESS, DONE, CANCELLED}, `due_date` nullable, `created_at`,
+  `updated_at`) and validates a canonical example;
+- `COMMIT_DOMAIN_OBJECTS` includes `project` and `task`;
+- no breaking change to existing contract types;
+- `BL-006` date semantics are documented (explicit `YYYY-MM-DD` → value;
+  relative-only → `null`; never hallucinated).
+
+### PL-B — Happy lifecycle
+
+Given a QUALIFIED lead with a resolved customer and an explicit `scheduled_date`:
+
+Expected:
+- `convertLeadToProject` returns `LIFECYCLE_SUCCESS`;
+- Project created with `status = DRAFT` (not IN_PROGRESS) and linked `customer_id`/`lead_id`;
+- a Task created with default `task_type = PROJECT_SETUP`, `title = "Project setup"`,
+  `status = TODO` when none supplied (no LLM);
+- all three commits (`project`/`task`/`lead`) have `readback_status = VERIFIED`;
+- `businessRepository` write counts: project = 1, task = 1, lead-status = 1.
+
+### PL-C — Anonymous lead
+
+Given a lead with `customer_id = null`:
+
+Expected:
+- `BLOCKED`, `reason = CUSTOMER_REQUIRED`;
+- zero Project/Task/Lead-status writes;
+- no Customer auto-created.
+
+### PL-D — Dangling / already-converted / LOST
+
+Expected:
+- Dangling customer (id present but not found) → fail closed, 0 writes;
+- already-`CONVERTED` lead → `BLOCKED`, 0 new writes, no dedup engine;
+- `LOST` lead → `BLOCKED`, 0 writes.
+
+### PL-E — Partial-failure compensation
+
+Expected:
+- Project created but Task write/readback fails → Project deleted by exact record id,
+  result `FAILED`, Task create never attempted;
+- Project + Task created but Lead `CONVERTED` update/readback fails → Task + Project
+  deleted by exact record id, result `FAILED`;
+- Lead is **not** reported `CONVERTED` in any failure case;
+- compensation uses exact record ids (no transaction/saga/retry).
+
+### PL-F — Architecture boundary
+
+PASS if `packages/project-lifecycle/src/**` has no direct dependency on:
+- Feishu table IDs;
+- Feishu field mappings;
+- credentials;
+- raw Feishu record structures;
+- direct Feishu API calls / `RealFeishuAdapter` / `open-apis` / `FEISHU_`.
+
+### PL-G — Regression
+
+Existing suites for:
+- contracts
+- business-repository
+- golden-path
+- human-review
+- project-lifecycle
+
+must remain PASS. TypeScript compile/typecheck must remain clean.
+
+### PL-H — Live Feishu vertical slice
+
+Run the full lifecycle through:
+
+```text
+Existing Lead (QUALIFIED)
+→ verify Customer
+→ BusinessRepository.createProject (DRAFT)
+→ BusinessRepository.createTask (TODO)
+→ BusinessRepository.updateLeadStatus (CONVERTED)
+→ RealFeishuAdapter
+→ real Feishu write
+→ real Feishu readback
+→ VERIFIED
+```
+
+Requirements:
+- do not print credentials;
+- record sanitized evidence only;
+- clean generated test records by exact `record_id`;
+- cleanup must not affect existing business records;
+- gated on `FEISHU_*` + `FEISHU_PROJECT_TABLE_ID` / `FEISHU_TASK_TABLE_ID`.
+
+If live credentials / Project+Task tables unexpectedly become unavailable:
+mark:
+
+`IMPLEMENTATION PASS / LIVE P4 LIFECYCLE E2E BLOCKED`
+
+Do not substitute Fake/Simulator PASS for Live PASS.
+
+P4-01 is not COMPLETE (live) until PL-H passes; it is reported
+`IMPLEMENTATION PASS / LIVE P4 LIFECYCLE E2E BLOCKED` and the task STOPS at
+commit + push + clean tree (no automatic P5).

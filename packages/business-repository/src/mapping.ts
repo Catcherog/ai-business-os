@@ -1,4 +1,4 @@
-import type { Lead, Customer, LeadStatus, CustomerStatus } from '@busos/contracts';
+import type { Lead, Customer, Project, Task, LeadStatus, CustomerStatus, ProjectStatus, TaskStatus } from '@busos/contracts';
 import type { FeishuRecord } from './types.js';
 
 /**
@@ -35,6 +35,23 @@ export interface FeishuFieldMap {
   leadPreferredDate: string;
   leadStatus: string;
   leadCreatedAt: string;
+  /* Project (P4 additive) */
+  projectId: string;
+  projectCustomerId: string;
+  projectLeadId: string;
+  projectType: string;
+  projectTitle: string;
+  projectStatus: string;
+  projectScheduledDate: string;
+  projectCreatedAt: string;
+  /* Task (P4 additive) */
+  taskId: string;
+  taskProjectId: string;
+  taskType: string;
+  taskTitle: string;
+  taskStatus: string;
+  taskDueDate: string;
+  taskCreatedAt: string;
 }
 
 export const DEFAULT_FIELD_MAP: FeishuFieldMap = {
@@ -55,6 +72,21 @@ export const DEFAULT_FIELD_MAP: FeishuFieldMap = {
   leadPreferredDate: '期望日期',
   leadStatus: '状态',
   leadCreatedAt: '创建时间',
+  projectId: 'Project ID',
+  projectCustomerId: 'Customer ID',
+  projectLeadId: 'Lead ID',
+  projectType: 'Project Type',
+  projectTitle: 'Title',
+  projectStatus: 'Status',
+  projectScheduledDate: 'Scheduled Date',
+  projectCreatedAt: 'Created At',
+  taskId: 'Task ID',
+  taskProjectId: 'Project ID',
+  taskType: 'Task Type',
+  taskTitle: 'Title',
+  taskStatus: 'Status',
+  taskDueDate: 'Due Date',
+  taskCreatedAt: 'Created At',
 };
 
 /* ------------------------------------------------------------- coercion utils */
@@ -159,6 +191,71 @@ export function fromFeishuCustomerRecord(rec: FeishuRecord, fm: FeishuFieldMap):
     phone: asStringOrNull(f[fm.customerPhone]),
     wechat: asStringOrNull(f[fm.customerWechat]),
     status: (status || 'ACTIVE') as CustomerStatus,
+    created_at: createdAt,
+    updated_at: createdAt,
+  };
+}
+
+/* ----------------------------------------------------------- Project mapping */
+
+export function toFeishuProjectFields(project: Project, fm: FeishuFieldMap): Record<string, unknown> {
+  const fields: Record<string, unknown> = {
+    [fm.projectId]: project.project_id,
+    [fm.projectCustomerId]: project.customer_id,
+    [fm.projectLeadId]: project.lead_id,
+    [fm.projectType]: project.project_type,
+    [fm.projectTitle]: project.title,
+    [fm.projectStatus]: project.status,
+    [fm.projectCreatedAt]: project.created_at,
+  };
+  // scheduled_date is a nullable string; omit when null so it round-trips as null.
+  if (project.scheduled_date != null) fields[fm.projectScheduledDate] = project.scheduled_date;
+  return fields;
+}
+
+export function fromFeishuProjectRecord(rec: FeishuRecord, fm: FeishuFieldMap): Project {
+  const f = rec.fields;
+  const status = asString(f[fm.projectStatus]) as ProjectStatus;
+  const createdAt = asString(f[fm.projectCreatedAt]) || new Date().toISOString();
+  return {
+    project_id: asString(f[fm.projectId]),
+    customer_id: asString(f[fm.projectCustomerId]),
+    lead_id: asString(f[fm.projectLeadId]),
+    project_type: asString(f[fm.projectType]),
+    title: asString(f[fm.projectTitle]),
+    status: (status || 'DRAFT') as ProjectStatus,
+    scheduled_date: asStringOrNull(f[fm.projectScheduledDate]),
+    created_at: createdAt,
+    updated_at: createdAt,
+  };
+}
+
+/* ------------------------------------------------------------- Task mapping */
+
+export function toFeishuTaskFields(task: Task, fm: FeishuFieldMap): Record<string, unknown> {
+  const fields: Record<string, unknown> = {
+    [fm.taskId]: task.task_id,
+    [fm.taskProjectId]: task.project_id,
+    [fm.taskType]: task.task_type,
+    [fm.taskTitle]: task.title,
+    [fm.taskStatus]: task.status,
+    [fm.taskCreatedAt]: task.created_at,
+  };
+  if (task.due_date != null) fields[fm.taskDueDate] = task.due_date;
+  return fields;
+}
+
+export function fromFeishuTaskRecord(rec: FeishuRecord, fm: FeishuFieldMap): Task {
+  const f = rec.fields;
+  const status = asString(f[fm.taskStatus]) as TaskStatus;
+  const createdAt = asString(f[fm.taskCreatedAt]) || new Date().toISOString();
+  return {
+    task_id: asString(f[fm.taskId]),
+    project_id: asString(f[fm.taskProjectId]),
+    task_type: asString(f[fm.taskType]),
+    title: asString(f[fm.taskTitle]),
+    status: (status || 'TODO') as TaskStatus,
+    due_date: asStringOrNull(f[fm.taskDueDate]),
     created_at: createdAt,
     updated_at: createdAt,
   };

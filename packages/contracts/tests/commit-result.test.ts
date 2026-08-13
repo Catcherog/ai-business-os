@@ -63,7 +63,9 @@ describe('CommitResultV1 — clearly invalid samples', () => {
 
   it('rejects an unknown domain object', () => {
     const result = clone(canonicalCommitResult) as Record<string, unknown>;
-    result.domain_object = 'project';
+    // 'project' and 'task' were added as valid domain objects in P4 (additive
+    // contract delta). Use a genuinely unknown value to exercise rejection.
+    result.domain_object = 'widget';
     expect(validateCommitResultV1(result).ok).toBe(false);
   });
 

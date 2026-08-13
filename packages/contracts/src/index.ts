@@ -97,6 +97,9 @@ export {
   SESSION_STATUSES,
   SessionSchema,
   SessionStatusSchema,
+  TASK_STATUSES,
+  TaskSchema,
+  TaskStatusSchema,
   type AgentRun,
   type AgentRunStatus,
   type Customer,
@@ -107,4 +110,6 @@ export {
   type ProjectStatus,
   type Session,
   type SessionStatus,
+  type Task,
+  type TaskStatus,
 } from './domain.js';

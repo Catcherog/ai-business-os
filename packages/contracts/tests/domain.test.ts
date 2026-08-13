@@ -10,6 +10,8 @@ import {
   ProjectSchema,
   SESSION_STATUSES,
   SessionSchema,
+  TASK_STATUSES,
+  TaskSchema,
 } from '../src/index.js';
 import {
   canonicalAgentRun,
@@ -17,6 +19,7 @@ import {
   canonicalLead,
   canonicalProject,
   canonicalSession,
+  canonicalTask,
   clone,
 } from './fixtures.js';
 
@@ -55,6 +58,36 @@ describe('Domain objects exist and validate canonical samples', () => {
       'DELIVERED',
       'CANCELLED',
     ]);
+  });
+
+  it('Task (additive, P4 BUSOS-P4-01)', () => {
+    expect(TaskSchema.safeParse(canonicalTask).success).toBe(true);
+    expect(TASK_STATUSES).toEqual(['TODO', 'IN_PROGRESS', 'DONE', 'CANCELLED']);
+  });
+});
+
+describe('P4 additive contract — no breaking change to existing objects (PL-A)', () => {
+  it('Project.scheduled_date stays an unconstrained nullable string (BL-006 unresolved -> no redesign)', () => {
+    // null remains valid
+    const p1 = clone(canonicalProject) as Record<string, unknown>;
+    p1.scheduled_date = null;
+    expect(ProjectSchema.safeParse(p1).success).toBe(true);
+    // an arbitrary (even relative) string is still accepted at the contract layer;
+    // the V1 *resolution* rule (explicit YYYY-MM-DD vs null) lives in the
+    // project-lifecycle package, not in the frozen contract schema.
+    const p2 = clone(canonicalProject) as Record<string, unknown>;
+    p2.scheduled_date = '下个月';
+    expect(ProjectSchema.safeParse(p2).success).toBe(true);
+  });
+
+  it('Task keeps the exact P4 canonical shape', () => {
+    const t = clone(canonicalTask);
+    expect(TaskSchema.safeParse(t).success).toBe(true);
+    // minimal required fields only — no assignee/priority/dependencies etc.
+    const requiredKeys = Object.keys(TaskSchema.parse(canonicalTask)).sort();
+    expect(requiredKeys).toEqual(
+      ['created_at', 'due_date', 'project_id', 'status', 'task_id', 'task_type', 'title', 'updated_at'].sort(),
+    );
   });
 });
 

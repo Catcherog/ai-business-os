@@ -2,11 +2,11 @@
 
 PROJECT: AI Business OS
 VERSION: V1
-PHASE: P3 — Productize Human Review [COMPLETE]
-STATUS: P3 COMPLETE
-CURRENT TASK: (none — P3 done; NEXT: P4 — Project Lifecycle Slice, not started)
-BASELINE: 669c7202e502647399ab4978abf18429e237df0f
-CURRENT BLOCKERS: None
+PHASE: P4 — Project Lifecycle Slice [IMPLEMENTATION PASS / LIVE E2E BLOCKED]
+STATUS: P4 IMPLEMENTATION PASS (live Feishu E2E BLOCKED — env absent)
+CURRENT TASK: BUSOS-P4-01 — Project Lifecycle Vertical Slice  [COMPLETE — IMPLEMENTATION PASS / LIVE P4 LIFECYCLE E2E BLOCKED]
+BASELINE: bcfa102
+CURRENT BLOCKERS: PL-H live Feishu E2E BLOCKED (FEISHU_* + FEISHU_PROJECT_TABLE_ID/FEISHU_TASK_TABLE_ID absent)
 
 PRIMARY OBJECTIVE:
 Productize the minimum human-review vertical slice required by R1:
@@ -16,15 +16,15 @@ BusinessRepository -> FeishuAdapter -> write -> readback -> VERIFIED.
 
 This task productizes Human Review only. It does NOT build a general workflow engine.
 
-CURRENT P3 TASK:
-- BUSOS-P3-01 — Minimal Human Review Surface  [COMPLETE — LIVE P3 REVIEW E2E PASS]
+CURRENT P4 TASK:
+- BUSOS-P4-01 — Project Lifecycle Vertical Slice  [COMPLETE — IMPLEMENTATION PASS / LIVE P4 LIFECYCLE E2E BLOCKED]
 
 EXECUTION ORDER:
 - P0 VERIFIED. [done]
 - P1 COMPLETE. [done — contracts + candidate builder + business repository/adapter]
 - P2 COMPLETE. [done — GP-001 vertical slice, live Feishu E2E PASS]
 - BUSOS-P3-01. [COMPLETE — live HR-H Feishu E2E PASS 2026-08-12]
-- NEXT: P4 — Project Lifecycle Slice (`Lead -> Customer -> Project -> Task`), not started.
+- BUSOS-P4-01. [COMPLETE — IMPLEMENTATION PASS; PL-A..PL-G PASS; PL-H live Feishu E2E BLOCKED (env absent). NEXT: none — STOP per task §15.]
 
 P1-01 EVIDENCE:
 - Package: packages/contracts (TypeScript + zod runtime validation).
@@ -65,11 +65,27 @@ P3-01 EVIDENCE:
 - Tests: HR-A..HR-E 7 passing, HR-F 34 token assertions passing, HR-G regression green across all 5 packages (contracts 82 / sac 53 / br 36+1skip / gp 11+1skip / hr 42+2skip), HR-H fake/sim PASS + live SKIPPED (FEISHU_* absent). tsc --noEmit clean on all modified packages.
 - Completion evidence: 09-P3-01-COMPLETION.md — status `COMPLETE / LIVE P3 REVIEW E2E PASS` (HR-H live Feishu E2E PASSED 2026-08-12; all HR-A..HR-H gates PASS).
 
+P4-01 PLAN:
+- New package: packages/project-lifecycle (name @busos/project-lifecycle).
+- Additive contract delta (no breaking change): canonical `Task` (task_id, project_id, task_type, title, status TODO|IN_PROGRESS|DONE|CANCELLED, due_date nullable, created_at, updated_at) added to @busos/contracts; `COMMIT_DOMAIN_OBJECTS` gains `project`/`task`; `BL-006` date semantics documented (explicit YYYY-MM-DD → value; relative-only → null; never hallucinated).
+- BusinessRepository + FeishuAdapter increment: `updateLeadStatus`, `createProject`(DRAFT), `getProject`, `createTask`(TODO), `getTask`, `deleteProject`/`deleteTask` (exact record id, test-hygiene/compensation only). Upper layer receives only canonical domain objects + `CommitResultV1`.
+- Methods are fail-closed (`assertWith`); readback-verify on every write (D019); exact-record-id compensation on partial failure (no saga/retry/CQRS).
+- `convertLeadToProject(input, deps)` is the single primary API: 7-step write order, eligibility Cases 1–5 (Normal / Anonymous-BLOCKED / Dangling-fail-closed / Already-Converted-BLOCKED / Lost-BLOCKED), default initial task PROJECT_SETUP/"Project setup" (no LLM).
+- PL-A..PL-G gates implemented; PL-H live E2E gated on FEISHU_* + FEISHU_PROJECT_TABLE_ID/FEISHU_TASK_TABLE_ID.
+
+P4-01 EVIDENCE:
+- Package: packages/project-lifecycle (TypeScript; name @busos/project-lifecycle).
+- Full lifecycle implemented and verified through Fake + RealFeishuAdapter-via-simulator: Lead(QUALIFIED) → verify Customer → createProject(DRAFT) → createTask(TODO, default PROJECT_SETUP) → readback VERIFIED (Project+Task+Lead CONVERTED) → LIFECYCLE_SUCCESS. Eligibility cases (Anonymous/Dangling/Already-Converted/Lost) fail closed with 0 writes. Partial-failure compensation deletes by exact record id; Lead never reported CONVERTED on failure. PL-F static scan PASS (6 assertions: no forbidden Feishu tokens in src/).
+- Tests: 20 passed / 1 skipped (vitest) + tsc --noEmit clean. Regression PL-G green across all 5 affected packages (contracts 85 / br 36+1skip / gp 11+1skip / hr 42+2skip / pl 20+1skip).
+- PL-H live Feishu E2E: BLOCKED (FEISHU_* + FEISHU_PROJECT_TABLE_ID/FEISHU_TASK_TABLE_ID absent in sandbox). Reported honestly as `RealFeishuAdapter via in-memory Feishu simulator: PASS`, NOT "Real Feishu E2E: PASS".
+- Completion evidence: 10-P4-01-COMPLETION.md — status `IMPLEMENTATION PASS / LIVE P4 LIFECYCLE E2E BLOCKED` (PL-A..PL-G PASS; PL-H live E2E BLOCKED pending env).
+
 CURRENT BLOCKERS:
 - **BL-013 CLOSED (2026-08-12)** — Live Feishu E2E executed with provided FEISHU_* credentials; real-adapter LIVE block passed.
 - **BL-014 CLOSED (2026-08-12)** — Dedicated Lead table provisioned in the real Base.
 - **BL-015 OPEN / NON-BLOCKING** — P1-02 extractor does not resolve bare "新中式" to a service_type. Unchanged; not a blocker for the live gate.
 - **HR-H LIVE E2E — PASS (2026-08-12)** — BUSOS-P3-01 live Feishu review slice executed with real FEISHU_* credentials; both live HR-H tests PASSED and records were cleaned by exact record_id. HR-H gate CLOSED. (See 09-P3-01-COMPLETION.md §7/§8.)
+- **PL-H LIVE P4 LIFECYCLE E2E — BLOCKED (2026-08-13)** — `FEISHU_*` + `FEISHU_PROJECT_TABLE_ID`/`FEISHU_TASK_TABLE_ID` absent in this sandbox. Implementation complete and gated; will run when the user provisions the Project/Task tables + credentials. BUSOS-P4-01 reported as `IMPLEMENTATION PASS / LIVE P4 LIFECYCLE E2E BLOCKED`. (See 10-P4-01-COMPLETION.md §4/§7.)
 
 LATEST CONTROL DECISIONS:
 See `03-DECISIONS.md` (D001..D020 FROZEN).

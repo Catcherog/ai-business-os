@@ -21,7 +21,7 @@ export const COMMIT_STATUSES = ['COMMITTED', 'FAILED'] as const;
 export const CommitStatusSchema = z.enum(COMMIT_STATUSES);
 export type CommitStatus = z.infer<typeof CommitStatusSchema>;
 
-export const COMMIT_DOMAIN_OBJECTS = ['lead', 'customer'] as const;
+export const COMMIT_DOMAIN_OBJECTS = ['lead', 'customer', 'project', 'task'] as const;
 export const CommitDomainObjectSchema = z.enum(COMMIT_DOMAIN_OBJECTS);
 export type CommitDomainObject = z.infer<typeof CommitDomainObjectSchema>;
 

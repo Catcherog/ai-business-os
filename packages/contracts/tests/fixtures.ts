@@ -7,6 +7,7 @@ import type {
   LeadCandidateV1,
   Project,
   Session,
+  Task,
 } from '../src/index.js';
 
 /**
@@ -142,6 +143,18 @@ export const canonicalProject: Project = {
   scheduled_date: null,
   created_at: '2026-08-11T10:00:04.000Z',
   updated_at: '2026-08-11T10:00:04.000Z',
+};
+
+/** Task is additive (P4). Created only after a Lead converts to a Project. */
+export const canonicalTask: Task = {
+  task_id: 'task_0001',
+  project_id: 'proj_0001',
+  task_type: 'PROJECT_SETUP',
+  title: 'Project setup',
+  status: 'TODO',
+  due_date: null,
+  created_at: '2026-08-11T10:00:05.000Z',
+  updated_at: '2026-08-11T10:00:05.000Z',
 };
 
 /** Deep clone helper so an invalid-case mutation cannot leak between tests. */

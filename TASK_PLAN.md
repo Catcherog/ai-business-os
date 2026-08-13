@@ -1,13 +1,13 @@
-# TASK_PLAN — BUSOS-P2-GP-001 (CLOSED) · BUSOS-P3-01 (CLOSED) · NEXT: P4
+# TASK_PLAN — BUSOS-P2-GP-001 (CLOSED) · BUSOS-P3-01 (CLOSED) · BUSOS-P4-01 (CLOSED — IMPL PASS / LIVE E2E BLOCKED)
 
 ## task_id
-BUSOS-P2-GP-001 — Golden Path Vertical Slice
+BUSOS-P4-01 — Project Lifecycle Vertical Slice
 
 ## phase
-P2 — GP-001 Integration
+P4 — Project Lifecycle Slice
 
 ## status
-COMPLETE (P2) — implementation PASS + LIVE FEISHU E2E PASS (BL-013/BL-014 CLOSED; BL-015 OPEN/NON-BLOCKING). P3 (BUSOS-P3-01) ALSO COMPLETE — HR-H live Feishu review E2E PASS 2026-08-12. NEXT: P4.
+COMPLETE (P4) — IMPLEMENTATION PASS; PL-A..PL-G PASS; PL-H live Feishu E2E BLOCKED (FEISHU_* + FEISHU_PROJECT_TABLE_ID/FEISHU_TASK_TABLE_ID absent in sandbox). P2 (GP-001) COMPLETE — LIVE FEISHU E2E PASS (BL-013/BL-014 CLOSED; BL-015 OPEN/NON-BLOCKING). P3 (BUSOS-P3-01) COMPLETE — HR-H live Feishu review E2E PASS 2026-08-12. NEXT: none — STOP per task §15.
 
 - Golden Path orchestration built on the frozen P1 building blocks (Service Agent candidate → Governance → BusinessRepository → FeishuAdapter → readback) is complete and verified by 11 passing integration tests (1 live E2E skipped).
 - (P2 live Feishu E2E later PASSED — see `live_feishu` below — closing BL-013/BL-014. P3 live HR-H review E2E also PASSED 2026-08-12 — see `09-P3-01-COMPLETION.md`.)
@@ -75,8 +75,95 @@ PASS — executed 2026-08-12 with user-supplied `FEISHU_*` credentials against r
 - BL-014: dedicated Lead table (fields added to `tblp9GuLf3nY597F`) provisioned — **CLOSED**.
 - Minimal fix: `business-repository/src/mapping.ts` `toFeishuLeadFields` no longer emits `客户关联` when `customer_id` is null (previously `[]` → `TextFieldConvFail` on a text-modeled link field). `business-repository` suite: 36 passed / 1 skipped. No contract change.
 
-## frozen_contracts
-@busos/contracts modified: NO. No schema/type in `contracts/*.schema.json` or `@busos/contracts/src` changed.
+## p4_task (BUSOS-P4-01 — Project Lifecycle Vertical Slice)
+
+scope_enforced:
+ONLY BUSOS-P4-01. Implemented the minimum business-lifecycle vertical slice
+(`Lead(QUALIFIED) → verify Customer → Project(DRAFT) → Task(TODO) → Lead CONVERTED →
+LIFECYCLE_SUCCESS`). Did NOT:
+- build a generic task platform / workflow DSL / event bus / RBAC / notifications /
+  recurrence / subtasks / dependencies / comments / attachments / assignee / priority;
+- redesign governance, candidate builder, golden-path, or human-review;
+- add transaction/saga/retry/CQRS/event-sourcing infrastructure.
+
+contracts_delta (additive only — no breaking change):
+- `packages/contracts/src/domain.ts`: added `TaskSchema` (`task_id`, `project_id`,
+  `task_type`, `title`, `status` ∈ {TODO,IN_PROGRESS,DONE,CANCELLED}, `due_date`
+  nullable, `created_at`, `updated_at`) + `TASK_STATUSES`/`TaskStatusSchema`/`Task`/`TaskStatus`.
+- `packages/contracts/src/commit-result.ts`: `COMMIT_DOMAIN_OBJECTS` += `project`,`task`.
+- `packages/contracts/src/index.ts`: exported the above.
+- `BL-006` date semantics documented in `project-control/04-INTERFACES.md` §7.2:
+  explicit `YYYY-MM-DD` → value; relative-only → `null`; never hallucinated.
+- No schema/type removal or signature change to existing types.
+
+new_package:
+`packages/project-lifecycle/` (@busos/project-lifecycle)
+- `src/types.ts` — `ProjectLifecycleRepository` port, `LifecycleStatus`, `BlockedReason`,
+  `ConvertLeadToProjectInput/Result`, `InitialTaskInput`, `LifecycleCompensation`.
+- `src/eligibility.ts` — `checkConversionEligibility` (Cases 1 Normal / 2 Anonymous /
+  3 Dangling / 4 Already-Converted / 5 Lost).
+- `src/scheduled-date.ts` — `isExplicitDate` + `resolveScheduledDate` (BL-006).
+- `src/convert-lead-to-project.ts` — `convertLeadToProject(input, deps)`: 7-step write
+  order, fail-closed eligibility, exact-record-id compensation (no saga), default
+  initial task `PROJECT_SETUP`/"Project setup" (no LLM).
+- `src/index.ts` — public surface.
+- `tests/testkit.ts`, `tests/lifecycle.test.ts` (PL-B/C/D/E + BL-006 unit),
+  `tests/architecture-boundary.test.ts` (PL-F), `tests/real-adapter.test.ts`
+  (§12 simulator + PL-H live SKIP).
+
+modified_reused:
+- `packages/business-repository/src/*` — `FeishuAdapter` port gains `updateLeadStatus`,
+  `createProject`, `getProject`, `createTask`, `getTask`, `deleteProject`,
+  `deleteTask`; mapping/verify for Project/Task; `createProject` DRAFT default,
+  `createTask` TODO default; `createFeishuAdapterFromEnv` now requires
+  `FEISHU_PROJECT_TABLE_ID`/`FEISHU_TASK_TABLE_ID`. Upper layer receives only
+  canonical domain objects + `CommitResultV1` (D017/D018/D019).
+
+tests:
+command (in `packages/project-lifecycle`): `npm run verify`  # tsc --noEmit && vitest run
+- typecheck: PASS (tsc --noEmit exit 0)
+- vitest: **20 passed | 1 skipped** (21 total)
+  - lifecycle.test.ts (13: PL-B/C/D/E + BL-006 unit) · architecture-boundary.test.ts
+    (6: PL-F) · real-adapter.test.ts (2 · 1 skipped = PL-H LIVE E2E)
+- PL-H LIVE block SKIPPED — `createFeishuAdapterFromEnv()` returns null (no FEISHU_* +
+  FEISHU_PROJECT_TABLE_ID/FEISHU_TASK_TABLE_ID). Reported as `RealFeishuAdapter via
+  in-memory Feishu simulator: PASS` (NOT "Real Feishu E2E: PASS").
+
+fake_adapter:
+PASS — `FakeFeishuAdapter` proves the full lifecycle + all eligibility/compensation
+cases (PL-B..PL-E) with 0 live dependency.
+
+real_adapter_plus_stub:
+PASS — `RealFeishuAdapter` driven by the in-memory Feishu bitable simulator
+(`makeFeishuStub`, extended with Project/Task tables + DELETE): full lifecycle runs
+through the PRODUCTION adapter logic (auth→create→readback→map→verify→CommitResultV1)
+for Project and Task. Reported honestly as: **RealFeishuAdapter via in-memory Feishu
+simulator: PASS** (NOT "Real Feishu E2E: PASS").
+
+live_feishu:
+BLOCKED — not executed. `FEISHU_*` + `FEISHU_PROJECT_TABLE_ID`/`FEISHU_TASK_TABLE_ID`
+absent in sandbox. The LIVE block is written, gated, and will run when the user
+supplies the Project/Task tables + credentials (App Secret rotation NOT required —
+"key 就保持不变即可"). Implementation is complete.
+
+regression_plg:
+| Package | tsc | Tests |
+|---------|-----|-------|
+| @busos/contracts | clean | 85 passed |
+| @busos/business-repository | clean | 36 passed · 1 skipped |
+| @busos/golden-path | clean | 11 passed · 1 skipped |
+| @busos/human-review | clean | 42 passed · 2 skipped |
+| @busos/project-lifecycle | clean | 20 passed · 1 skipped |
+All TypeScript compiles clean. One stale contract test (`commit-result.test.ts`
+"unknown domain object" now uses `'widget'`) was the single regression PL-G caught
+and fixed.
+
+frozen_contracts
+@busos/contracts modified: YES — but **additive only**, per the explicit P4 contract
+delta (Task schema + project/task commit domain objects). No breaking change, no
+removal, no signature change to existing types. This is the sanctioned P4 delta, not
+the "do not modify frozen contracts" prohibition (which forbids redesign/breaking
+change).
 
 ## blockers / backlog
 - BL-013 (CLOSED 2026-08-12) — Live Feishu E2E executed with user-supplied FEISHU_* credentials; real-adapter LIVE block passed.
@@ -85,13 +172,16 @@ PASS — executed 2026-08-12 with user-supplied `FEISHU_*` credentials against r
 
 ## git_info
 - branch: main
-- baseline HEAD: afb9c2f1e1e2385119a0261ca7cf81d72e126154
-- closing SHA: (see git log after commit)
-- pushed: yes (origin/main)
+- baseline HEAD: bcfa102 (P3 post-closure hygiene)
+- closing SHA: (filled after commit 1 + evidence-fill commit 2)
+- pushed: pending (origin/main)
 - remote main synced.
 
 ## nextActor
-P2 (BUSOS-P2-GP-001) and P3 (BUSOS-P3-01) are both CLOSED:
+P2 (BUSOS-P2-GP-001), P3 (BUSOS-P3-01), and P4 (BUSOS-P4-01) are all CLOSED:
 - P2 live Feishu E2E PASS (BL-013/BL-014 CLOSED; BL-015 OPEN/NON-BLOCKING).
 - P3 HR-H live Feishu review E2E PASS (2026-08-12) — full Human Review → BusinessRepository → RealFeishuAdapter → real write → real readback → VERIFIED → COMMITTED; EDIT+APPROVE readback 4500; cleanup by exact record_id.
-NEXT: P4 — Project Lifecycle Slice (`Lead → Customer → Project → Task`). Do NOT start P4 until explicitly requested (STOP).
+- P4 IMPLEMENTATION PASS — full lifecycle `Lead(QUALIFIED) → Customer → Project(DRAFT) → Task(TODO) → Lead CONVERTED → LIFECYCLE_SUCCESS` verified via Fake + RealFeishuAdapter-via-simulator; PL-A..PL-G PASS; PL-H live Feishu E2E BLOCKED (env absent).
+NEXT: none — STOP per task §15. Do NOT start P5 until explicitly requested. When the
+user provisions `FEISHU_*` + `FEISHU_PROJECT_TABLE_ID`/`FEISHU_TASK_TABLE_ID` and runs
+the PL-H LIVE block, P4-01 flips to fully CLOSED (live E2E PASS).
