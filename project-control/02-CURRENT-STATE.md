@@ -2,11 +2,11 @@
 
 PROJECT: AI Business OS
 VERSION: V1
-PHASE: P5 — Creative Production Slice [IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED]
-STATUS: P5 COMPLETE (IMPLEMENTATION PASS 2026-08-13; LIVE CREATIVE E2E BLOCKED — secrets absent)
-CURRENT TASK: BUSOS-P5-01 — Creative Production Vertical Slice  [COMPLETE — IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED]
+PHASE: P5 — Creative Production Slice [FUNCTIONAL PASS 2026-08-15; live CREATIVE_SUCCESS rerun deferred — CloudBase quota]
+STATUS: P5 COMPLETE (FUNCTIONAL PASS 2026-08-15; live CREATIVE_SUCCESS rerun DEFERRED — CloudBase NoSQL read quota exhausted, owner override)
+CURRENT TASK: BUSOS-P5-01 — Creative Production Vertical Slice  [COMPLETE — FUNCTIONAL PASS; live rerun deferred]
 BASELINE: 842d91e8b90e99919d577be4d4490937989223d4
-CURRENT BLOCKERS: LIVE CREATIVE E2E BLOCKED (no Vercel Lumen URL+`AUTH_PASSWORD`, no `FEISHU_*`+`FEISHU_ASSET_TABLE_ID`); BL-015 OPEN/NON-BLOCKING.
+CURRENT BLOCKERS: none blocking P6. Live CREATIVE_SUCCESS rerun deferred (external CloudBase read-quota exhaustion, non-code). BL-015 OPEN/NON-BLOCKING.
 
 PRIMARY OBJECTIVE:
 Productize the minimum human-review vertical slice required by R1:
@@ -25,7 +25,7 @@ EXECUTION ORDER:
 - P2 COMPLETE. [done — GP-001 vertical slice, live Feishu E2E PASS]
 - BUSOS-P3-01. [COMPLETE — live HR-H Feishu E2E PASS 2026-08-12]
 - BUSOS-P4-01. [COMPLETE — LIVE P4 LIFECYCLE E2E PASS 2026-08-13; PL-A..PL-H all PASS. NEXT: none — STOP per task §15.]
-- BUSOS-P5-01. [COMPLETE — IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED 2026-08-13; P5-A..P5-H all PASS (fake + real-adapter-stubbed), P5-I real E2E BLOCKED. NEXT: none — STOP per task §15/§49.]
+- BUSOS-P5-01. [COMPLETE — FUNCTIONAL PASS 2026-08-15 (P5-X03); P5-A..P5-H PASS; live CREATIVE_SUCCESS rerun DEFERRED on CloudBase quota (owner override). P6 authorized.]
 
 P1-01 EVIDENCE:
 - Package: packages/contracts (TypeScript + zod runtime validation).
@@ -91,8 +91,8 @@ P5-01 EVIDENCE:
 - Packages: @busos/lumen-adapter (tsc clean; 7 tests PASS), @busos/creative-production (tsc clean; 19 passed / 1 skipped).
 - Full slice verified through Fake + RealLumenAdapter-via-stub: Project(DRAFT) → Creative Task(TODO) → Lumen generate → Asset(IMAGE/LUMEN, uri from Lumen signedUrls) → Task DONE, readback VERIFIED at every step. Eligibility cases (missing/CANCELLED/DELIVERED/empty prompt/empty image) fail closed with 0 writes. Compensation E1–E4 delete by exact record id. P5-G static scan PASS (4 source files, 18 forbidden-token assertions).
 - Regression P5-H green across all 5 packages (contracts 85 / br 36+1skip / pl 20+1skip / la 7 / cp 19+1skip). tsc --noEmit clean on all.
-- P5-I REAL end-to-end BLOCKED (no Vercel Lumen URL+`AUTH_PASSWORD`, no `FEISHU_*`+`FEISHU_ASSET_TABLE_ID`). Reported honestly as `IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED`.
-- Completion evidence: 11-P5-01-COMPLETION.md — status `IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED` (P5-A..P5-H PASS; P5-I BLOCKED).
+- P5-I REAL end-to-end: closed as FUNCTIONAL PASS 2026-08-15 (P5-X03 HARDEN + tests + prod deploy dpl_AdnQygPLZ7fB58QJECcvj5o4NxGV). Live CREATIVE_SUCCESS rerun DEFERRED on CloudBase read-quota exhaustion (owner override; not a code defect). Reported honestly as `P5 FUNCTIONAL PASS — LIVE RE-RUN DEFERRED — CLOUDBASE QUOTA`.
+- Completion evidence: 11-P5-01-COMPLETION.md (impl); BUSOS-P5-X03-STATUS.md (functional closure + owner override). P5-A..P5-H PASS; P5-I live rerun deferred.
 
 CURRENT BLOCKERS:
 - **BL-013 CLOSED (2026-08-12)** — Live Feishu E2E executed with provided FEISHU_* credentials; real-adapter LIVE block passed.

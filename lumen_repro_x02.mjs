@@ -13,7 +13,11 @@ import { readFileSync, writeFileSync } from 'node:fs';
 
 const BASE = process.env.LUMEN_BASE_URL || 'https://lumen-ink.vercel.app';
 const PROXY = process.env.HTTPS_PROXY || process.env.LUMEN_REPRO_PROXY || 'http://127.0.0.1:7890';
-const PASS = process.env.LUMEN_AUTH_PASSWORD || 'changemelater';
+const PASS = process.env.LUMEN_AUTH_PASSWORD;
+if (!PASS) {
+  console.error('LUMEN_AUTH_PASSWORD (Lumen production AUTH_PASSWORD) must be supplied via env — no hardcoded fallback.');
+  process.exit(2);
+}
 const IN = process.argv[2] || process.env.LUMEN_IN_B64 || 'lumen_in.b64';
 const OUT = process.argv[3] || 'lumen_repro_result.json';
 

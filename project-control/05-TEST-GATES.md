@@ -316,7 +316,7 @@ commit + push + clean tree (no automatic P5).
 
 ## P5-01 Gate — Creative Production Slice
 
-PASS only if all gates below pass. Status as of 2026-08-13: **IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED**.
+PASS only if all gates below pass. Status as of 2026-08-15 (P5-X03): **FUNCTIONAL PASS — LIVE RE-RUN DEFERRED (CloudBase quota, owner override)**. Implementation/contracts/production-persistence all verified; live CREATIVE_SUCCESS not re-asserted this run.
 
 ### P5-A1 — Lumen real-dependency capability probe
 
@@ -431,8 +431,9 @@ Requirements:
 - gated on `LUMEN_BASE_URL` + `LUMEN_AUTH_PASSWORD` (Vercel Lumen) and `FEISHU_*`
   + `FEISHU_ASSET_TABLE_ID`.
 
-**Status: BLOCKED** (secrets absent in this environment). Per the STOP rule the
-task is reported `IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED` and STOPS at
-commit + push + clean tree — **no automatic P6**. Do not substitute
+**Status: FUNCTIONAL PASS — LIVE RE-RUN DEFERRED** (CloudBase NoSQL read quota
+exhausted, non-code; secrets now present). Per owner override 2026-08-15 the
+task is reported `P5 FUNCTIONAL PASS — LIVE RE-RUN DEFERRED — CLOUDBASE QUOTA`
+and **P6 is authorized** (live CREATIVE_SUCCESS rerun deferred). Do not substitute
 Fake/Simulator PASS for Live PASS; the `live-e2e.test.ts` sketch remains gated and
 skipped until secrets are supplied.

@@ -30,7 +30,7 @@ real `CREATIVE_SUCCESS`.
   ⇒ The app now boots and actually connects to CloudBase NoSQL.
 
 ## 5. §11 live proof — BLOCKED (new, environmental)
-- `AUTH_PASSWORD` recovered from workspace memory = `changemelater`. Repro written:
+- `LUMEN_AUTH_PASSWORD=<configured in Vercel production env>` (rotated during P5-X03; no plaintext in repo). Repro written:
   `D:/360Downloads/Trae 项目/.repro_tmp/lumen_repro_x02.mjs`
   (auth → create project → enqueue job → poll → verify `signedUrls[asset.id]`).
 - `POST /api/auth` **hangs** (curl `000`, timeout) while `GET /api/projects`→401 and
@@ -59,7 +59,7 @@ throttle + snapshot both read). No live generation ⇒ no closure ⇒ P6 not sta
 2. *(Recommended, separate HARDEN task, out of P5-X02 scope)* Back off the sweeper
    (`sweeperIntervalMs` larger; single-leader election so not every instance scans) to fit quota.
 3. Once quota restored: `node D:/360Downloads/Trae 项目/.repro_tmp/lumen_repro_x02.mjs`
-   (expects `changemelater`) → confirm `resolved=true` + `contractOk=true`.
+   (expects `LUMEN_AUTH_PASSWORD` from env) → confirm `resolved=true` + `contractOk=true`.
 4. Only after Lumen-only PASS: rerun `packages/creative-production/tests/live-e2e.test.ts`
    (needs Feishu creds in env) → close P5-I/BL-016 on `CREATIVE_SUCCESS`.
 

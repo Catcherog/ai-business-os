@@ -202,7 +202,9 @@ export class RealLumenAdapter implements LumenPort {
       const asset = version
         ? resultSnapshot.assets.find((a) => a.id === version.assetId)
         : undefined;
-      const uri = asset ? resultSnapshot.signedUrls[asset.storageKey] : undefined;
+      // BUSOS-P5-03: resolve via the public, stable asset.id key (never the
+      // redacted storageKey, basename, suffix, or string replacement).
+      const uri = asset ? resultSnapshot.signedUrls[asset.id] : undefined;
       if (!uri) {
         return {
           status: 'FAILED',

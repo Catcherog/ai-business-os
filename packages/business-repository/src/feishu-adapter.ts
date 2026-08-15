@@ -623,7 +623,6 @@ export class RealFeishuAdapter implements FeishuAdapter {
     } else {
       const ok = await this.updateRecord(this.taskTableId!, taskRecordId, {
         [this.fm.taskStatus]: status,
-        [this.fm.taskCreatedAt]: new Date().toISOString(),
       });
       if (!ok) {
         errors.push('feishu update task status failed');

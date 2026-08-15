@@ -40,7 +40,7 @@ function makeLumenStub(opts: { failJob?: boolean } = {}) {
         assets: [{ id: assetId, storageKey, mimeType: body.mimeType }],
         versions: [{ id: versionId, assetId }],
         activeVersion: { id: versionId, assetId },
-        signedUrls: { [storageKey]: `file://${storageKey}` },
+        signedUrls: { [assetId]: `file://${storageKey}` },
       };
       return json(snapshot, 201);
     }
@@ -88,7 +88,7 @@ function makeLumenStub(opts: { failJob?: boolean } = {}) {
         assets: [{ id: resultAssetId, storageKey, mimeType: 'image/png' }],
         versions: [{ id: resultVersionId, assetId: resultAssetId }],
         activeVersion: { id: `ver_src_${pid}` },
-        signedUrls: { [storageKey]: `https://lumen.example/${storageKey}` },
+        signedUrls: { [resultAssetId]: `https://lumen.example/${storageKey}` },
       };
       return json(snapshot);
     }

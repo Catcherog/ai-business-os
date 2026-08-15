@@ -88,7 +88,7 @@ function makeLumenStub(opts: { failJob?: boolean } = {}) {
         assets: [{ id: resultAssetId, storageKey, mimeType: 'image/png' }],
         versions: [{ id: resultVersionId, assetId: resultAssetId }],
         activeVersion: { id: `ver_src_${pid}` },
-        signedUrls: { [storageKey]: `https://lumen.example/${storageKey}` },
+        signedUrls: { [resultAssetId]: `https://lumen.example/${storageKey}` },
       });
     }
 

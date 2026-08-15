@@ -117,16 +117,34 @@ Initial deferred items:
 - Suggested revisit phase: P2 (model-driven service-type extraction) or when a new service vertical is onboarded (BL-011).
 
 ## BL-016 LIVE Creative E2E blocked (missing Lumen Vercel + Feishu Asset credentials)
-- Type: **DEFERRED (non-blocking — gated on deployment secrets)**
+- Type: **CLOSED AS ENGINEERING BLOCKER / LIVE QUOTA RE-RUN DEFERRED** (owner override 2026-08-15; see amendment below)
 - Found in task: BUSOS-P5-01
 - Description: The REAL end-to-end creative slice (live Feishu Asset write/readback + live Vercel Lumen generation) requires `LUMEN_BASE_URL` + `LUMEN_AUTH_PASSWORD` (the Lumen `AUTH_PASSWORD`, NOT the provider key) and `FEISHU_*` + `FEISHU_ASSET_TABLE_ID`. Neither set was provided in this environment. The implementation is COMPLETE and verified by fake + real-adapter(stubbed) gates (P5-A..P5-H PASS); only the live run is blocked.
 - Why non-blocking: Implementation is fully verified without live credentials; the slice is reported honestly as `IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED`. No production behaviour depends on the live run having executed.
-- Suggested revisit phase: When the user supplies the Vercel Lumen URL + `AUTH_PASSWORD` and `FEISHU_*` + `FEISHU_ASSET_TABLE_ID`; run `packages/creative-production/tests/live-e2e.test.ts` (already wired to `executeCreativeProduction`) — or open a P5-lifecycle closure task per the P4 precedent.
+- Suggested revisit phase: When CloudBase read quota is restored, rerun
+  `lumen_repro_x02.mjs` (with the rotated `LUMEN_AUTH_PASSWORD`) + the
+  `packages/creative-production` live-e2e to claim LIVE CREATIVE_SUCCESS.
+
+### 2026-08-15 OWNER OVERRIDE (P5 closure authority)
+P5 may close as **FUNCTIONAL PASS** with the live rerun **deferred** when the sole
+remaining blocker is an exhausted third-party **CloudBase NoSQL read quota** and all
+implementation / contracts / production persistence integration have been verified
+(P5-X03 HARDEN deployed `dpl_AdnQygPLZ7fB58QJECcvj5o4NxGV`; NoSQL persistence 147/0;
+P5-03 signed-urls contract PASS; `GET /api/projects` → 401). This exception does
+**not** convert deferred live evidence into a PASS. BL-016 → CLOSED AS ENGINEERING
+BLOCKER / LIVE QUOTA RE-RUN DEFERRED. P5 no longer blocks P6.
 
 ## BL-002 Creative Agent / Lumen integration — status updated by BUSOS-P5-01
 - Type: DEFERRED → **IMPLEMENTATION COMPLETE (live E2E still deferred, see BL-016)**
 - Found in task: Architecture planning / BUSOS-P5-01
 - Description: `Project -> Creative Task -> Lumen -> Asset` is now implemented as a bounded vertical slice in `@busos/creative-production` + `@busos/lumen-adapter`, behind the canonical `LumenPort` (only Lumen `AUTH_PASSWORD` + base URL held; provider key stays in Lumen, §19). The additive `Asset` contract (`asset_type=IMAGE`, `source=LUMEN`) and Asset/Task-status repository operations are in place.
 - Why non-blocking for live: only the REAL Feishu+Lumen E2E is deferred (BL-016). The fake + real-adapter(stubbed) gates all PASS.
-- Suggested revisit phase: P5 live closure (BL-016) — do NOT auto-start P6.
+- Suggested revisit phase: P5 live closure (BL-016) — **P6 authorized 2026-08-15** (owner override); live rerun deferred on CloudBase quota.
+
+## BL-017 updateLeadStatus writes Lead Created-At as ISO (DatetimeFieldConvFail risk)
+- Type: DEFERRED (non-blocking — out of BUSOS-P5-X01 scope)
+- Found in task: BUSOS-P5-X01 (discovered while fixing the sibling P5-04 `updateTaskStatus` bug)
+- Description: `packages/business-repository/src/feishu-adapter.ts` `updateLeadStatus` writes the Lead `Created At` DateTime field as `new Date().toISOString()`. Feishu DateTime fields require epoch-ms via `toFeishuDateTime()` (as `createTask`/`createAsset` correctly do). `updateTaskStatus` had the identical defect and failed live with `code=1254064 msg=DatetimeFieldConvFail field="Created At"`; `updateLeadStatus` would hit the same failure if a Lead status update carries `Created At`.
+- Why non-blocking: P5-X01 scope is the Lumen production-generation root cause (queue→worker, no on-demand execution). Lead-status writes are not on the P5 live closure path (the live E2E seeds `lead_id: 'lead_live_p5'` and never calls `updateLeadStatus`). The P5-04 Task-DONE fix is complete and unaffected.
+- Suggested revisit phase: When a flow first calls `updateLeadStatus` with a `Created At` payload, or as a proactive hardening pass on Feishu DateTime writes. Fix mirrors P5-04: send only the status field, remove the ISO `Created At` rewrite.
 

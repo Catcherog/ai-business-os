@@ -62,12 +62,13 @@ Only after GP-001 is stable.
 Goal:
 `Project -> Creative Task -> Lumen -> Asset`
 
-Status: COMPLETE (IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED — 2026-08-13).
+Status: COMPLETE (FUNCTIONAL PASS — 2026-08-15; live CREATIVE_SUCCESS rerun deferred on CloudBase quota, owner override).
 Implemented as `@busos/creative-production` + `@busos/lumen-adapter` behind the
 canonical `LumenPort` (only Lumen `AUTH_PASSWORD` + base URL held; provider key
 stays in Lumen, §19). P5-A..P5-H PASS via fake + real-adapter(stubbed) gates; P5-I
-REAL E2E BLOCKED (no Vercel Lumen URL+`AUTH_PASSWORD`, no `FEISHU_*`+
-`FEISHU_ASSET_TABLE_ID`). STOP — no automatic P6.
+REAL E2E was BLOCKED (CloudBase read-quota exhaustion on live run). **2026-08-15
+owner override**: P5 closes as FUNCTIONAL PASS; live CREATIVE_SUCCESS rerun deferred
+(non-code, third-party quota). P6 authorized to start.
 
 ## P6+ — Deferred
 

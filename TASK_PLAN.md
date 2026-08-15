@@ -7,7 +7,7 @@ BUSOS-P5-01 — Creative Production Vertical Slice
 P5 — Creative Production Slice
 
 ## status
-COMPLETE (P5) — IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED. P5-A..P5-H all PASS via fake + real-adapter(stubbed) gates; P5-I REAL end-to-end BLOCKED (no Vercel Lumen URL+`AUTH_PASSWORD`, no `FEISHU_*`+`FEISHU_ASSET_TABLE_ID`). P4 (BUSOS-P4-01) COMPLETE — LIVE P4 LIFECYCLE E2E PASS. P3/P2 COMPLETE. NEXT: none — STOP per task §15/§49.
+COMPLETE (P5) — FUNCTIONAL PASS 2026-08-15 (P5-X03); live CREATIVE_SUCCESS rerun DEFERRED on CloudBase read-quota (owner override). P5-A..P5-H all PASS via fake + real-adapter(stubbed) gates; P5-I REAL end-to-end closed as FUNCTIONAL PASS (live rerun deferred). P4 (BUSOS-P4-01) COMPLETE — LIVE P4 LIFECYCLE E2E PASS. P3/P2 COMPLETE. NEXT: P6 (authorized 2026-08-15).
 
 - Golden Path orchestration built on the frozen P1 building blocks (Service Agent candidate → Governance → BusinessRepository → FeishuAdapter → readback) is complete and verified by 11 passing integration tests (1 live E2E skipped).
 - (P2 live Feishu E2E later PASSED — see `live_feishu` below — closing BL-013/BL-014. P3 live HR-H review E2E also PASSED 2026-08-12 — see `09-P3-01-COMPLETION.md`.)
@@ -193,12 +193,12 @@ P2 (BUSOS-P2-GP-001), P3 (BUSOS-P3-01), and P4 (BUSOS-P4-01) are all CLOSED:
 - P2 live Feishu E2E PASS (BL-013/BL-014 CLOSED; BL-015 OPEN/NON-BLOCKING).
 - P3 HR-H live Feishu review E2E PASS (2026-08-12) — full Human Review → BusinessRepository → RealFeishuAdapter → real write → real readback → VERIFIED → COMMITTED; EDIT+APPROVE readback 4500; cleanup by exact record_id.
 - P4 LIVE P4 LIFECYCLE E2E PASS (2026-08-13) — full lifecycle `Lead(QUALIFIED) → Customer → Project(DRAFT) → Task(TODO) → Lead CONVERTED → LIFECYCLE_SUCCESS` verified on the REAL Base (real write + readback VERIFIED for Project/Task/Lead, LIFECYCLE_SUCCESS) and cleaned by exact record_id; PL-A..PL-H all PASS.
-NEXT: none — STOP per task §15/§49. P5 (BUSOS-P5-01) is now CLOSED (IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED). Do NOT start P6 until explicitly requested.
+NEXT: P6 (BUSOS-P6-01) — authorized 2026-08-15 via owner override (P5 closes as FUNCTIONAL PASS with live rerun deferred on CloudBase quota). P5 (BUSOS-P5-01) is now CLOSED (FUNCTIONAL PASS; live CREATIVE_SUCCESS rerun DEFERRED — non-code).
 
 ## P5-01 — Creative Production Slice (current task)
 - New packages: `@busos/lumen-adapter` (Lumen `LumenPort` + Real/Fake adapters; holds only Lumen `AUTH_PASSWORD` + base URL — never the provider key, §19), `@busos/creative-production` (`executeCreativeProduction` orchestration; depends only on canonical `CreativeProductionRepository` + `LumenPort`; no Feishu/Lumen secrets).
 - Additive contract delta: canonical `Asset` (`asset_type=IMAGE`, `source=LUMEN`), `COMMIT_DOMAIN_OBJECTS += 'asset'`; BusinessRepository/FeishuAdapter increment with `updateTaskStatus` + Asset ops.
 - Bounded path: Project → Creative Task (TODO) → Lumen.generate → Asset (IMAGE/LUMEN) → Task DONE, with readback verification (D019) + exact-record-id compensation.
-- Gates: P5-A1/P5-A2 MAPPED (real source read + real-adapter-via-stub); P5-B PASS; P5-C/D/E/F/G/H PASS; P5-I REAL E2E BLOCKED (secrets absent).
+- Gates: P5-A1/P5-A2 MAPPED; P5-B PASS; P5-C/D/E/F/G/H PASS; P5-I closed as FUNCTIONAL PASS (live CREATIVE_SUCCESS rerun DEFERRED — CloudBase quota, owner override 2026-08-15).
 - Tests (per package `npm run verify`): contracts 85 · business-repository 36+1skip · project-lifecycle 20+1skip · lumen-adapter 7 · creative-production 19+1skip.
 - Completion evidence: `11-P5-01-COMPLETION.md` — status `IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED`.
