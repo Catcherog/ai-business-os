@@ -70,16 +70,28 @@ REAL E2E was BLOCKED (CloudBase read-quota exhaustion on live run). **2026-08-15
 owner override**: P5 closes as FUNCTIONAL PASS; live CREATIVE_SUCCESS rerun deferred
 (non-code, third-party quota). P6 authorized to start.
 
-## P6+ — Deferred
+## P6 — Orchestrator MVP  [ACTIVE — BUSOS-P6-01 started 2026-08-15]
 
-Possible later work:
-- Orchestrator
+Goal: Compose the existing vertical slices (Golden Path → Project Lifecycle →
+Creative Production) into a single runnable business process behind one
+`runBusinessProcess(input, deps)` entrypoint, with a structured execution trace
+for observability. Composition only — no existing package is modified, no new
+infra (no Redis / MQ / orchestration engine). The orchestrator also turns the
+deferred live CREATIVE_SUCCESS rerun (BL-016) into one inspectable call instead
+of three manual runs.
+
+Status: BUSOS-P6-01 IN PROGRESS — first implementation task COMPLETE
+(`@busos/orchestrator` package; tsc clean; 2/2 fake-E2E tests pass 2026-08-15).
+See `BUSOS-P6-01-PLAN.md`. Live full-process E2E deferred on CloudBase quota
+(BL-016).
+
+### P6+ — Remaining deferred (not started)
 - Memory
 - HITL policy automation
 - Evaluation center
-- observability expansion
+- observability expansion (beyond the trace)
 - dashboard
-- production hardening
+- production hardening (beyond the P5-X03 sweeper fix)
 - portfolio/demo packaging
 
-Do not start these until earlier gates are closed.
+Do not start these until P6 gates close.

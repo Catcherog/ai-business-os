@@ -2,11 +2,11 @@
 
 PROJECT: AI Business OS
 VERSION: V1
-PHASE: P5 — Creative Production Slice [FUNCTIONAL PASS 2026-08-15; live CREATIVE_SUCCESS rerun deferred — CloudBase quota]
-STATUS: P5 COMPLETE (FUNCTIONAL PASS 2026-08-15; live CREATIVE_SUCCESS rerun DEFERRED — CloudBase NoSQL read quota exhausted, owner override)
-CURRENT TASK: BUSOS-P5-01 — Creative Production Vertical Slice  [COMPLETE — FUNCTIONAL PASS; live rerun deferred]
-BASELINE: 842d91e8b90e99919d577be4d4490937989223d4
-CURRENT BLOCKERS: none blocking P6. Live CREATIVE_SUCCESS rerun deferred (external CloudBase read-quota exhaustion, non-code). BL-015 OPEN/NON-BLOCKING.
+PHASE: P5 COMPLETE (FUNCTIONAL PASS 2026-08-15; live rerun deferred — CloudBase quota) · P6 Orchestrator MVP [ACTIVE — BUSOS-P6-01 started 2026-08-15]
+STATUS: P5 COMPLETE (FUNCTIONAL PASS 2026-08-15; live CREATIVE_SUCCESS rerun DEFERRED — CloudBase NoSQL read quota exhausted, owner override). P6 BUSOS-P6-01 IN PROGRESS — first implementation task COMPLETE (orchestrator package; tsc clean; 2/2 fake-E2E tests pass 2026-08-15).
+CURRENT TASK: BUSOS-P6-01 — Orchestrator MVP (Composition Only)  [IN PROGRESS — P6-A/P6-B PASS (fake E2E); live full-process E2E deferred on BL-016]
+BASELINE: 40511e27b03c8402d8229f468e9471e0a2960b06
+CURRENT BLOCKERS: none blocking P6. Live full-process CREATIVE_SUCCESS rerun deferred (external CloudBase read-quota exhaustion, non-code; BL-016). BL-015 OPEN/NON-BLOCKING.
 
 PRIMARY OBJECTIVE:
 Productize the minimum human-review vertical slice required by R1:
@@ -26,6 +26,7 @@ EXECUTION ORDER:
 - BUSOS-P3-01. [COMPLETE — live HR-H Feishu E2E PASS 2026-08-12]
 - BUSOS-P4-01. [COMPLETE — LIVE P4 LIFECYCLE E2E PASS 2026-08-13; PL-A..PL-H all PASS. NEXT: none — STOP per task §15.]
 - BUSOS-P5-01. [COMPLETE — FUNCTIONAL PASS 2026-08-15 (P5-X03); P5-A..P5-H PASS; live CREATIVE_SUCCESS rerun DEFERRED on CloudBase quota (owner override). P6 authorized.]
+- BUSOS-P6-01. [IN PROGRESS — Orchestrator MVP (composition only). First implementation task COMPLETE: `@busos/orchestrator` composes golden-path → project-lifecycle → creative-production behind `runBusinessProcess` with a structured trace. tsc clean; 2/2 fake-E2E tests pass (2026-08-15). P6-A/P6-B PASS. Live full-process E2E DEFERRED on BL-016 (CloudBase quota).]
 
 P1-01 EVIDENCE:
 - Package: packages/contracts (TypeScript + zod runtime validation).
@@ -93,6 +94,19 @@ P5-01 EVIDENCE:
 - Regression P5-H green across all 5 packages (contracts 85 / br 36+1skip / pl 20+1skip / la 7 / cp 19+1skip). tsc --noEmit clean on all.
 - P5-I REAL end-to-end: closed as FUNCTIONAL PASS 2026-08-15 (P5-X03 HARDEN + tests + prod deploy dpl_AdnQygPLZ7fB58QJECcvj5o4NxGV). Live CREATIVE_SUCCESS rerun DEFERRED on CloudBase read-quota exhaustion (owner override; not a code defect). Reported honestly as `P5 FUNCTIONAL PASS — LIVE RE-RUN DEFERRED — CLOUDBASE QUOTA`.
 - Completion evidence: 11-P5-01-COMPLETION.md (impl); BUSOS-P5-X03-STATUS.md (functional closure + owner override). P5-A..P5-H PASS; P5-I live rerun deferred.
+
+P6-01 PLAN:
+- New package: packages/orchestrator (name @busos/orchestrator).
+- Composition only — no existing package modified, no new infra. `runBusinessProcess(input, deps)` wires the three slices with a shared `BusinessRepository` (Feishu port) + single `LumenPort`. `TraceCollector` records per-stage OK/FAILED for observability and makes the deferred live rerun (BL-016) a single inspectable call.
+- Imports ONLY from @busos/golden-path, @busos/project-lifecycle, @busos/creative-production, @busos/contracts, @busos/business-repository, @busos/lumen-adapter. Holds no secret.
+- P6-A fake E2E + P6-B failure-observability gates implemented; live full-process E2E (P6-C) gated on FEISHU_* + FEISHU_ASSET_TABLE_ID and LUMEN_BASE_URL + LUMEN_AUTH_PASSWORD, deferred on CloudBase quota.
+
+P6-01 EVIDENCE:
+- Package: packages/orchestrator (TypeScript; name @busos/orchestrator).
+- tsc --noEmit clean (exit 0). vitest 2 passed / 0 failed (13ms, 1 file).
+- Tests: fake-e2e.test.ts (2) — full happy-path SUCCESS (asset id/uri defined, 3 OK stages in order) · Lumen-failure → FAILED at CREATIVE_PRODUCTION with 3 stages recorded (last FAILED).
+- Plan/acceptance: BUSOS-P6-01-PLAN.md.
+- Live P6-C E2E: DEFERRED (BL-016, CloudBase NoSQL read-quota exhaustion, non-code). Not substituted for Fake PASS.
 
 CURRENT BLOCKERS:
 - **BL-013 CLOSED (2026-08-12)** — Live Feishu E2E executed with provided FEISHU_* credentials; real-adapter LIVE block passed.

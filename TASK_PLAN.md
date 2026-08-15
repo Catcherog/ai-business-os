@@ -1,4 +1,4 @@
-# TASK_PLAN — BUSOS-P2-GP-001 (CLOSED) · BUSOS-P3-01 (CLOSED) · BUSOS-P4-01 (CLOSED — LIVE P4 LIFECYCLE E2E PASS) · BUSOS-P5-01 (IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED)
+# TASK_PLAN — BUSOS-P2-GP-001 (CLOSED) · BUSOS-P3-01 (CLOSED) · BUSOS-P4-01 (CLOSED — LIVE P4 LIFECYCLE E2E PASS) · BUSOS-P5-01 (FUNCTIONAL PASS / LIVE RE-RUN DEFERRED) · BUSOS-P6-01 (IN PROGRESS — Orchestrator MVP)
 
 ## task_id
 BUSOS-P5-01 — Creative Production Vertical Slice
@@ -202,3 +202,79 @@ NEXT: P6 (BUSOS-P6-01) — authorized 2026-08-15 via owner override (P5 closes a
 - Gates: P5-A1/P5-A2 MAPPED; P5-B PASS; P5-C/D/E/F/G/H PASS; P5-I closed as FUNCTIONAL PASS (live CREATIVE_SUCCESS rerun DEFERRED — CloudBase quota, owner override 2026-08-15).
 - Tests (per package `npm run verify`): contracts 85 · business-repository 36+1skip · project-lifecycle 20+1skip · lumen-adapter 7 · creative-production 19+1skip.
 - Completion evidence: `11-P5-01-COMPLETION.md` — status `IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED`.
+
+## p6_task (BUSOS-P6-01 — Orchestrator MVP, Composition Only)
+
+status:
+IN PROGRESS — first implementation task COMPLETE (2026-08-15). P6-A/P6-B PASS
+(fake E2E). Live full-process E2E (P6-C) DEFERRED on BL-016 (CloudBase quota).
+No existing package modified; no new infra.
+
+scope_enforced:
+ONLY BUSOS-P6-01. Build one thin composition layer (`packages/orchestrator`)
+that wires the existing P1–P5 slices into a single `runBusinessProcess(input,
+deps)` entrypoint with a structured execution trace. Did NOT:
+- modify any `@busos/*` package (golden-path / project-lifecycle /
+  creative-production / business-repository / lumen-adapter / contracts / …);
+- redesign governance, candidate builder, human-review, or any slice;
+- add transaction / saga / retry / CQRS / event-sourcing / queue infra;
+- implement Memory / HITL / Evaluation center / dashboard / portfolio (P6+ deferred);
+- change any contract schema/type.
+
+new_package:
+`packages/orchestrator/` (@busos/orchestrator)
+- `src/types.ts` — `OrchestratorDeps` (shared `BusinessRepository` + `LumenPort`
+  + optional `candidateBuilder`/`governance` overrides), `OrchestratorInput`,
+  `ProcessStage`, `ProcessStatus`, `ProcessStageEvent`, `ProcessTrace`,
+  `ProcessResult`.
+- `src/trace.ts` — `TraceCollector` (async `stage(name, fn, ok)` + `snapshot()`).
+- `src/run-business-process.ts` — `runBusinessProcess(input, deps)`: composes the
+  3 slices, early-exits on non-success.
+- `src/index.ts` — public surface.
+- `tests/fake-e2e.test.ts` — 2 tests (happy-path SUCCESS; Lumen-failure → FAILED
+  at CREATIVE_PRODUCTION).
+
+tests:
+command (in `packages/orchestrator`): `npm run verify`  # tsc --noEmit && vitest run --pool=forks
+- typecheck: PASS (tsc --noEmit exit 0)
+- vitest: **2 passed | 0 failed** (13ms, 1 file)
+  - fake-e2e.test.ts (2): full happy-path SUCCESS (asset id/uri defined, 3 OK
+    stages in order) · Lumen-failure → FAILED at CREATIVE_PRODUCTION (3 stages
+    recorded, last FAILED).
+- Live P6-C E2E: DEFERRED (BL-016, CloudBase NoSQL read-quota exhaustion,
+  non-code). Not substituted for Fake PASS.
+
+regression_plg:
+Existing P5 suites remain PASS (unchanged — orchestrator adds no dependency on
+them, composition only). tsc clean across all modified packages.
+
+frozen_contracts:
+@busos/contracts NOT modified by P6-01 (composition only).
+
+## blockers / backlog
+- BL-016 (CLOSED AS ENGINEERING BLOCKER / LIVE QUOTA RE-RUN DEFERRED) — P6-01
+  makes the deferred live rerun a single `runBusinessProcess(realDeps)` call;
+  still gated on CloudBase quota + secrets.
+- BL-015 (OPEN / NON-BLOCKING) — unchanged.
+
+## git_info
+- branch: main
+- baseline HEAD (remote): 40511e27b03c8402d8229f468e9471e0a2960b06
+- closing SHA: <this P6-01 commit — pending push>
+- pushed: pending / origin/main
+
+## nextActor
+P6-01 first implementation task COMPLETE (orchestrator package, tsc clean, 2/2
+fake-E2E tests pass 2026-08-15). NEXT P6-01 step: when CloudBase quota is
+restored + secrets supplied, run `runBusinessProcess` with REAL adapters to claim
+P6-C LIVE full-process E2E (BL-016 rerun). Do NOT start P6+ items without a new
+authorized task.
+
+## P6-01 — Orchestrator MVP (current task)
+- New package: `@busos/orchestrator` — composes golden-path → project-lifecycle →
+  creative-production behind `runBusinessProcess`; `TraceCollector` for
+  observability; holds no secret. Composition only.
+- Gates: P6-A PASS (fake E2E happy path) · P6-B PASS (failure trace) · P6-C
+  DEFERRED (live full-process E2E, BL-016 CloudBase quota).
+- Tests: tsc clean; vitest 2 passed / 0 failed (13ms).
+- Plan/acceptance: `BUSOS-P6-01-PLAN.md`.

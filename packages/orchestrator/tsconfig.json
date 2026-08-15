@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@busos/contracts": ["../contracts/src/index.ts"],
+      "@busos/business-repository": ["../business-repository/src/index.ts"],
+      "@busos/service-agent-candidate": ["../service-agent-candidate/src/index.ts"],
+      "@busos/golden-path": ["../golden-path/src/index.ts"],
+      "@busos/project-lifecycle": ["../project-lifecycle/src/index.ts"],
+      "@busos/lumen-adapter": ["../lumen-adapter/src/index.ts"],
+      "@busos/creative-production": ["../creative-production/src/index.ts"]
+    }
+  },
+  "include": ["src", "tests"]
+}

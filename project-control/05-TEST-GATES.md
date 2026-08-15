@@ -437,3 +437,44 @@ task is reported `P5 FUNCTIONAL PASS — LIVE RE-RUN DEFERRED — CLOUDBASE QUOT
 and **P6 is authorized** (live CREATIVE_SUCCESS rerun deferred). Do not substitute
 Fake/Simulator PASS for Live PASS; the `live-e2e.test.ts` sketch remains gated and
 skipped until secrets are supplied.
+
+---
+
+## P6-01 Gate — Orchestrator MVP (Composition Only)
+
+PASS only if all gates below pass. Status as of 2026-08-15: **FAKE E2E PASS — LIVE FULL-PROCESS E2E DEFERRED (CloudBase quota, BL-016)**.
+
+### P6-A — Composition fake E2E
+
+`runBusinessProcess` with `FakeFeishuAdapter` + `createFakeLumenAdapter` runs
+Consultation → Lead/Customer → Project/Task → Asset end to end and returns
+`SUCCESS` with a 3-stage (GOLDEN_PATH → PROJECT_LIFECYCLE → CREATIVE_PRODUCTION)
+all-OK trace; asset id + asset uri defined.
+
+**Status: PASS** — `packages/orchestrator` fake-e2e.test.ts (1 of 2):
+full happy-path SUCCESS, trace records 3 OK stages in order.
+
+### P6-B — Failure observability
+
+On a Lumen generation failure the trace marks CREATIVE_PRODUCTION FAILED and
+`result.failedStage === 'CREATIVE_PRODUCTION'`; zero partial Asset (upstream
+compensation already proven by P4/P5). Early-exit stops the process at the failed
+stage with the prior stages recorded.
+
+**Status: PASS** — fake-e2e.test.ts (2 of 2): Lumen-failure → FAILED at
+CREATIVE_PRODUCTION, 3 stages recorded (last FAILED).
+
+### P6-C — Live full-process E2E (deferred — BL-016)
+
+Run the SAME `runBusinessProcess` with REAL `BusinessRepository`
+(`RealFeishuAdapter`) + REAL `LumenPort` (`RealLumenAdapter`) through the full
+chain (Consultation → Real Feishu Lead/Customer write+readback → Real Feishu
+Project/Task write+readback → Real Vercel Lumen generate → Real Feishu Asset
+write+readback → VERIFIED). Requirements: no credential print; sanitized evidence
+only; cleanup by exact `record_id`; gated on `FEISHU_*`+`FEISHU_ASSET_TABLE_ID`
+and `LUMEN_BASE_URL`+`LUMEN_AUTH_PASSWORD`.
+
+**Status: DEFERRED** (CloudBase NoSQL read-quota exhaustion, non-code). Do NOT
+substitute Fake PASS for Live PASS. The orchestrator makes this a single
+re-runnable call once quota is restored.
+

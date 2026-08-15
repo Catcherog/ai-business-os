@@ -148,3 +148,13 @@ BLOCKER / LIVE QUOTA RE-RUN DEFERRED. P5 no longer blocks P6.
 - Why non-blocking: P5-X01 scope is the Lumen production-generation root cause (queue→worker, no on-demand execution). Lead-status writes are not on the P5 live closure path (the live E2E seeds `lead_id: 'lead_live_p5'` and never calls `updateLeadStatus`). The P5-04 Task-DONE fix is complete and unaffected.
 - Suggested revisit phase: When a flow first calls `updateLeadStatus` with a `Created At` payload, or as a proactive hardening pass on Feishu DateTime writes. Fix mirrors P5-04: send only the status field, remove the ISO `Created At` rewrite.
 
+## BL-018 BUSOS-P6-01 — Orchestrator MVP (composition only)
+- Type: **ACCEPTED / IN PROGRESS** (authorized 2026-08-15; first implementation task COMPLETE 2026-08-15)
+- Found in task: BUSOS-P6-01
+- Description: A single `@busos/orchestrator` package composes the existing vertical slices (golden-path → project-lifecycle → creative-production) behind one `runBusinessProcess(input, deps)` entrypoint with a structured execution trace. No existing package modified; no new infra (no Redis/MQ/orchestration engine). The orchestrator converts the deferred live CREATIVE_SUCCESS rerun (BL-016) into a single inspectable call instead of three manual runs.
+- Why non-blocking: pure composition; all three slices were independently verified in P2/P4/P5. No contract or slice change.
+- Suggested revisit phase: P6-01 live full-process E2E (P6-C) once CloudBase read quota is restored + `FEISHU_*`+`FEISHU_ASSET_TABLE_ID` and `LUMEN_BASE_URL`+`LUMEN_AUTH_PASSWORD` are supplied — then re-run via `runBusinessProcess(realDeps)`.
+
+## BL-016 rerun path (updated by BUSOS-P6-01)
+The deferred live CREATIVE_SUCCESS rerun is now a single `runBusinessProcess(input, { businessRepository: RealFeishuAdapter-based, lumen: RealLumenAdapter })` call (P6-A/P6-B fake PASS; P6-C live DEFERRED). When CloudBase quota is restored, supply the rotated `LUMEN_AUTH_PASSWORD` + `FEISHU_*` and run the orchestrator's real-adapter path to claim P6-C LIVE full-process E2E (resolves BL-016 rerun).
+

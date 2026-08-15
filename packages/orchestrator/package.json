@@ -1,0 +1,31 @@
+{
+  "name": "@busos/orchestrator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI Business OS BUSOS-P6-01 — Orchestrator MVP: composes golden-path -> project-lifecycle -> creative-production into one runBusinessProcess entrypoint with a structured execution trace. Composition only; no package modification, no new infra.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --pool=forks",
+    "verify": "npm run typecheck && npm run test"
+  },
+  "dependencies": {
+    "@busos/contracts": "file:../contracts",
+    "@busos/business-repository": "file:../business-repository",
+    "@busos/service-agent-candidate": "file:../service-agent-candidate",
+    "@busos/golden-path": "file:../golden-path",
+    "@busos/project-lifecycle": "file:../project-lifecycle",
+    "@busos/lumen-adapter": "file:../lumen-adapter",
+    "@busos/creative-production": "file:../creative-production"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.2",
+    "typescript": "5.6.3",
+    "vitest": "2.1.8"
+  }
+}
