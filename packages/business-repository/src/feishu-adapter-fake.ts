@@ -20,6 +20,32 @@ import {
 } from './verify.js';
 import { generateRecordId, nowIso } from './util.js';
 
+/** Deterministic ordering: most-recently-updated first, stable tie-break by id. */
+function cmpUpdatedDesc(
+  a: { updated_at: string; project_id?: string; asset_id?: string },
+  b: { updated_at: string; project_id?: string; asset_id?: string },
+): number {
+  if (a.updated_at === b.updated_at) {
+    const aid = a.project_id ?? a.asset_id ?? '';
+    const bid = b.project_id ?? b.asset_id ?? '';
+    return aid < bid ? -1 : aid > bid ? 1 : 0;
+  }
+  return a.updated_at > b.updated_at ? -1 : 1;
+}
+
+/** Deterministic ordering: earliest-created first, stable tie-break by id. */
+function cmpCreatedAsc(
+  a: { created_at: string; task_id?: string },
+  b: { created_at: string; task_id?: string },
+): number {
+  if (a.created_at === b.created_at) {
+    const aid = a.task_id ?? '';
+    const bid = b.task_id ?? '';
+    return aid < bid ? -1 : aid > bid ? 1 : 0;
+  }
+  return a.created_at < b.created_at ? -1 : 1;
+}
+
 /**
  * In-memory Feishu adapter for development + unit tests (explicitly Fake,
  * §6). It proves repository domain logic, mapping contract, readback
@@ -223,6 +249,26 @@ export class FakeFeishuAdapter implements FeishuAdapter {
 
   async getAsset(assetId: string): Promise<Asset | null> {
     return this.assets.get(assetId) ?? null;
+  }
+
+  /* ----------------------------------------------- H1-01 additive collection reads */
+
+  async listProjects(opts?: { limit?: number }): Promise<Project[]> {
+    const all = [...this.projects.values()].sort(cmpUpdatedDesc);
+    const limit = opts?.limit;
+    return typeof limit === 'number' && limit >= 0 ? all.slice(0, limit) : all;
+  }
+
+  async listTasksByProject(projectId: string): Promise<Task[]> {
+    return [...this.tasks.values()]
+      .filter((t) => t.project_id === projectId)
+      .sort(cmpCreatedAsc);
+  }
+
+  async listAssetsByProject(projectId: string): Promise<Asset[]> {
+    return [...this.assets.values()]
+      .filter((a) => a.project_id === projectId)
+      .sort(cmpUpdatedDesc);
   }
 
   /* --------------------------------------------------- test-hygiene deletion */

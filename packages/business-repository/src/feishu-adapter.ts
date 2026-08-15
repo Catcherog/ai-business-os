@@ -717,6 +717,58 @@ export class RealFeishuAdapter implements FeishuAdapter {
     return fromFeishuAssetRecord(recs[0], this.fm);
   }
 
+  /* ----------------------------------------------- H1-01 additive collection reads */
+
+  /**
+   * List every record in a table via `/records/search` with an empty filter
+   * (matches all). Reuses the same search endpoint and unwrap logic as the
+   * field-scoped lookups, so the live Base (which rejects the list `?filter=`
+   * query) behaves consistently. Pagination is left to the caller's `limit`; a
+   * single page is sufficient for the H1-01 workspace surface.
+   */
+  private async listRecords(tableId: string): Promise<FeishuRecord[]> {
+    const path = `/open-apis/bitable/v1/apps/${this.baseAppToken}/tables/${tableId}/records/search`;
+    const resp = await this.feishuCall('POST', path, {
+      filter: { conjunction: 'and', conditions: [] },
+    });
+    if (resp.code !== 0) return [];
+    const data = resp.data as { items?: FeishuRecord[] } | undefined;
+    return (data?.items ?? []).map((rec) => ({
+      record_id: rec.record_id,
+      fields: unwrapFeishuFields(rec.fields ?? {}),
+    }));
+  }
+
+  async listProjects(opts?: { limit?: number }): Promise<Project[]> {
+    const tableId = this.requireProjectTable();
+    const projects = (await this.listRecords(tableId)).map((r) => fromFeishuProjectRecord(r, this.fm));
+    projects.sort((a, b) =>
+      a.updated_at === b.updated_at ? 0 : a.updated_at > b.updated_at ? -1 : 1,
+    );
+    const limit = opts?.limit;
+    return typeof limit === 'number' && limit >= 0 ? projects.slice(0, limit) : projects;
+  }
+
+  async listTasksByProject(projectId: string): Promise<Task[]> {
+    const tableId = this.requireTaskTable();
+    const tasks = (await this.findRecordsByField(tableId, this.fm.taskProjectId, projectId)).map(
+      (r) => fromFeishuTaskRecord(r, this.fm),
+    );
+    tasks.sort((a, b) => (a.created_at === b.created_at ? 0 : a.created_at < b.created_at ? -1 : 1));
+    return tasks;
+  }
+
+  async listAssetsByProject(projectId: string): Promise<Asset[]> {
+    const tableId = this.requireAssetTable();
+    const assets = (await this.findRecordsByField(tableId, this.fm.assetProjectId, projectId)).map(
+      (r) => fromFeishuAssetRecord(r, this.fm),
+    );
+    assets.sort((a, b) =>
+      a.updated_at === b.updated_at ? 0 : a.updated_at > b.updated_at ? -1 : 1,
+    );
+    return assets;
+  }
+
   /* --------------------------------------------------- test-hygiene deletion */
 
   private async deleteRecord(tableId: string, recordId: string): Promise<boolean> {

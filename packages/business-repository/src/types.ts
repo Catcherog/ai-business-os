@@ -76,6 +76,23 @@ export interface FeishuAdapter {
   createAsset(asset: Asset): Promise<FeishuWriteOutcome<Asset>>;
   getAsset(assetId: string): Promise<Asset | null>;
   /**
+   * H1-01 additive READ — list all Projects. Returns canonical `Project[]`
+   * (mapping applied inside the adapter). Results are ordered most-recently
+   * updated first; an optional bounded `limit` may be supplied. No write, no
+   * Feishu record structures escape the adapter.
+   */
+  listProjects(opts?: { limit?: number }): Promise<Project[]>;
+  /**
+   * H1-01 additive READ — list Tasks belonging to a Project (by canonical
+   * `project_id`). Canonical `Task[]`, ordered deterministically.
+   */
+  listTasksByProject(projectId: string): Promise<Task[]>;
+  /**
+   * H1-01 additive READ — list Assets belonging to a Project (by canonical
+   * `project_id`). Canonical `Asset[]`, ordered deterministically.
+   */
+  listAssetsByProject(projectId: string): Promise<Asset[]>;
+  /**
    * Test-hygiene / P4-P5 compensation only: delete a single record by its
    * exact Feishu `record_id`. Used by the live E2E and by partial-failure
    * compensation to clean up generated records without touching existing

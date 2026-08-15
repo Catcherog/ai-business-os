@@ -199,6 +199,23 @@ export class BusinessRepository {
     return this.adapter.getAsset(assetId);
   }
 
+  /* ----------------------------------------------- H1-01 additive collection reads */
+
+  /** List canonical Projects (most-recently-updated first). Read-only. */
+  async listProjects(opts?: { limit?: number }): Promise<Project[]> {
+    return this.adapter.listProjects(opts);
+  }
+
+  /** List canonical Tasks for a Project. Read-only. */
+  async listTasksByProject(projectId: string): Promise<Task[]> {
+    return this.adapter.listTasksByProject(projectId);
+  }
+
+  /** List canonical Assets for a Project. Read-only. */
+  async listAssetsByProject(projectId: string): Promise<Asset[]> {
+    return this.adapter.listAssetsByProject(projectId);
+  }
+
   /* ------------------------------------------- test-hygiene / compensation */
 
   async deleteProject(recordId: string): Promise<boolean> {

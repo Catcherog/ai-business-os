@@ -628,3 +628,119 @@ DEFERRED (BL-018); BL-016 CLOSED; P6+ NOT STARTED.
 
 **Status: PASS.**
 
+---
+
+## R2-H1-01 Gate — Operator Workspace Shell + Project Read Surface
+
+PASS only if all gates below pass. Status as of 2026-08-15: **PASS**.
+No live environment required for any H1-01 gate — the read surface is exercised
+against the in-memory `FakeFeishuAdapter` and against the `RealFeishuAdapter`
+simulator (stubbed transport). H1-01 is strictly read-only.
+
+Scope lock: only H1-01 implemented. H1-02 (Reviews), H1-03 (Runs), H1-04
+(AI action), H1-05 are NOT started. No business mutation UI/API, no Human
+Review, no Creative Production, no Lumen, no Orchestrator execution.
+
+### H1-01-A — Baseline / authority
+
+`git reset --hard` to the authorized baseline `4b5ca9c7eaba3c9571b3dfb1d50d3119a75a9aa9`
+(remote `main` verified equal). R2 AUTHORITY CONFIRMED, COMPATIBILITY PASS,
+H1-01 AUTHORIZED. Stale pre-R2 working edits were backed up out-of-tree
+(`/tmp/h1-backup`, `/tmp/h1-repo-edit`) and NOT merged back.
+
+**Status: PASS.**
+
+### H1-01-B — Workspace Shell
+
+`apps/operator-workspace` is a minimal, maintainable TS web app (no separate
+frontend/backend deployment). Desktop-first, responsive. Exactly four top-level
+nav entries: **Overview / Projects / Reviews / Runs**. Projects is the only
+functional domain; Overview / Reviews / Runs are bounded placeholders. Built and
+headless-smoke-tested (bundle loads, seeds the in-memory workspace, renders
+without throwing).
+
+**Status: PASS.**
+
+### H1-01-C — Canonical Project List
+
+`WorkspaceReadService.listProjects()` returns canonical `Project[]` (most-recently
+updated first), proven over both the fake and the real-adapter simulator. The
+Projects list renders titles, type, customer_id, and status; loading / empty /
+error states implemented.
+
+**Status: PASS** — `packages/workspace-read/tests/fake-e2e.test.ts` +
+`real-adapter-simulator.test.ts` (list assertions) and the bundled UI.
+
+### H1-01-D — Project Detail
+
+`WorkspaceReadService.getProjectWorkspace(projectId)` returns
+`{ project, customer, tasks, assets }` (null when missing). The Project Detail
+view renders Project + Customer + Tasks table + Assets table. Every seeded
+project resolves its own customer / tasks / assets through both adapters.
+
+**Status: PASS** — `fake-e2e.test.ts` (3 tests) + `real-adapter-simulator.test.ts`
+(2 tests) assert the full aggregate over both adapters.
+
+### H1-01-E — Repository Read Boundary
+
+Additive collection reads added behind the frozen persistence boundary:
+`BusinessRepository.listProjects / listTasksByProject / listAssetsByProject`,
+implemented in both `FakeFeishuAdapter` (in-memory maps, deterministic order) and
+`RealFeishuAdapter` (reuses the same `/records/search` + unwrap +
+`fromFeishu*Record` mapping). No Feishu record id / table id / field name escapes
+the adapter — only canonical domain types reach `WorkspaceReadService`.
+
+**Status: PASS.**
+
+### H1-01-F — Read-Only Enforcement
+
+`WorkspaceReadService` and the three new repository methods are reads only: they
+delegate to `getProject` / `getCustomer` / `listProjects` / `listTasksByProject`
+/ `listAssetsByProject` and never to any create/update/delete path, so they
+cannot mutate storage. Static review of the H1-01 diff confirms no new write /
+mutation surface was introduced (the only `create*` usage is `seedFakeWorkspace`,
+a seed-setup helper consumed by tests and the demo bootstrap — not by the
+read-only service or UI). No Feishu credential is present in the browser bundle.
+
+**Status: PASS.**
+
+### H1-01-G — Fake Product E2E
+
+End-to-end read surface against `FakeFeishuAdapter`: seed deterministic demo
+data (≥2 Projects, Customers, Tasks, Assets), then prove `WorkspaceReadService`
+exposes the canonical structures with no Feishu leakage and returns `null` for
+unknown ids.
+
+**Status: PASS** — `packages/workspace-read/tests/fake-e2e.test.ts`
+**3 passed / 0 failed**.
+
+### H1-01-H — Real-Adapter Simulator Regression
+
+The production `RealFeishuAdapter` (driven by a stubbed `fetchImpl`, no live
+credentials) writes the demo dataset then reads it back through
+`WorkspaceReadService`, proving the real adapter's collection-read mapping is
+correct end-to-end.
+
+**Status: PASS** — `packages/workspace-read/tests/real-adapter-simulator.test.ts`
+**2 passed / 0 failed**.
+
+### H1-01-I — Existing Regression
+
+All `@busos/*` packages + the new `@busos/workspace-read` typecheck clean and
+their test suites pass; only LIVE credential-gated SKIPs are non-passing:
+- contracts 85 · service-agent-candidate 53 · business-repository 37+1skip ·
+  golden-path 11+1skip · human-review 42+2skip · project-lifecycle 20+1skip ·
+  lumen-adapter 9 · creative-production 19+1skip · orchestrator 37 ·
+  **workspace-read 5 (new)**.
+
+**Status: PASS.**
+
+### H1-01-J — Build / Type Safety
+
+`packages/workspace-read` `tsc --noEmit` clean; all packages typecheck clean.
+The `apps/operator-workspace` frontend bundles cleanly via esbuild
+(aliases for `@busos/*`, `node:crypto` shim, `process` shim) to
+`dist/bundle.js` (headless smoke PASS); no Feishu secret in the artifact.
+
+**Status: PASS.**
+

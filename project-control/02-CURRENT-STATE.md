@@ -9,16 +9,22 @@ BUSOS-P5-X03-STATUS.md, BUSOS-P6-01-PLAN.md). Detailed evidence for P1–P6 is
 preserved in those completion reports and git history — not duplicated here.
 
 CURRENT PHASE:
-R2 — H1 Operator Workspace Planning
+R2 — H1 Operator Workspace MVP
 
 CURRENT TASK:
-BUSOS-R2-00 — R1→R2 Planning Baseline
-[COMPLETE / PASS — control-document task only; no product code changed]
+BUSOS-R2-H1-01 — Workspace Shell + Project Read Surface
+[COMPLETE]
 
 CURRENT ENGINEERING STATUS:
-No R2 product implementation started. Only `project-control/` planning documents
-were updated in this task. H1-01 is the next authorized unit, requiring a
-separate explicit task.
+H1-01 COMPLETE — Operator Workspace shell (Overview / Projects / Reviews / Runs)
+shipped with the read-only Projects list + Project Detail (Project + Customer +
+Tasks + Assets) surface on top of the R1 core. Additive repository collection
+reads (listProjects / listTasksByProject / listAssetsByProject) implemented in
+both Fake + Real Feishu adapters, behind a new `@busos/workspace-read`
+`WorkspaceReadService` boundary (no Feishu leakage). `apps/operator-workspace`
+is a minimal client-side TS app (in-memory fake adapter; no Feishu credential in
+the browser). Gates H1-01-A..H1-01-J all PASS. No business mutation was
+authorized or implemented. See `BUSOS-R2-H1-01-COMPLETION.md`.
 
 EXISTING CAPABILITIES (short list):
 - Candidate / Governance (Service Agent → `LeadCandidateV1`, deterministic governance)
@@ -36,8 +42,10 @@ ACTIVE BLOCKERS:
   R2 scope.
 
 NEXT AUTHORIZED WORK:
-H1-01 only after BUSOS-R2-00 closure and an explicit task authorization. Do not
-start H1-01 from this planning task.
+H1-01 is CLOSED. Per the STOP rule, do not start H1-02 (Reviews), H1-03 (Runs),
+H1-04 (AI action), or H1-05 without explicit owner authorization. They cannot be
+auto-started. The next step after H1-01 closure is commit + push + clean tree
+(H1-01 is a non-live, self-contained read surface).
 
 IMPORTANT DEFERRED ITEMS:
 - BL-018 — live full-process E2E (P6-C); OPEN / NON-ENGINEERING LIVE DEPENDENCY.

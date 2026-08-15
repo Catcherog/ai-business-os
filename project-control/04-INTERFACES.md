@@ -304,3 +304,74 @@ new env vars `FEISHU_PROJECT_TABLE_ID` / `FEISHU_TASK_TABLE_ID` (added
 alongside the existing `FEISHU_APP_ID` / `FEISHU_APP_SECRET` /
 `FEISHU_BASE_APP_TOKEN` / `FEISHU_LEAD_TABLE_ID` / `FEISHU_CUSTOMER_TABLE_ID`).
 No secret is ever written to the repository.
+
+---
+
+## 8. Addendum — H1-01 Operator Workspace Read Surface (BUSOS-R2-H1-01, ADDITIVE)
+
+This section is additive to the frozen R1 interfaces above (and to the P4
+addendum §7). It does not modify any existing Lead / Customer / Project / Task /
+Asset contract or decision. It introduces the canonical `WorkspaceReadService`
+application boundary — the Operator Workspace's only read surface in H1-01 — and
+the minimal repository/adapter collection-read methods it depends on.
+
+Frozen decisions respected: D008 (storage abstraction), D014 (contract-based
+interaction), D017 (BusinessRepository is the persistence boundary), D018
+(FeishuAdapter owns Feishu knowledge), D019 (write != success until readback
+VERIFIED). H1-01 is **read-only** — no create/update/delete is added to the
+workspace path.
+
+The UI (`apps/operator-workspace`) runs entirely client-side against the
+in-memory `FakeFeishuAdapter`; no Feishu credential ever reaches the browser.
+The production `RealFeishuAdapter` path is exercised only by the server-side
+simulator tests, never shipped to the client.
+
+### 8.1 WorkspaceReadService (canonical, additive)
+
+```ts
+interface ProjectWorkspace {
+  project: Project;
+  customer: Customer | null;
+  tasks: Task[];
+  assets: Asset[];
+}
+
+class WorkspaceReadService {
+  constructor(repo: BusinessRepository);
+  listProjects(opts?: { limit?: number }): Promise<Project[]>;
+  getProjectWorkspace(projectId: string): Promise<ProjectWorkspace | null>;
+}
+```
+
+- `listProjects` backs the **Projects** navigation list.
+- `getProjectWorkspace` backs the **Project Detail** view (Project + Customer
+  reference + Tasks + Assets). Returns `null` when the project does not exist.
+- Every method delegates to a BusinessRepository *read* (`getProject`,
+  `getCustomer`, `listProjects`, `listTasksByProject`, `listAssetsByProject`);
+  it never calls a create/update/delete path, so it cannot mutate storage
+  (H1-01-F).
+- Only canonical domain types leave this boundary — Feishu record ids, table
+  ids, and field names never appear in `ProjectWorkspace` (D018).
+
+### 8.2 BusinessRepository additional interface (H1-01, read-only)
+
+Existing V1 / P4 methods unchanged. Added for H1-01 (all reads):
+
+- `listProjects(opts?: { limit?: number }) -> Project[]`  (most-recently-updated first)
+- `listTasksByProject(projectId) -> Task[]`              (deterministic order)
+- `listAssetsByProject(projectId) -> Asset[]`            (deterministic order)
+
+Upper layers (workspace-read / Operator Workspace) must not receive raw Feishu
+record structures; only canonical domain objects.
+
+### 8.3 FeishuAdapter additional responsibilities (H1-01, read-only)
+
+- list all Project records (via `/records/search` empty filter) and map to canonical `Project`
+- list Task records by canonical `project_id` (via field-scoped `/records/search`)
+- list Asset records by canonical `project_id` (via field-scoped `/records/search`)
+
+Only this module may know the Project/Task/Asset **table ids** and field names.
+`FakeFeishuAdapter` returns the in-memory maps directly (deterministic ordering);
+`RealFeishuAdapter` reuses the same search + unwrap + `fromFeishu*Record` mapping
+as the field-scoped lookups used by `getProject` / `getTask` / `getAsset`.
+
