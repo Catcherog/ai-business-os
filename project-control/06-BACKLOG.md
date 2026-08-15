@@ -177,9 +177,21 @@ live-evidence dependency migrated to **BL-018** (BUSOS-P6-02 hygiene pass).
 - Suggested revisit phase: owner-authorized live closure run (not P6-02 scope).
 
 ## BL-019 golden-path real-adapter-simulator Flow B fails (`linkLeadCustomer: lead not found in Feishu`)
-- Type: **OPEN / NON-BLOCKING** (pre-existing; observed during BUSOS-P6-02 regression sweep)
+- **CLOSED (2026-08-15) — test-harness regression repaired (BUSOS-P6-03).** The
+  diagnostic history below is preserved verbatim.
+- Type (history): **OPEN / NON-BLOCKING** (pre-existing; observed during BUSOS-P6-02 regression sweep)
 - Found in task: BUSOS-P6-02 (observation only — NOT caused by P6-02)
-- Description: `packages/golden-path/tests/real-adapter.test.ts` Flow B fails with
+- Closure (BUSOS-P6-03): root cause confirmed as a **stale in-memory Feishu
+  simulator** in `packages/golden-path/tests/testkit.ts` (`makeFeishuStub`). The
+  production `RealFeishuAdapter.findRecordsByField` switched to the `/records/search`
+  endpoint in BUSOS-P4-01 (the list `?filter=` query returns InvalidFilter on the
+  live Base), but the golden-path stub copy never gained the `/records/search`
+  branch. So `linkLeadCustomer`/`findCustomerByIdentity` resolved to zero records
+  and Flow B failed closed. Fix: add the `POST .../records/search` branch to the
+  golden-path stub (mirrors the already-correct `packages/business-repository/tests/feishu-real.test.ts`
+  stub). **No production/contract/business behavior changed.** All golden-path +
+  workspace gates green (see BUSOS-P6-03 FINAL REPORT).
+- Description (history): `packages/golden-path/tests/real-adapter.test.ts` Flow B fails with
   `expected 'FAILED' to be 'SUCCESS'`. Root cause (probed, then probe removed):
   `linkLeadCustomer: lead not found in Feishu: lead_<id>` — the in-memory Feishu
   simulator's readback of the just-written Lead does not find the record, so the
@@ -192,7 +204,8 @@ live-evidence dependency migrated to **BL-018** (BUSOS-P6-02 hygiene pass).
 - Why non-blocking: it is a test-simulator fidelity issue in golden-path, not a
   production or contract defect; the live golden-path E2E (P2/GP-001) previously
   PASSED against real Feishu. All other 8 packages are green.
-- Suggested revisit phase: a dedicated golden-path test-harness maintenance task
+- Revisit phase (history): a dedicated golden-path test-harness maintenance task
   (fix the simulator Lead readback keying). Explicitly out of P6-02 scope
-  (no refactor of existing packages allowed).
+  (no refactor of existing packages allowed). **CLOSED by BUSOS-P6-03 (2026-08-15):
+  the `/records/search` stub branch was added; no production code touched.**
 

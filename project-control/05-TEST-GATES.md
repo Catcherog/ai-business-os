@@ -574,3 +574,57 @@ values and clamps length. The same dispositions are asserted end-to-end through
 
 **Status: PASS** — `tests/error-classification.test.ts` (unit + wired-through).
 
+## P6-03 Gate — Golden Path Regression Integrity / BL-019 Closure
+
+PASS only if all conditions below hold. Status as of 2026-08-15: **PASS**.
+No live environment required. Scope: golden-path test harness / in-memory Feishu
+simulator only — no production, contract, governance, Feishu production mapping,
+Lumen or CloudBase behavior changed.
+
+### P6-K — Targeted reproduction (Flow B restored)
+
+`packages/golden-path/tests/real-adapter.test.ts` Flow B
+(`customer find/create + lead + link VERIFIED`) returns `status === 'SUCCESS'`
+with `counts.writes.customer === 1`, `counts.writes.lead === 1`,
+`counts.writes.link === 1`, `lead.customer_id === customer.customer_id`, and both
+`leadCommit`/`customerCommit` `isBusinessCommitSuccess`. The whole file: 3 passed |
+1 skipped (the skip is the LIVE-Feishu E2E block, not hidden).
+
+**Status: PASS** — `tests/real-adapter.test.ts` (Flow B block).
+
+### P6-L — Golden Path regression
+
+`npx tsc --noEmit` clean in `packages/golden-path`; full `vitest run` →
+**11 passed | 1 skipped** (6 files: anonymous · identified · governance-block ·
+readback-failure · identity-boundary · real-adapter). Zero unexpected failures.
+
+**Status: PASS.**
+
+### P6-M — Business Repository regression (simulator-boundary)
+
+The fix lives in the golden-path simulator but crosses the BusinessRepository
+boundary, so its suite must stay green: `packages/business-repository` tsc clean;
+`vitest run` → **37 passed | 1 skipped** (the skip is the LIVE-Feishu E2E block).
+
+**Status: PASS.**
+
+### P6-N — Orchestrator regression (P6-02 gates intact)
+
+`packages/orchestrator` tsc clean; `npx vitest run --pool=forks` → **37 passed / 0
+failed** (P6-D..P6-J unchanged). P6-02 behavior was not modified by P6-03.
+
+**Status: PASS.**
+
+### P6-O — Full workspace regression
+
+All 9 `@busos/*` packages typecheck clean and their test suites pass; the only
+non-passing items are LIVE credential-gated SKIPs (reported, not hidden):
+- contracts 85 · service-agent-candidate 53 · business-repository 37+1skip ·
+  golden-path 11+1skip · human-review 42+2skip · project-lifecycle 20+1skip ·
+  lumen-adapter 9 · creative-production 19+1skip · orchestrator 37.
+
+BL-019 → **CLOSED (2026-08-15) — test-harness regression repaired**. P6-C stays
+DEFERRED (BL-018); BL-016 CLOSED; P6+ NOT STARTED.
+
+**Status: PASS.**
+

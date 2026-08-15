@@ -1,4 +1,4 @@
-# TASK_PLAN — BUSOS-P2-GP-001 (CLOSED) · BUSOS-P3-01 (CLOSED) · BUSOS-P4-01 (CLOSED — LIVE P4 LIFECYCLE E2E PASS) · BUSOS-P5-01 (FUNCTIONAL PASS / LIVE RE-RUN DEFERRED) · BUSOS-P6-01 (COMPLETE — Orchestrator MVP) · BUSOS-P6-02 (COMPLETE / PASS — Orchestrator Reliability + Trace Contract)
+# TASK_PLAN — BUSOS-P2-GP-001 (CLOSED) · BUSOS-P3-01 (CLOSED) · BUSOS-P4-01 (CLOSED — LIVE P4 LIFECYCLE E2E PASS) · BUSOS-P5-01 (FUNCTIONAL PASS / LIVE RE-RUN DEFERRED) · BUSOS-P6-01 (COMPLETE — Orchestrator MVP) · BUSOS-P6-02 (COMPLETE / PASS — Orchestrator Reliability + Trace Contract) · BUSOS-P6-03 (COMPLETE / PASS — Golden Path Regression Integrity / BL-019 Closure)
 
 ## task_id
 BUSOS-P5-01 — Creative Production Vertical Slice
@@ -257,9 +257,11 @@ frozen_contracts:
 - BL-018 (**OPEN / NON-ENGINEERING LIVE DEPENDENCY**) — P6-C live full-process E2E
   deferred on CloudBase read quota + `LUMEN_*` + `FEISHU_*` live credentials. Closes
   with one `runBusinessProcess(input, realDeps, { idempotencyKey })` call.
-- BL-019 (OPEN / NON-BLOCKING, recorded 2026-08-15) — pre-existing golden-path
-  real-adapter-simulator Flow B failure (`linkLeadCustomer: lead not found in
-  Feishu`); byte-identical to remote `0b515e9`, NOT caused by P6-02.
+- BL-019 (**CLOSED** 2026-08-15) — golden-path real-adapter-simulator Flow B
+  failure (`linkLeadCustomer: lead not found in Feishu`). Root cause: stale
+  in-memory Feishu stub in `packages/golden-path/tests/testkit.ts` lacked the
+  `/records/search` branch the production adapter adopted in BUSOS-P4-01. Fixed by
+  BUSOS-P6-03 (added the `/records/search` stub branch; no production code changed).
 - BL-015 (OPEN / NON-BLOCKING) — unchanged.
 
 ## git_info
@@ -269,11 +271,13 @@ frozen_contracts:
 - pushed: see `## p6_02_task` → git_info
 
 ## nextActor
-BUSOS-P6-01 COMPLETE and BUSOS-P6-02 COMPLETE / PASS (2026-08-15). NEXT: nothing —
-STOP per task §15. Do NOT start P6-03 / Memory / HITL / Eval / Dashboard /
-Portfolio / CloudBase live rerun without a new authorized task. The deferred P6-C
-live run remains available as a single `runBusinessProcess` call once BL-018's
-external dependency (quota + credentials) is satisfied.
+BUSOS-P6-01 COMPLETE, BUSOS-P6-02 COMPLETE / PASS, and BUSOS-P6-03 COMPLETE / PASS
+(2026-08-15). P6-03 closed BL-019 by repairing the stale golden-path Feishu
+simulator (test-harness only). NEXT: nothing — STOP per P6-03 task §11. Do NOT
+start P6-C live rerun / Memory / HITL / Eval / Dashboard / Portfolio / CloudBase
+live rerun without a new authorized task. The deferred P6-C live run remains
+available as a single `runBusinessProcess` call once BL-018's external dependency
+(quota + credentials) is satisfied.
 
 ## P6-01 — Orchestrator MVP
 - New package: `@busos/orchestrator` — composes golden-path → project-lifecycle →
@@ -370,3 +374,102 @@ cross-language business object.
 live_gate:
 P6-02 required no live environment and requested none. P6-C stays DEFERRED with
 BL-018 OPEN. No fake result was reported as a live PASS.
+
+## p6_03_task (BUSOS-P6-03 — Golden Path Regression Integrity / BL-019 Closure)
+
+status:
+COMPLETE / PASS (2026-08-15). Flow B restored; BL-019 CLOSED. No live environment
+required; P6-C stays DEFERRED (BL-018 OPEN / NON-ENGINEERING LIVE DEPENDENCY).
+
+baseline:
+- starting SHA: e7b97d576273d968857ceffd8eba57392c4ea4d9 (origin/main, verified)
+- closing SHA: see `## git_info` below
+- branch: main
+
+objective:
+Close BL-019 by diagnosing + minimally fixing the pre-existing golden-path
+real-adapter-simulator Flow B regression
+(`packages/golden-path/tests/real-adapter.test.ts`: `expected 'FAILED' to be
+'SUCCESS'`; observed root symptom `linkLeadCustomer: lead not found in Feishu`).
+
+scope_enforced:
+ONLY the golden-path test harness / in-memory Feishu simulator. Allowed touch
+points: `packages/golden-path/tests/**` and the simulator in `testkit.ts`. Did NOT:
+- modify orchestrator behavior / runBusinessProcess / process contracts / idempotency;
+- modify Golden Path business rules, governance, or Feishu production mappings;
+- touch Lumen / CloudBase / live Feishu / production credentials;
+- start P6-C live E2E / Memory / HITL / Eval / Dashboard / Portfolio;
+- add Redis / MQ / queue / DB / workflow engine / lock / retry framework;
+- rewrite unrelated tests or weaken assertions (no deletion / no count fudge).
+
+diagnosis (root cause):
+`packages/golden-path/tests/testkit.ts` `makeFeishuStub` is a STALE copy of
+`packages/business-repository/tests/feishu-real.test.ts`. The production
+`RealFeishuAdapter.findRecordsByField` POSTs to `POST /open-apis/bitable/v1/apps/{app}/tables/{table}/records/search`
+(a BUSOS-P4-01 live-closure fix — the list `?filter=` query param returns
+InvalidFilter 1254018 on the live Base and `/search` works). The golden-path stub
+only handled `POST /records`, `GET /records/{id}`, `PUT /records/{id}` and
+`GET /records?filter=`, so `/records/search` fell through to `unsupported` (400) →
+zero items → `recordIdByCanonicalId` returns null → `linkLeadCustomer` throws
+`lead not found in Feishu`. Leads ARE written with the canonical `lead_id` in the
+`Lead ID` field (`toFeishuLeadFields`), so the data is correct — only the
+simulator's lookup route was missing. Flow A does not exercise `/search` (its
+readback uses `GET /records/{id}`), which is why only Flow B regressed.
+
+fix (test-harness only):
+Added the `POST .../records/search` branch to `makeFeishuStub` in
+`packages/golden-path/tests/testkit.ts` — identical filter semantics to the already
+correct business-repository stub (`matchFilter` over stored `fields`). The simulator
+now faithfully emulates the existing adapter contract. **No production/contract/
+business behavior changed.**
+
+tests:
+command (in `packages/golden-path`): `npx tsc --noEmit` + `npx vitest run --pool=forks`
+- typecheck: PASS (tsc --noEmit exit 0)
+- `tests/real-adapter.test.ts`: 3 passed | 1 skipped (LIVE E2E skipped) — Flow B now
+  PASS.
+- full golden-path: 11 passed | 1 skipped (6 files).
+- business-repository: 37 passed | 1 skipped (regression across the simulator boundary).
+- orchestrator: 37 passed | 0 failed (P6-02 gates P6-D..P6-J remain green).
+
+regression (full workspace, tsc clean everywhere; skipped = LIVE credential-gated):
+| Package | tsc | Tests |
+|---------|-----|-------|
+| @busos/contracts | clean | 85 passed |
+| @busos/service-agent-candidate | clean | 53 passed |
+| @busos/business-repository | clean | 37 passed · 1 skipped |
+| @busos/golden-path | clean | 11 passed · 1 skipped |
+| @busos/human-review | clean | 42 passed · 2 skipped |
+| @busos/project-lifecycle | clean | 20 passed · 1 skipped |
+| @busos/lumen-adapter | clean | 9 passed |
+| @busos/creative-production | clean | 19 passed · 1 skipped |
+| @busos/orchestrator | clean | 37 passed · 0 failed |
+No failure anywhere except correctly-skipped LIVE blocks (reported, not hidden).
+
+bl019_closure:
+BL-019 → **CLOSED (2026-08-15) — test-harness regression repaired**. Diagnostic
+history preserved in `06-BACKLOG.md`. Closure justified: exact root cause identified
+(stale `/records/search` stub), minimal harness fix applied, original Flow B passes,
+golden-path + affected + orchestrator + full-workspace gates green, no product
+behavior weakened, no live evidence fabricated.
+
+control_state:
+- P5 = COMPLETE / FUNCTIONAL PASS (unchanged)
+- P6-01 = COMPLETE (unchanged)
+- P6-02 = COMPLETE / PASS (unchanged)
+- P6-03 = COMPLETE / PASS (this task)
+- P6-C = DEFERRED / BL-018 OPEN / NON-ENGINEERING LIVE DEPENDENCY (unchanged)
+- BL-016 = CLOSED (unchanged)
+- BL-019 = CLOSED (this task)
+- BL-015 = OPEN / NON-BLOCKING (unchanged)
+- P6+ NOT STARTED (Memory / HITL / Eval / Dashboard / Portfolio / production hardening / observability)
+
+## git_info
+- branch: main
+- baseline HEAD: e7b97d576273d968857ceffd8eba57392c4ea4d9
+- closing SHA: <see commit below after push>
+- pushed: YES / origin/main (verified via git ls-remote)
+
+## STOP
+P6-03 complete. STOP per task §11. P6-C live rerun, Memory, HITL, Eval, Dashboard and
+Portfolio were NOT started.

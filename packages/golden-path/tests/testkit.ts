@@ -123,6 +123,18 @@ function makeFeishuStub() {
       store.set(rid, { ...body.fields });
       return json({ code: 0, msg: 'ok', data: { record: { record_id: rid, fields: body.fields } } });
     }
+    // POST .../records/search — mirrors the live Base's search endpoint. The
+    // real adapter switched lookups to /search (the list `?filter=` query param
+    // returns InvalidFilter on the live Base, BUSOS-P4-01 live-closure fix), so
+    // the simulator must emulate it. Returns plain field values; the adapter
+    // unwraps any [{"text"}] / link wrappers itself. (Restores BL-019 regression.)
+    if (method === 'POST' && recordId === 'search') {
+      const parsed = body?.filter ?? null;
+      const items = [...store.entries()]
+        .filter(([, f]) => matchFilter(f, parsed))
+        .map(([rid, f]) => ({ record_id: rid, fields: f }));
+      return json({ code: 0, msg: 'ok', data: { items } });
+    }
     if (method === 'GET' && recordId) {
       const fields = store.get(recordId);
       if (!fields) return json({ code: 1, msg: 'not found' }, 404);
