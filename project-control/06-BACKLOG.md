@@ -13,6 +13,23 @@ Format:
 
 Initial deferred items:
 
+## R2 Planning Note (added by BUSOS-R2-00, 2026-08-15)
+
+R2 product direction and H2/H3/H4 candidate areas live in
+`R2-LONG-TERM-ROADMAP.md`. New photography-specific requirements (e.g. a
+`ProjectParticipant` domain, scheduling, finance) discovered through **real
+Workspace usage** in H1 must enter this backlog **first** as a non-blocking item
+before they can change the active task. Execution windows must not pull roadmap
+candidate areas (Memory, Evaluation Center, observability, multi-tenant, etc.)
+into scope automatically — those remain deferred horizons until explicitly
+authorized.
+
+- BL-015 — DEFERRED / NON-BLOCKING (P1-02 extraction gap). Unchanged.
+- BL-016 — **CLOSED** (P5 owner override). Must not be cited as an active blocker.
+- BL-018 — **OPEN / NON-ENGINEERING LIVE DEPENDENCY** (P6-C live E2E). Not an
+  R2 engineering blocker.
+- BL-019 — **CLOSED** (BUSOS-P6-03 golden-path simulator regression repaired).
+
 ## BL-001 Full Evaluation Center
 - Type: DEFERRED
 - Found in task: Architecture planning

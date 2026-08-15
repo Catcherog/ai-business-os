@@ -1,3 +1,24 @@
+# AI Business OS — Master Plan
+
+## Top-Level Planning State (updated by BUSOS-R2-00, 2026-08-15)
+
+- **R1 / P0–P6 = COMPLETED TECHNICAL BASELINE.** The R1 sections below are
+  preserved as history and remain authoritative for what was built.
+- **P6-C (live full-process E2E) = DEFERRED external live evidence** under
+  **BL-018 (OPEN / NON-ENGINEERING LIVE DEPENDENCY)**. Not an R2 engineering
+  blocker. BL-016 is CLOSED and must not be cited as an active blocker.
+- **R2 = productization of the R1 core**, beginning with **H1 — Operator
+  Workspace MVP** (see `R2-LONG-TERM-ROADMAP.md`). R2 is an extension of R1, not
+  a replacement or restart.
+- **H2 / H3 / H4 remain deferred horizons** and cannot be auto-started.
+- Current authorized planning task: **BUSOS-R2-00 — R1→R2 Planning Baseline**
+  (control-document only). Next authorized implementation unit: **H1-01**, only
+  after BUSOS-R2-00 closure and an explicit task authorization.
+
+The R1 plan (P0–P6) below is retained verbatim as the completed baseline history.
+
+---
+
 # AI Business OS — Master Plan R1
 
 ## P0 — Foundation Design
@@ -134,3 +155,42 @@ not be cited as an active blocker.
 - portfolio/demo packaging
 
 Do not start these until P6 gates close.
+
+---
+
+# R2 — Productization of the R1 Core (begins after R1 baseline)
+
+> R2 is an **extension of R1**, not a replacement or restart. R1 frozen decisions
+> (D001–D020) remain authoritative. Full direction: `R2-LONG-TERM-ROADMAP.md`.
+> This master plan records only the planning state; it does **not** authorize
+> implementation beyond the current task (`BUSOS-R2-00`, control-docs only).
+
+## R2 Planning State
+
+- R1 / P0–P6 = **COMPLETED TECHNICAL BASELINE** (preserved above).
+- P6-C (live full-process E2E) = DEFERRED external live evidence under
+  **BL-018 (OPEN / NON-ENGINEERING LIVE DEPENDENCY)**; not an R2 engineering
+  blocker. BL-016 CLOSED.
+- R2 begins with **H1 — Operator Workspace MVP**: productize the existing R1
+  core behind four navigation surfaces — **Overview, Projects, Reviews, Runs**.
+- **H2 (Intelligence Improvement)**, **H3 (Operations & Reliability)**,
+  **H4 (Scale / SaaS)** remain **deferred horizons** and cannot be auto-started.
+
+## H1 Roadmap Units (planning decomposition only — not authorized tasks)
+
+1. **H1-01 — Workspace Shell + Project Read Surface**
+2. **H1-02 — Review Surface Integration**
+3. **H1-03 — Run Detail / Trace Surface**
+4. **H1-04 — First Real AI Action Vertical Slice** (`Generate Visual Reference`,
+   reusing Creative Production + Lumen + Asset)
+5. **H1-05 — Real Usage Closure / MVP Review**
+
+H1 success definition (exact):
+
+> A user can open AI Business OS, inspect an existing real project, see its Tasks
+> and Assets, trigger one real AI-assisted business action, observe the Run
+> status, and inspect the resulting business output without leaving the Business
+> OS product surface.
+
+These units are executed **one at a time**, each requiring a separate bounded
+task authorization. Do **not** start H1-01 from this planning task.
