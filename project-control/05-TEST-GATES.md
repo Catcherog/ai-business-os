@@ -442,7 +442,7 @@ skipped until secrets are supplied.
 
 ## P6-01 Gate — Orchestrator MVP (Composition Only)
 
-PASS only if all gates below pass. Status as of 2026-08-15: **FAKE E2E PASS — LIVE FULL-PROCESS E2E DEFERRED (CloudBase quota, BL-016)**.
+PASS only if all gates below pass. Status as of 2026-08-15: **FAKE E2E PASS — LIVE FULL-PROCESS E2E DEFERRED (CloudBase quota + live credentials, BL-018 OPEN / NON-ENGINEERING LIVE DEPENDENCY)**. BL-016 is CLOSED and is not a blocker here.
 
 ### P6-A — Composition fake E2E
 
@@ -453,6 +453,8 @@ all-OK trace; asset id + asset uri defined.
 
 **Status: PASS** — `packages/orchestrator` fake-e2e.test.ts (1 of 2):
 full happy-path SUCCESS, trace records 3 OK stages in order.
+(Migrated to the P6-02 contract 2026-08-15: `status === 'SUCCEEDED'`,
+`completedStages` in order, `output.assetId`/`output.assetUri` defined.)
 
 ### P6-B — Failure observability
 
@@ -463,8 +465,10 @@ stage with the prior stages recorded.
 
 **Status: PASS** — fake-e2e.test.ts (2 of 2): Lumen-failure → FAILED at
 CREATIVE_PRODUCTION, 3 stages recorded (last FAILED).
+(Migrated to the P6-02 contract 2026-08-15: `status === 'FAILED'`,
+`currentStage === 'CREATIVE_PRODUCTION'`, terminal trace event per stage.)
 
-### P6-C — Live full-process E2E (deferred — BL-016)
+### P6-C — Live full-process E2E (deferred — BL-018)
 
 Run the SAME `runBusinessProcess` with REAL `BusinessRepository`
 (`RealFeishuAdapter`) + REAL `LumenPort` (`RealLumenAdapter`) through the full
@@ -474,7 +478,99 @@ write+readback → VERIFIED). Requirements: no credential print; sanitized evide
 only; cleanup by exact `record_id`; gated on `FEISHU_*`+`FEISHU_ASSET_TABLE_ID`
 and `LUMEN_BASE_URL`+`LUMEN_AUTH_PASSWORD`.
 
-**Status: DEFERRED** (CloudBase NoSQL read-quota exhaustion, non-code). Do NOT
-substitute Fake PASS for Live PASS. The orchestrator makes this a single
-re-runnable call once quota is restored.
+**Status: DEFERRED** — tracked by **BL-018 (OPEN / NON-ENGINEERING LIVE DEPENDENCY)**:
+CloudBase quota availability + LUMEN live credentials + FEISHU live credentials. Not an
+engineering blocker; no code change pending. Do NOT substitute Fake PASS for Live PASS.
+The orchestrator makes this a single re-runnable call once the dependency is available.
+
+---
+
+## P6-02 Gate — Orchestrator Reliability + Trace Contract
+
+PASS only if all gates below pass. Status as of 2026-08-15: **PASS**.
+No live environment required. Command (in `packages/orchestrator`):
+`npx vitest run --pool=forks` → **37 passed / 0 failed** (4 files); `npx tsc --noEmit` exit 0.
+P6-C stays DEFERRED (BL-018); BL-016 is CLOSED and is not a blocker here.
+
+### P6-D — Process contract happy path
+
+Fake-deps happy path returns `status === 'SUCCEEDED'`, `completedStages ===
+['GOLDEN_PATH','PROJECT_LIFECYCLE','CREATIVE_PRODUCTION']`, `output` containing
+only stable refs (leadId / customerId / projectId / taskId / assetId / assetUri),
+`startedAt`/`endedAt`/`durationMs` present and coherent, `error` absent, and a
+caller-supplied `processId` honored.
+
+**Status: PASS** — `tests/process-contract.test.ts` (P6-D block).
+
+### P6-E — Business outcome semantics (rejection ≠ failure)
+
+Governance `REJECT` → `status === 'REJECTED'` (never FAILED), `rejection.stage
+=== 'GOLDEN_PATH'`, `rejection.reasonCode === 'REJECT'`, and **zero downstream
+side effects** (createProject / lumenGenerate / createAsset counters all 0).
+Governance `REVIEW_REQUIRED` → `status === 'HUMAN_REQUIRED'` (not FAILED).
+A creative-stage business rejection (empty prompt) → `status === 'REJECTED'` with
+`reasonCode === 'PROMPT_EMPTY'` and the upstream stages still marked completed.
+
+**Status: PASS** — `tests/process-contract.test.ts` (P6-E block).
+
+### P6-F — Failure propagation / fail closed
+
+A throwing creative-production dependency (Lumen 503) → `status === 'FAILED'`,
+`currentStage === 'CREATIVE_PRODUCTION'`, `error` = `ProcessError` with `code`,
+`message`, `stage`, `disposition === 'RETRYABLE'`. A golden-path write failure →
+`FAILED` at `GOLDEN_PATH` with **no** PROJECT_LIFECYCLE / CREATIVE_PRODUCTION
+execution; a project-lifecycle failure → `FAILED` at `PROJECT_LIFECYCLE` with no
+creative execution. `runBusinessProcess` never throws.
+
+**Status: PASS** — `tests/process-contract.test.ts` (P6-F block).
+
+### P6-G — Structured trace
+
+Every executed stage emits exactly one `STARTED` event plus exactly one terminal
+event (`SUCCEEDED` | `FAILED` | `REJECTED` | `HUMAN_REQUIRED`) with
+`startedAt`/`endedAt`/`durationMs`; no dangling `STARTED` remains in any outcome
+(success, rejection, failure, throw). Trace `metadata` carries only allowlisted
+stable refs — `sanitizeTraceMetadata` drops non-allowlisted keys, objects/arrays
+and non-primitive values, and clamps long strings; no secret/token/prompt/raw
+third-party payload appears anywhere in the trace.
+
+**Status: PASS** — `tests/process-contract.test.ts` (P6-G block, incl.
+`sanitizeTraceMetadata` unit assertions).
+
+### P6-H — Idempotency success path
+
+Running the same `idempotencyKey` twice against a shared
+`InMemoryProcessRegistry` executes downstream work **once**
+(goldenPathCalls === 1, projectLifecycleCalls === 1, creativeProductionCalls === 1)
+and the second call returns the same result (same `processId`, same status/output)
+flagged `deduplicated`. Different keys execute independently. A duplicate arriving
+while the first run is `RUNNING` returns a deterministic duplicate with no
+execution. Supplying an `idempotencyKey` without a registry fails closed with
+`INVALID_INPUT` / `TERMINAL`. A registry injected via `deps.processRegistry` is
+honored.
+
+**Status: PASS** — `tests/idempotency.test.ts` (P6-H block; counters via spy deps).
+
+### P6-I — Idempotency terminal failure
+
+After a `TERMINAL` failure, re-running the same `idempotencyKey` does **not**
+auto-rerun and produces no duplicate side effect (counters unchanged); the prior
+failure is replayed. An explicit retry request is still refused for `TERMINAL`.
+A prior `RETRYABLE` failure replays by default and re-executes only when the
+explicit `retryPreviousFailure` extension point is used.
+
+**Status: PASS** — `tests/idempotency.test.ts` (P6-I block).
+
+### P6-J — Error classification
+
+`classifyFailure` maps: CloudBase read-quota exhaustion → `EXTERNAL_QUOTA_EXHAUSTED`
+/ `EXTERNAL_DEPENDENCY`; Lumen 5xx + timeout → `UPSTREAM_TEMPORARY_FAILURE` /
+`RETRYABLE`; Feishu timeout/network → `RETRYABLE`; contract validation → 
+`CONTRACT_VALIDATION_FAILED` / `TERMINAL`; invalid input → `INVALID_INPUT` /
+`TERMINAL`; unverified write → `RETRYABLE`; unclassifiable → `TERMINAL`
+(fail closed). `sanitizeMessage` redacts bearer tokens / passwords / token-like
+values and clamps length. The same dispositions are asserted end-to-end through
+`runBusinessProcess` (result `error.disposition` and the trace event error match).
+
+**Status: PASS** — `tests/error-classification.test.ts` (unit + wired-through).
 

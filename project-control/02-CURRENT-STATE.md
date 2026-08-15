@@ -2,11 +2,11 @@
 
 PROJECT: AI Business OS
 VERSION: V1
-PHASE: P5 COMPLETE (FUNCTIONAL PASS 2026-08-15; live rerun deferred — CloudBase quota) · P6 Orchestrator MVP [ACTIVE — BUSOS-P6-01 started 2026-08-15]
-STATUS: P5 COMPLETE (FUNCTIONAL PASS 2026-08-15; live CREATIVE_SUCCESS rerun DEFERRED — CloudBase NoSQL read quota exhausted, owner override). P6 BUSOS-P6-01 IN PROGRESS — first implementation task COMPLETE (orchestrator package; tsc clean; 2/2 fake-E2E tests pass 2026-08-15).
-CURRENT TASK: BUSOS-P6-01 — Orchestrator MVP (Composition Only)  [IN PROGRESS — P6-A/P6-B PASS (fake E2E); live full-process E2E deferred on BL-016]
+PHASE: P5 COMPLETE (FUNCTIONAL PASS 2026-08-15; live rerun deferred — CloudBase quota) · P6 Orchestrator [ACTIVE — BUSOS-P6-01 COMPLETE, BUSOS-P6-02 COMPLETE 2026-08-15]
+STATUS: P5 COMPLETE (FUNCTIONAL PASS 2026-08-15; live CREATIVE_SUCCESS rerun DEFERRED — CloudBase NoSQL read quota exhausted, owner override). P6-01 COMPLETE (orchestrator composition MVP). P6-02 COMPLETE / PASS (orchestrator reliability + trace contract; 37/37 orchestrator tests, tsc clean, gates P6-D..P6-J PASS, 2026-08-15).
+CURRENT TASK: BUSOS-P6-02 — Orchestrator Reliability + Trace Contract  [COMPLETE / PASS — gates P6-D..P6-J PASS; no live env required]
 BASELINE: 40511e27b03c8402d8229f468e9471e0a2960b06
-CURRENT BLOCKERS: none blocking P6. Live full-process CREATIVE_SUCCESS rerun deferred (external CloudBase read-quota exhaustion, non-code; BL-016). BL-015 OPEN/NON-BLOCKING.
+CURRENT BLOCKERS: none blocking P6 engineering. Live full-process E2E (P6-C) DEFERRED — external non-engineering live dependency (CloudBase NoSQL read quota + LUMEN_* / FEISHU_* live credentials), tracked by **BL-018 OPEN / NON-ENGINEERING LIVE DEPENDENCY**. **BL-016 is CLOSED** (P5 engineering blocker resolved / owner override recorded) and must not be cited as an active blocker. BL-015 OPEN/NON-BLOCKING. Pre-existing (not P6-02) golden-path real-adapter-simulator Flow B failure tracked as BL-019 OPEN / NON-BLOCKING.
 
 PRIMARY OBJECTIVE:
 Productize the minimum human-review vertical slice required by R1:
@@ -26,7 +26,9 @@ EXECUTION ORDER:
 - BUSOS-P3-01. [COMPLETE — live HR-H Feishu E2E PASS 2026-08-12]
 - BUSOS-P4-01. [COMPLETE — LIVE P4 LIFECYCLE E2E PASS 2026-08-13; PL-A..PL-H all PASS. NEXT: none — STOP per task §15.]
 - BUSOS-P5-01. [COMPLETE — FUNCTIONAL PASS 2026-08-15 (P5-X03); P5-A..P5-H PASS; live CREATIVE_SUCCESS rerun DEFERRED on CloudBase quota (owner override). P6 authorized.]
-- BUSOS-P6-01. [IN PROGRESS — Orchestrator MVP (composition only). First implementation task COMPLETE: `@busos/orchestrator` composes golden-path → project-lifecycle → creative-production behind `runBusinessProcess` with a structured trace. tsc clean; 2/2 fake-E2E tests pass (2026-08-15). P6-A/P6-B PASS. Live full-process E2E DEFERRED on BL-016 (CloudBase quota).]
+- BUSOS-P6-01. [COMPLETE — Orchestrator MVP (composition only). `@busos/orchestrator` composes golden-path → project-lifecycle → creative-production behind `runBusinessProcess` with a structured trace. tsc clean; fake-E2E gates P6-A/P6-B PASS (2026-08-15).]
+- BUSOS-P6-02. [COMPLETE / PASS — Orchestrator Reliability + Trace Contract. Process state contract (RUNNING/SUCCEEDED/FAILED/REJECTED/HUMAN_REQUIRED), `BusinessProcessResult` (refs only), structured `ProcessTraceEvent` with allowlisted metadata sanitizer, error classification (RETRYABLE/TERMINAL/EXTERNAL_DEPENDENCY), idempotency via `ProcessRegistry` port + `InMemoryProcessRegistry`, fail-closed stage propagation. Gates P6-D..P6-J PASS; 37/37 orchestrator tests; tsc --noEmit clean on all packages. No live env required. NEXT: none — STOP per task §15.]
+- Live full-process E2E (P6-C). [DEFERRED — external non-engineering live dependency (CloudBase read quota + LUMEN_*/FEISHU_* credentials); BL-018 OPEN.]
 
 P1-01 EVIDENCE:
 - Package: packages/contracts (TypeScript + zod runtime validation).
@@ -106,7 +108,21 @@ P6-01 EVIDENCE:
 - tsc --noEmit clean (exit 0). vitest 2 passed / 0 failed (13ms, 1 file).
 - Tests: fake-e2e.test.ts (2) — full happy-path SUCCESS (asset id/uri defined, 3 OK stages in order) · Lumen-failure → FAILED at CREATIVE_PRODUCTION with 3 stages recorded (last FAILED).
 - Plan/acceptance: BUSOS-P6-01-PLAN.md.
-- Live P6-C E2E: DEFERRED (BL-016, CloudBase NoSQL read-quota exhaustion, non-code). Not substituted for Fake PASS.
+- Live P6-C E2E: DEFERRED (BL-018 — CloudBase NoSQL read-quota exhaustion + missing live credentials; non-engineering). Not substituted for Fake PASS.
+
+P6-02 PLAN:
+- Scope: `@busos/orchestrator` only. Upgrade `runBusinessProcess` from "composition" into a reliable business process orchestrator. No Memory, no dashboard, no eval platform, no queue/Redis/MQ, no new DB, no new AI agent, no new UI, no resume engine, no distributed lock.
+- Four deliverables: (1) Process State Contract, (2) `BusinessProcessResult` (refs only), (3) Structured Trace Contract, (4) Error Classification + basic Idempotency.
+- Stage naming keeps the real composition names (GOLDEN_PATH / PROJECT_LIFECYCLE / CREATIVE_PRODUCTION); governance, customer resolution and business persistence execute inside golden-path and are not force-renamed into separate stages.
+- Idempotency storage stays in-process: `ProcessRegistry` port + `InMemoryProcessRegistry`, injected via `options.registry` or `deps.processRegistry`. No CloudBase/Feishu/Postgres added.
+- Gates P6-D..P6-J; no live environment required (P6-C stays DEFERRED).
+
+P6-02 EVIDENCE:
+- New source: `packages/orchestrator/src/process-contract.ts` (status/stage/result/trace/error types), `src/errors.ts` (classifier + message sanitizer), `src/process-registry.ts` (`ProcessRegistry` port + `InMemoryProcessRegistry`). Rewritten: `src/trace.ts` (structured `ProcessTraceEvent` + allowlisted `sanitizeTraceMetadata`), `src/run-business-process.ts` (state machine, fail-closed propagation, idempotency, never throws), `src/types.ts`, `src/index.ts`.
+- New tests: `tests/helpers.ts` (counting deps + fault injection + rejecting/review governance), `tests/process-contract.test.ts` (P6-D/P6-E/P6-F/P6-G), `tests/idempotency.test.ts` (P6-H/P6-I), `tests/error-classification.test.ts` (P6-J). `tests/fake-e2e.test.ts` migrated to the new contract (P6-A/P6-B still PASS).
+- Verification: `npx vitest run --pool=forks` in packages/orchestrator → **37 passed / 0 failed** (4 files). `npx tsc --noEmit` clean (exit 0) in all 9 packages.
+- Regression sweep: contracts 85 · service-agent-candidate 53 · business-repository 36+1skip · project-lifecycle 20+1skip · human-review 42+2skip · lumen-adapter 7 · creative-production 19+1skip · orchestrator 37 → all PASS. golden-path: 1 pre-existing failure (real-adapter simulator Flow B, `linkLeadCustomer: lead not found in Feishu`) — proven byte-identical to remote `0b515e9` and untouched by P6-02; tracked as BL-019 OPEN / NON-BLOCKING.
+- Behavior: business rejection → `REJECTED` (not FAILED) with zero downstream writes; REVIEW_REQUIRED → `HUMAN_REQUIRED`; stage failure → `FAILED` with `ProcessError { code, message, stage, disposition }` and no stage N+1; duplicate idempotency key after success replays the prior result with downstream call counts unchanged (1/1/1); prior TERMINAL failure never auto-reruns.
 
 CURRENT BLOCKERS:
 - **BL-013 CLOSED (2026-08-12)** — Live Feishu E2E executed with provided FEISHU_* credentials; real-adapter LIVE block passed.
@@ -114,6 +130,9 @@ CURRENT BLOCKERS:
 - **BL-015 OPEN / NON-BLOCKING** — P1-02 extractor does not resolve bare "新中式" to a service_type. Unchanged; not a blocker for the live gate.
 - **HR-H LIVE E2E — PASS (2026-08-12)** — BUSOS-P3-01 live Feishu review slice executed with real FEISHU_* credentials; both live HR-H tests PASSED and records were cleaned by exact record_id. HR-H gate CLOSED. (See 09-P3-01-COMPLETION.md §7/§8.)
 - **PL-H LIVE P4 LIFECYCLE E2E — PASS (2026-08-13)** — executed via BUSOS-P4-01-LIVE-CLOSURE with user-supplied `FEISHU_*` + `FEISHU_PROJECT_TABLE_ID`/`FEISHU_TASK_TABLE_ID`; full real chain (Customer → Lead QUALIFIED → link → Project DRAFT → Task TODO → Lead CONVERTED) wrote + read-back VERIFIED, `LIFECYCLE_SUCCESS`, and cleaned all four generated records by exact `record_id`. PL-H gate CLOSED; BUSOS-P4-01 is `COMPLETE / LIVE P4 LIFECYCLE E2E PASS`. (See 10-P4-01-COMPLETION.md §4/§7/§10.)
+- **BL-016 CLOSED (2026-08-15)** — P5 engineering blocker resolved / owner override recorded (P5 closed as FUNCTIONAL PASS). BL-016 is history and must NOT be cited as an active blocker; live evidence tracking moved to BL-018.
+- **BL-018 OPEN / NON-ENGINEERING LIVE DEPENDENCY** — live full-process E2E (P6-C) deferred: CloudBase NoSQL read quota + `LUMEN_BASE_URL`/`LUMEN_AUTH_PASSWORD` + `FEISHU_*`/`FEISHU_ASSET_TABLE_ID` not available. Not an engineering defect; closes by one `runBusinessProcess(input, realDeps)` call once quota + credentials are supplied.
+- **BL-019 OPEN / NON-BLOCKING (recorded 2026-08-15)** — pre-existing golden-path real-adapter-simulator Flow B failure (`linkLeadCustomer: lead not found in Feishu`). Proven byte-identical to remote `0b515e9`; NOT caused by P6-02; out of P6-02 scope.
 - **LIVE CREATIVE E2E (P5-I) — BLOCKED** — BUSOS-P5-01 REAL end-to-end (live Feishu Asset write/readback + live Vercel Lumen generation) could not execute: no `LUMEN_BASE_URL`/`LUMEN_AUTH_PASSWORD` (Vercel Lumen) and no `FEISHU_*` + `FEISHU_ASSET_TABLE_ID` were provided. Implementation is COMPLETE and verified by fake + real-adapter(stubbed) gates (P5-A..P5-H PASS). Reported honestly as `IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED`; the task STOPS at commit + push + clean tree (no automatic P6). (See 11-P5-01-COMPLETION.md §4/§6.)
 
 LATEST CONTROL DECISIONS:

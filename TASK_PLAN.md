@@ -1,4 +1,4 @@
-# TASK_PLAN — BUSOS-P2-GP-001 (CLOSED) · BUSOS-P3-01 (CLOSED) · BUSOS-P4-01 (CLOSED — LIVE P4 LIFECYCLE E2E PASS) · BUSOS-P5-01 (FUNCTIONAL PASS / LIVE RE-RUN DEFERRED) · BUSOS-P6-01 (IN PROGRESS — Orchestrator MVP)
+# TASK_PLAN — BUSOS-P2-GP-001 (CLOSED) · BUSOS-P3-01 (CLOSED) · BUSOS-P4-01 (CLOSED — LIVE P4 LIFECYCLE E2E PASS) · BUSOS-P5-01 (FUNCTIONAL PASS / LIVE RE-RUN DEFERRED) · BUSOS-P6-01 (COMPLETE — Orchestrator MVP) · BUSOS-P6-02 (COMPLETE / PASS — Orchestrator Reliability + Trace Contract)
 
 ## task_id
 BUSOS-P5-01 — Creative Production Vertical Slice
@@ -206,9 +206,9 @@ NEXT: P6 (BUSOS-P6-01) — authorized 2026-08-15 via owner override (P5 closes a
 ## p6_task (BUSOS-P6-01 — Orchestrator MVP, Composition Only)
 
 status:
-IN PROGRESS — first implementation task COMPLETE (2026-08-15). P6-A/P6-B PASS
-(fake E2E). Live full-process E2E (P6-C) DEFERRED on BL-016 (CloudBase quota).
-No existing package modified; no new infra.
+COMPLETE (2026-08-15). P6-A/P6-B PASS (fake E2E). Live full-process E2E (P6-C)
+DEFERRED — non-engineering live dependency, BL-018 OPEN (BL-016 is CLOSED and is
+not a blocker). No existing package modified; no new infra.
 
 scope_enforced:
 ONLY BUSOS-P6-01. Build one thin composition layer (`packages/orchestrator`)
@@ -252,29 +252,121 @@ frozen_contracts:
 @busos/contracts NOT modified by P6-01 (composition only).
 
 ## blockers / backlog
-- BL-016 (CLOSED AS ENGINEERING BLOCKER / LIVE QUOTA RE-RUN DEFERRED) — P6-01
-  makes the deferred live rerun a single `runBusinessProcess(realDeps)` call;
-  still gated on CloudBase quota + secrets.
+- BL-016 (**CLOSED** 2026-08-15) — P5 engineering blocker resolved / owner override
+  recorded. MUST NOT be cited as an active blocker.
+- BL-018 (**OPEN / NON-ENGINEERING LIVE DEPENDENCY**) — P6-C live full-process E2E
+  deferred on CloudBase read quota + `LUMEN_*` + `FEISHU_*` live credentials. Closes
+  with one `runBusinessProcess(input, realDeps, { idempotencyKey })` call.
+- BL-019 (OPEN / NON-BLOCKING, recorded 2026-08-15) — pre-existing golden-path
+  real-adapter-simulator Flow B failure (`linkLeadCustomer: lead not found in
+  Feishu`); byte-identical to remote `0b515e9`, NOT caused by P6-02.
 - BL-015 (OPEN / NON-BLOCKING) — unchanged.
 
 ## git_info
 - branch: main
-- baseline HEAD (remote): 40511e27b03c8402d8229f468e9471e0a2960b06
-- closing SHA: <this P6-01 commit — pending push>
-- pushed: pending / origin/main
+- baseline HEAD (remote): 0b515e9bcc80af3f1adb0163c857730d892fec20
+- closing SHA: see `## p6_02_task` → git_info
+- pushed: see `## p6_02_task` → git_info
 
 ## nextActor
-P6-01 first implementation task COMPLETE (orchestrator package, tsc clean, 2/2
-fake-E2E tests pass 2026-08-15). NEXT P6-01 step: when CloudBase quota is
-restored + secrets supplied, run `runBusinessProcess` with REAL adapters to claim
-P6-C LIVE full-process E2E (BL-016 rerun). Do NOT start P6+ items without a new
-authorized task.
+BUSOS-P6-01 COMPLETE and BUSOS-P6-02 COMPLETE / PASS (2026-08-15). NEXT: nothing —
+STOP per task §15. Do NOT start P6-03 / Memory / HITL / Eval / Dashboard /
+Portfolio / CloudBase live rerun without a new authorized task. The deferred P6-C
+live run remains available as a single `runBusinessProcess` call once BL-018's
+external dependency (quota + credentials) is satisfied.
 
-## P6-01 — Orchestrator MVP (current task)
+## P6-01 — Orchestrator MVP
 - New package: `@busos/orchestrator` — composes golden-path → project-lifecycle →
   creative-production behind `runBusinessProcess`; `TraceCollector` for
   observability; holds no secret. Composition only.
 - Gates: P6-A PASS (fake E2E happy path) · P6-B PASS (failure trace) · P6-C
-  DEFERRED (live full-process E2E, BL-016 CloudBase quota).
+  DEFERRED (live full-process E2E, BL-018).
 - Tests: tsc clean; vitest 2 passed / 0 failed (13ms).
 - Plan/acceptance: `BUSOS-P6-01-PLAN.md`.
+- Status: **COMPLETE**.
+
+## p6_02_task (BUSOS-P6-02 — Orchestrator Reliability + Trace Contract)
+
+status:
+COMPLETE / PASS (2026-08-15). Gates P6-D..P6-J PASS. No live environment required;
+P6-C stays DEFERRED (BL-018 OPEN / NON-ENGINEERING LIVE DEPENDENCY).
+
+control_hygiene (task §1):
+- `06-BACKLOG.md`: BL-016 → **CLOSED (2026-08-15) — P5 engineering blocker resolved /
+  owner override recorded**, with an explicit hygiene note that it must not be cited as
+  an active blocker. History preserved verbatim (nothing deleted or rewritten).
+- `06-BACKLOG.md`: BL-018 re-scoped → **OPEN — NON-ENGINEERING LIVE DEPENDENCY**,
+  recording the P6-C deferral (CloudBase quota + LUMEN creds + FEISHU creds), its
+  nature (not an engineering defect/blocker), and the closure path. Origin text kept.
+- `05-TEST-GATES.md` / `02-CURRENT-STATE.md`: P6-C references moved from BL-016 → BL-018.
+- No live PASS was faked; no closed blocker was reused as OPEN.
+
+scope_enforced:
+ONLY BUSOS-P6-02, inside `packages/orchestrator`. Did NOT add: Memory, dashboard,
+evaluation platform, queue/Redis/MQ, new DB, new AI agent, new UI, a complex
+resume engine, distributed lock or leader election. Did NOT refactor any existing
+slice package, did NOT re-audit P1–P5, did NOT chase the CloudBase live gate.
+
+implementation:
+- `src/process-contract.ts` (NEW) — `BusinessProcessStatus` (RUNNING | SUCCEEDED |
+  FAILED | REJECTED | HUMAN_REQUIRED), `BusinessProcessStage` (GOLDEN_PATH |
+  PROJECT_LIFECYCLE | CREATIVE_PRODUCTION — real composition names kept; governance /
+  customer resolution / business persistence all execute inside golden-path, so they
+  were NOT force-renamed into separate stages), `PROCESS_STAGE_ORDER`,
+  `ProcessErrorDisposition`, `ProcessErrorCode`, `ProcessError`, `ProcessRejection`,
+  `ProcessTraceEvent`, `BusinessProcessOutput`, `BusinessProcessResult`.
+- `src/errors.ts` (NEW) — `classifyFailure(stage, raw, opts?)` + `sanitizeMessage`
+  (redacts bearer/token/password, clamps length) + `invalidInputError`. Fail closed:
+  unclassifiable → TERMINAL.
+- `src/trace.ts` (REWRITTEN) — structured `TraceCollector(processId)` emitting one
+  STARTED + one terminal event per stage, `finalizeDangling`, and an allowlisted
+  `sanitizeTraceMetadata` (stable refs only; drops objects/arrays/non-allowlisted keys).
+- `src/process-registry.ts` (NEW) — `ProcessRegistry` port
+  (`getByIdempotencyKey` / `save`) + `InMemoryProcessRegistry`. Injected only; no new
+  persistence added.
+- `src/run-business-process.ts` (REWRITTEN) — `runBusinessProcess(input, deps,
+  options?)` state machine: input validation, idempotency (fail closed if a key is
+  supplied without a registry), REPLAY vs EXECUTE dedupe policy, per-stage
+  start/settle tracing, business rejection → REJECTED / HUMAN_REQUIRED, system
+  failure → FAILED with a classified `ProcessError`, fail-closed stage propagation,
+  never throws.
+- `src/types.ts`, `src/index.ts` — deps gain `processRegistry?`; P6-01 type aliases
+  kept for compatibility.
+
+tests:
+command (in `packages/orchestrator`): `npx vitest run --pool=forks` + `npx tsc --noEmit`
+- typecheck: PASS (exit 0)
+- vitest: **37 passed | 0 failed** (4 files)
+  - `tests/process-contract.test.ts` — P6-D / P6-E / P6-F / P6-G
+  - `tests/idempotency.test.ts` — P6-H / P6-I
+  - `tests/error-classification.test.ts` — P6-J
+  - `tests/fake-e2e.test.ts` — P6-A / P6-B migrated to the new contract
+- `tests/helpers.ts` — counting deps (goldenPathCalls / projectLifecycleCalls /
+  creativeProductionCalls / lumenGenerate) + fault injection + rejecting /
+  review-required governance.
+
+regression:
+| Package | tsc | Tests |
+|---------|-----|-------|
+| @busos/contracts | clean | 85 passed |
+| @busos/service-agent-candidate | clean | 53 passed |
+| @busos/business-repository | clean | 36 passed · 1 skipped |
+| @busos/golden-path | clean | 1 FAILED (pre-existing, BL-019) |
+| @busos/human-review | clean | 42 passed · 2 skipped |
+| @busos/project-lifecycle | clean | 20 passed · 1 skipped |
+| @busos/lumen-adapter | clean | 7 passed |
+| @busos/creative-production | clean | 19 passed · 1 skipped |
+| @busos/orchestrator | clean | 37 passed · 0 failed |
+The single golden-path failure is **pre-existing and not caused by P6-02**: the
+relevant files are byte-identical to remote `0b515e9`
+(`git diff --exit-code 0b515e9 -- packages/golden-path packages/business-repository`
+exits 0) and P6-02 touched `packages/orchestrator` only. Tracked as BL-019.
+
+frozen_contracts:
+@busos/contracts NOT modified by P6-02. `contracts/*.schema.json` NOT modified —
+the process/trace/error contract is orchestrator-runtime-internal, not a persisted
+cross-language business object.
+
+live_gate:
+P6-02 required no live environment and requested none. P6-C stays DEFERRED with
+BL-018 OPEN. No fake result was reported as a live PASS.

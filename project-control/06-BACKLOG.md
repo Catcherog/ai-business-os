@@ -117,7 +117,11 @@ Initial deferred items:
 - Suggested revisit phase: P2 (model-driven service-type extraction) or when a new service vertical is onboarded (BL-011).
 
 ## BL-016 LIVE Creative E2E blocked (missing Lumen Vercel + Feishu Asset credentials)
-- Type: **CLOSED AS ENGINEERING BLOCKER / LIVE QUOTA RE-RUN DEFERRED** (owner override 2026-08-15; see amendment below)
+- Type: **CLOSED** (2026-08-15) — P5 engineering blocker resolved / owner override recorded (see amendment below).
+- Hygiene note (BUSOS-P6-02, 2026-08-15): BL-016 is CLOSED and MUST NOT be cited as
+  an active/OPEN blocker. Any still-outstanding **live** evidence (P6-C) is tracked by
+  **BL-018 (OPEN / NON-ENGINEERING LIVE DEPENDENCY)**. History below is preserved
+  verbatim and is not rewritten.
 - Found in task: BUSOS-P5-01
 - Description: The REAL end-to-end creative slice (live Feishu Asset write/readback + live Vercel Lumen generation) requires `LUMEN_BASE_URL` + `LUMEN_AUTH_PASSWORD` (the Lumen `AUTH_PASSWORD`, NOT the provider key) and `FEISHU_*` + `FEISHU_ASSET_TABLE_ID`. Neither set was provided in this environment. The implementation is COMPLETE and verified by fake + real-adapter(stubbed) gates (P5-A..P5-H PASS); only the live run is blocked.
 - Why non-blocking: Implementation is fully verified without live credentials; the slice is reported honestly as `IMPLEMENTATION PASS / LIVE CREATIVE E2E BLOCKED`. No production behaviour depends on the live run having executed.
@@ -131,8 +135,9 @@ remaining blocker is an exhausted third-party **CloudBase NoSQL read quota** and
 implementation / contracts / production persistence integration have been verified
 (P5-X03 HARDEN deployed `dpl_AdnQygPLZ7fB58QJECcvj5o4NxGV`; NoSQL persistence 147/0;
 P5-03 signed-urls contract PASS; `GET /api/projects` → 401). This exception does
-**not** convert deferred live evidence into a PASS. BL-016 → CLOSED AS ENGINEERING
-BLOCKER / LIVE QUOTA RE-RUN DEFERRED. P5 no longer blocks P6.
+**not** convert deferred live evidence into a PASS. BL-016 → CLOSED (engineering
+blocker resolved; owner override recorded). P5 no longer blocks P6. The residual
+live-evidence dependency migrated to **BL-018** (BUSOS-P6-02 hygiene pass).
 
 ## BL-002 Creative Agent / Lumen integration — status updated by BUSOS-P5-01
 - Type: DEFERRED → **IMPLEMENTATION COMPLETE (live E2E still deferred, see BL-016)**
@@ -148,13 +153,46 @@ BLOCKER / LIVE QUOTA RE-RUN DEFERRED. P5 no longer blocks P6.
 - Why non-blocking: P5-X01 scope is the Lumen production-generation root cause (queue→worker, no on-demand execution). Lead-status writes are not on the P5 live closure path (the live E2E seeds `lead_id: 'lead_live_p5'` and never calls `updateLeadStatus`). The P5-04 Task-DONE fix is complete and unaffected.
 - Suggested revisit phase: When a flow first calls `updateLeadStatus` with a `Created At` payload, or as a proactive hardening pass on Feishu DateTime writes. Fix mirrors P5-04: send only the status field, remove the ISO `Created At` rewrite.
 
-## BL-018 BUSOS-P6-01 — Orchestrator MVP (composition only)
-- Type: **ACCEPTED / IN PROGRESS** (authorized 2026-08-15; first implementation task COMPLETE 2026-08-15)
-- Found in task: BUSOS-P6-01
-- Description: A single `@busos/orchestrator` package composes the existing vertical slices (golden-path → project-lifecycle → creative-production) behind one `runBusinessProcess(input, deps)` entrypoint with a structured execution trace. No existing package modified; no new infra (no Redis/MQ/orchestration engine). The orchestrator converts the deferred live CREATIVE_SUCCESS rerun (BL-016) into a single inspectable call instead of three manual runs.
-- Why non-blocking: pure composition; all three slices were independently verified in P2/P4/P5. No contract or slice change.
-- Suggested revisit phase: P6-01 live full-process E2E (P6-C) once CloudBase read quota is restored + `FEISHU_*`+`FEISHU_ASSET_TABLE_ID` and `LUMEN_BASE_URL`+`LUMEN_AUTH_PASSWORD` are supplied — then re-run via `runBusinessProcess(realDeps)`.
+## BL-018 P6-C live full-process E2E — NON-ENGINEERING LIVE DEPENDENCY
+- Type: **OPEN — NON-ENGINEERING LIVE DEPENDENCY** (re-scoped 2026-08-15 by BUSOS-P6-02)
+- Found in task: BUSOS-P6-01 (origin), re-scoped in BUSOS-P6-02
+- Origin (preserved): BL-018 was opened 2026-08-15 to track the BUSOS-P6-01
+  Orchestrator MVP (composition only) — a single `@busos/orchestrator` package
+  composing golden-path → project-lifecycle → creative-production behind one
+  `runBusinessProcess` entrypoint, no existing package modified, no new infra.
+  **That implementation work is COMPLETE** (P6-01 COMPLETE; P6-02 COMPLETE).
+  BL-018 now tracks ONLY the outstanding non-engineering live dependency.
+- Description: `P6-C live full-process E2E deferred pending:`
+  - **CloudBase quota availability** (CloudBase NoSQL read quota exhausted; third-party, non-code)
+  - **LUMEN live credentials** (`LUMEN_BASE_URL` + rotated `LUMEN_AUTH_PASSWORD`)
+  - **FEISHU live credentials** (`FEISHU_*` + `FEISHU_ASSET_TABLE_ID`)
+- Nature: This is **not an engineering defect and not an engineering blocker**. No
+  code change is pending. It is an external-environment/credential availability item.
+- Why non-blocking for engineering: the orchestrator is fully verified by fake-adapter
+  gates (P6-A/P6-B) and the P6-02 reliability gates (P6-D..P6-J). Deferred live
+  evidence is NEVER substituted by a fake PASS.
+- Closure path: when quota is restored and both credential sets are supplied, run the
+  SAME entrypoint once — `runBusinessProcess(input, { businessRepository: RealFeishuAdapter-based, lumen: RealLumenAdapter }, { idempotencyKey })` —
+  and claim P6-C LIVE full-process E2E. Sanitized evidence only; cleanup by exact `record_id`.
+- Suggested revisit phase: owner-authorized live closure run (not P6-02 scope).
 
-## BL-016 rerun path (updated by BUSOS-P6-01)
-The deferred live CREATIVE_SUCCESS rerun is now a single `runBusinessProcess(input, { businessRepository: RealFeishuAdapter-based, lumen: RealLumenAdapter })` call (P6-A/P6-B fake PASS; P6-C live DEFERRED). When CloudBase quota is restored, supply the rotated `LUMEN_AUTH_PASSWORD` + `FEISHU_*` and run the orchestrator's real-adapter path to claim P6-C LIVE full-process E2E (resolves BL-016 rerun).
+## BL-019 golden-path real-adapter-simulator Flow B fails (`linkLeadCustomer: lead not found in Feishu`)
+- Type: **OPEN / NON-BLOCKING** (pre-existing; observed during BUSOS-P6-02 regression sweep)
+- Found in task: BUSOS-P6-02 (observation only — NOT caused by P6-02)
+- Description: `packages/golden-path/tests/real-adapter.test.ts` Flow B fails with
+  `expected 'FAILED' to be 'SUCCESS'`. Root cause (probed, then probe removed):
+  `linkLeadCustomer: lead not found in Feishu: lead_<id>` — the in-memory Feishu
+  simulator's readback of the just-written Lead does not find the record, so the
+  link step fails closed.
+- Proof it is pre-existing: `git hash-object` shows
+  `packages/golden-path/tests/real-adapter.test.ts`, `packages/golden-path/tests/testkit.ts`
+  and `packages/business-repository/src/feishu-adapter.ts` are **byte-identical** to
+  remote `0b515e9`, and `git diff --exit-code 0b515e9` on those packages exits 0.
+  P6-02 touched `packages/orchestrator` only.
+- Why non-blocking: it is a test-simulator fidelity issue in golden-path, not a
+  production or contract defect; the live golden-path E2E (P2/GP-001) previously
+  PASSED against real Feishu. All other 8 packages are green.
+- Suggested revisit phase: a dedicated golden-path test-harness maintenance task
+  (fix the simulator Lead readback keying). Explicitly out of P6-02 scope
+  (no refactor of existing packages allowed).
 

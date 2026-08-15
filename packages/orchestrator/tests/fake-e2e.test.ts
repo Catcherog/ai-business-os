@@ -4,14 +4,18 @@ import { createFakeLumenAdapter } from '@busos/lumen-adapter';
 import { runBusinessProcess } from '../src/index.js';
 
 /**
- * BUSOS-P6-01 — Orchestrator MVP fake-adapter E2E.
+ * BUSOS-P6-01 gates P6-A / P6-B — Orchestrator fake-adapter E2E.
  *
  * Exercises the full composed chain through in-memory fakes (no Feishu/Lumen
- * network or secret). Proves the slices compose correctly and that the
- * execution trace records every stage. The real-adapter (Feishu + Lumen) path
- * is intentionally NOT asserted here — it stays deferred on CloudBase quota
- * (BL-016) and is a re-run of this same `runBusinessProcess` call with real
- * adapters.
+ * network or secret). Proves the slices compose correctly and that the execution
+ * trace records every stage. Re-verified against the richer BUSOS-P6-02 process
+ * contract (`SUCCEEDED`/`FAILED` + structured trace events) — same gates, new
+ * vocabulary.
+ *
+ * The real-adapter (Feishu + Lumen) path is intentionally NOT asserted here: it
+ * stays deferred as P6-C under BL-018 (OPEN / NON-ENGINEERING LIVE DEPENDENCY —
+ * CloudBase quota + LUMEN/FEISHU live credentials) and is a re-run of this same
+ * `runBusinessProcess` call with real adapters.
  */
 
 // Customer-linked, governance-approved consultation (mirrors golden-path Flow B).
@@ -20,7 +24,7 @@ const IDENTIFIED_TEXT =
 // Any non-empty base64 + png mime satisfies creative eligibility in fakes.
 const SOURCE_IMAGE_B64 = 'aGVsbG8td29ybGQtZmFrZS1wbmc=';
 
-describe('BUSOS-P6-01 — Orchestrator MVP fake E2E', () => {
+describe('BUSOS-P6-01 — Orchestrator fake E2E (P6-A / P6-B)', () => {
   it('runs Consultation -> Lead/Customer -> Project/Task -> Asset end to end', async () => {
     const businessRepository = new BusinessRepository(new FakeFeishuAdapter());
     const lumen = createFakeLumenAdapter();
@@ -39,21 +43,27 @@ describe('BUSOS-P6-01 — Orchestrator MVP fake E2E', () => {
       { businessRepository, lumen },
     );
 
-    expect(result.status).toBe('SUCCESS');
-    expect(result.failedStage).toBeNull();
-    expect(result.leadId).toBeDefined();
-    expect(result.customerId).toBeDefined();
-    expect(result.projectId).toBeDefined();
-    expect(result.assetId).toBeDefined();
-    expect(result.assetUri).toMatch(/^lumen-stub:\/\//);
+    expect(result.status).toBe('SUCCEEDED');
+    expect(result.currentStage).toBeUndefined();
+    expect(result.output?.leadId).toBeDefined();
+    expect(result.output?.customerId).toBeDefined();
+    expect(result.output?.projectId).toBeDefined();
+    expect(result.output?.assetId).toBeDefined();
+    expect(result.output?.assetUri).toMatch(/^lumen-stub:\/\//);
 
-    // Trace records all three stages in pipeline order, all OK.
-    expect(result.trace.stages.map((s) => s.stage)).toEqual([
+    // Trace records all three stages in pipeline order, all succeeded.
+    expect(result.completedStages).toEqual([
       'GOLDEN_PATH',
       'PROJECT_LIFECYCLE',
       'CREATIVE_PRODUCTION',
     ]);
-    expect(result.trace.stages.every((s) => s.status === 'OK')).toBe(true);
+    const terminal = result.trace.filter((e) => e.status !== 'STARTED');
+    expect(terminal.map((e) => e.stage)).toEqual([
+      'GOLDEN_PATH',
+      'PROJECT_LIFECYCLE',
+      'CREATIVE_PRODUCTION',
+    ]);
+    expect(terminal.every((e) => e.status === 'SUCCEEDED')).toBe(true);
   });
 
   it('records the failed stage in the trace when Lumen generation fails', async () => {
@@ -73,15 +83,17 @@ describe('BUSOS-P6-01 — Orchestrator MVP fake E2E', () => {
     );
 
     expect(result.status).toBe('FAILED');
-    expect(result.failedStage).toBe('CREATIVE_PRODUCTION');
-    expect(result.assetId).toBeUndefined();
+    expect(result.currentStage).toBe('CREATIVE_PRODUCTION');
+    expect(result.error?.stage).toBe('CREATIVE_PRODUCTION');
+    expect(result.output?.assetId).toBeUndefined();
 
     // All three stages ran; the last one is marked FAILED in the trace.
-    expect(result.trace.stages.map((s) => s.stage)).toEqual([
+    const terminal = result.trace.filter((e) => e.status !== 'STARTED');
+    expect(terminal.map((e) => e.stage)).toEqual([
       'GOLDEN_PATH',
       'PROJECT_LIFECYCLE',
       'CREATIVE_PRODUCTION',
     ]);
-    expect(result.trace.stages[2].status).toBe('FAILED');
+    expect(terminal[2].status).toBe('FAILED');
   });
 });

@@ -70,20 +70,59 @@ REAL E2E was BLOCKED (CloudBase read-quota exhaustion on live run). **2026-08-15
 owner override**: P5 closes as FUNCTIONAL PASS; live CREATIVE_SUCCESS rerun deferred
 (non-code, third-party quota). P6 authorized to start.
 
-## P6 — Orchestrator MVP  [ACTIVE — BUSOS-P6-01 started 2026-08-15]
+## P6 — Orchestrator  [ACTIVE — BUSOS-P6-02 COMPLETE 2026-08-15]
 
 Goal: Compose the existing vertical slices (Golden Path → Project Lifecycle →
 Creative Production) into a single runnable business process behind one
 `runBusinessProcess(input, deps)` entrypoint, with a structured execution trace
-for observability. Composition only — no existing package is modified, no new
-infra (no Redis / MQ / orchestration engine). The orchestrator also turns the
-deferred live CREATIVE_SUCCESS rerun (BL-016) into one inspectable call instead
-of three manual runs.
+for observability, then harden that entrypoint into a reliable business process
+orchestrator (explicit process state, structured trace contract, unified error
+classification, basic idempotency). Composition + reliability only — no existing
+slice is refactored, no new infra (no Redis / MQ / orchestration engine / new DB).
 
-Status: BUSOS-P6-01 IN PROGRESS — first implementation task COMPLETE
-(`@busos/orchestrator` package; tsc clean; 2/2 fake-E2E tests pass 2026-08-15).
-See `BUSOS-P6-01-PLAN.md`. Live full-process E2E deferred on CloudBase quota
-(BL-016).
+### BUSOS-P6-01 — Orchestrator MVP (composition only)
+Status: COMPLETE (2026-08-15). `@busos/orchestrator` composes the three slices
+behind `runBusinessProcess(input, deps)` with a `TraceCollector`. tsc clean;
+fake-E2E gates P6-A/P6-B PASS. See `BUSOS-P6-01-PLAN.md`.
+
+### BUSOS-P6-02 — Orchestrator Reliability + Trace Contract
+Status: COMPLETE / PASS (2026-08-15).
+Delivered inside `@busos/orchestrator` (no other package modified):
+- **Process state contract** — `BusinessProcessStatus` = RUNNING | SUCCEEDED |
+  FAILED | REJECTED | HUMAN_REQUIRED; `BusinessProcessStage` keeps the real
+  composition names GOLDEN_PATH | PROJECT_LIFECYCLE | CREATIVE_PRODUCTION
+  (governance / customer resolution / business persistence all execute inside
+  golden-path — no forced rename). Business rejection and human review are
+  first-class business outcomes, never system failures.
+- **`BusinessProcessResult`** — processId, idempotencyKey, status, currentStage,
+  completedStages, startedAt/endedAt/durationMs, `output` (stable refs only),
+  `error` / `rejection`, `trace`. No internal object dump.
+- **Structured trace contract** — `ProcessTraceEvent` (processId, stage, status
+  STARTED|SUCCEEDED|FAILED|REJECTED|HUMAN_REQUIRED, timing, error, metadata) with
+  an allowlisted `sanitizeTraceMetadata`: no secrets, tokens, prompts or raw
+  third-party payloads, stable refs only.
+- **Error classification** — `ProcessErrorDisposition` = RETRYABLE | TERMINAL |
+  EXTERNAL_DEPENDENCY; `ProcessError { code, message, stage, disposition }`.
+  CloudBase quota → EXTERNAL_DEPENDENCY; Lumen/Feishu 5xx/timeout → RETRYABLE;
+  contract-validation / invalid input → TERMINAL; unclassifiable → TERMINAL
+  (fail closed).
+- **Idempotency** — `processId` + `idempotencyKey` via
+  `runBusinessProcess(input, deps, options?)` over a `ProcessRegistry` port with
+  `InMemoryProcessRegistry` (injected; no new persistence). Duplicate after
+  success/rejection replays the prior result with zero re-execution; duplicate
+  while RUNNING returns a deterministic duplicate; a prior TERMINAL failure is
+  never auto-rerun; a prior RETRYABLE failure replays unless the explicit
+  `retryPreviousFailure` extension point is used.
+- **Fail closed** — stage N FAILED blocks stage N+1; every STARTED trace event is
+  always terminated (dangling events finalized as FAILED).
+
+Gates P6-D..P6-J PASS (37/37 orchestrator tests, `vitest run --pool=forks`);
+tsc --noEmit clean across all packages. No live environment required.
+
+Live full-process E2E (P6-C) remains DEFERRED — external, non-engineering live
+dependency (CloudBase NoSQL read quota + Lumen/Feishu live credentials), tracked
+by **BL-018 OPEN / NON-ENGINEERING LIVE DEPENDENCY**. BL-016 is CLOSED and must
+not be cited as an active blocker.
 
 ### P6+ — Remaining deferred (not started)
 - Memory
