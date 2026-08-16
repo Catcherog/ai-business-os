@@ -19,6 +19,10 @@ const alias = {
   '@busos/contracts': resolve(repoRoot, 'packages/contracts/src/index.ts'),
   '@busos/business-repository': resolve(repoRoot, 'packages/business-repository/src/index.ts'),
   '@busos/workspace-read': resolve(repoRoot, 'packages/workspace-read/src/index.ts'),
+  '@busos/workspace-review': resolve(repoRoot, 'packages/workspace-review/src/index.ts'),
+  '@busos/human-review': resolve(repoRoot, 'packages/human-review/src/index.ts'),
+  '@busos/golden-path': resolve(repoRoot, 'packages/golden-path/src/index.ts'),
+  '@busos/service-agent-candidate': resolve(repoRoot, 'packages/service-agent-candidate/src/index.ts'),
   'node:crypto': resolve(__dirname, 'shims/node-crypto.mjs'),
 };
 

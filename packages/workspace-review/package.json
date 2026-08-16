@@ -1,0 +1,29 @@
+{
+  "name": "@busos/workspace-review",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI Business OS Operator Workspace review-surface boundary (H1-02). A minimal application adapter that delegates human review decisions (APPROVE / EDIT_APPROVE / REJECT) to the existing @busos/human-review HumanReviewService behind an in-memory store. No Feishu leakage.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --no-cache",
+    "verify": "npm run typecheck && npm run test"
+  },
+  "dependencies": {
+    "@busos/business-repository": "file:../business-repository",
+    "@busos/contracts": "file:../contracts",
+    "@busos/golden-path": "file:../golden-path",
+    "@busos/human-review": "file:../human-review",
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.2",
+    "typescript": "5.6.3",
+    "vitest": "2.1.8"
+  }
+}

@@ -12,19 +12,26 @@ CURRENT PHASE:
 R2 — H1 Operator Workspace MVP
 
 CURRENT TASK:
-BUSOS-R2-H1-01 — Workspace Shell + Project Read Surface
+BUSOS-R2-H1-02 — Review Surface Integration
 [COMPLETE]
 
 CURRENT ENGINEERING STATUS:
 H1-01 COMPLETE — Operator Workspace shell (Overview / Projects / Reviews / Runs)
 shipped with the read-only Projects list + Project Detail (Project + Customer +
-Tasks + Assets) surface on top of the R1 core. Additive repository collection
-reads (listProjects / listTasksByProject / listAssetsByProject) implemented in
-both Fake + Real Feishu adapters, behind a new `@busos/workspace-read`
-`WorkspaceReadService` boundary (no Feishu leakage). `apps/operator-workspace`
-is a minimal client-side TS app (in-memory fake adapter; no Feishu credential in
-the browser). Gates H1-01-A..H1-01-J all PASS. No business mutation was
-authorized or implemented. See `BUSOS-R2-H1-01-COMPLETION.md`.
+Tasks + Assets) surface on top of the R1 core. See `BUSOS-R2-H1-01-COMPLETION.md`.
+
+H1-02 COMPLETE — the placeholder **Reviews** navigation is now a real, usable
+Human Review surface. A new minimal `@busos/workspace-review`
+`WorkspaceReviewService` delegates every review decision (APPROVE / EDIT+APPROVE
+/ REJECT) to the existing `@busos/human-review` `HumanReviewService` (which
+reuses the P2 golden-path commit path + readback verification + fail-closed).
+The Operator Workspace (`apps/operator-workspace`) renders a deterministic
+Reviews list (pending-first), a Review Detail (original AI candidate /
+governance / AI evidence / original snapshot), and the three human decisions
+with terminal-outcome display and repeat-decision guard. Deterministic demo
+review cases seed the in-memory `FakeFeishuAdapter`; no Feishu credential reaches
+the browser. Gates H1-02-A..H1-02-J all PASS. See
+`BUSOS-R2-H1-02-COMPLETION.md`.
 
 EXISTING CAPABILITIES (short list):
 - Candidate / Governance (Service Agent → `LeadCandidateV1`, deterministic governance)
@@ -42,10 +49,12 @@ ACTIVE BLOCKERS:
   R2 scope.
 
 NEXT AUTHORIZED WORK:
-H1-01 is CLOSED. Per the STOP rule, do not start H1-02 (Reviews), H1-03 (Runs),
-H1-04 (AI action), or H1-05 without explicit owner authorization. They cannot be
-auto-started. The next step after H1-01 closure is commit + push + clean tree
-(H1-01 is a non-live, self-contained read surface).
+H1-02 is CLOSED. Per the STOP rule, do not start H1-03 (Runs), H1-04 (AI action),
+or H1-05 without explicit owner authorization. They cannot be auto-started.
+H1-02 productized the existing R1/P3 Human Review capability as a workspace
+surface; it did NOT add a new review persistence database, RBAC, notifications,
+multi-reviewer workflow, assignment/inbox routing, event bus, or Feishu schema
+redesign. The next step after H1-02 closure is commit + push + clean tree.
 
 IMPORTANT DEFERRED ITEMS:
 - BL-018 — live full-process E2E (P6-C); OPEN / NON-ENGINEERING LIVE DEPENDENCY.

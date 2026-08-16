@@ -744,3 +744,124 @@ The `apps/operator-workspace` frontend bundles cleanly via esbuild
 
 **Status: PASS.**
 
+
+---
+
+## R2-H1-02 Gate — Operator Workspace Review Surface (BUSOS-R2-H1-02)
+
+PASS only if all gates below pass. Status as of 2026-08-16: **PASS**.
+No live environment required for any H1-02 gate — the review surface is
+exercised against the in-memory `FakeFeishuAdapter` (deterministic seed) and
+delegates every decision to the existing `@busos/human-review`
+`HumanReviewService` (which reuses the P2 golden-path commit path). H1-02 is
+strictly a product-surface integration: it does NOT reimplement ReviewState /
+ReviewAction / validation / governance / edit allowlist / commit / readback /
+fail-closed — all of that lives in HumanReviewService.
+
+Scope lock: only H1-02 implemented. H1-03 (Runs), H1-04 (AI action), H1-05 are
+NOT started. No new ReviewRepository / RBAC / notifications / multi-reviewer /
+assignment engine / event bus / Feishu schema redesign / Lumen work.
+
+### H1-02-A — Authority / scope
+
+Baseline `73938197daa783ab245ff4957578945ffed9e63d` confirmed equal to
+`origin/main` (verified via `git ls-remote`). H1-01 remains intact (Projects
+read surface unchanged, 4-nav constraint preserved). No H1-03/H1-04 work.
+New `@busos/workspace-review` package is a thin delegation adapter only.
+
+**Status: PASS.**
+
+### H1-02-B — Reviews list
+
+`WorkspaceReviewService.listReviews()` returns deterministic seeded
+`ReviewCase[]` (≥3 PENDING_REVIEW cases: APPROVE / EDIT+APPROVE / REJECT
+demos), pending-first then `updated_at` desc. Each item exposes canonical
+`ReviewCase` data (candidate id, state, service type, customer identity,
+budget, governance issue summary). No raw Feishu structures leak (asserted:
+no `FEISHU_APP_SECRET` / `app_token` / `table_id` / `record_id` in the list
+dump).
+
+**Status: PASS** — `packages/workspace-review/tests/review-e2e.test.ts`
+(H1-02-B).
+
+### H1-02-C — Review detail / inspection
+
+`getReview(caseId)` exposes original candidate (customer / service_type /
+budget / preferred_date_text / notes), governance decision + issues,
+AI evidence, and the retained original snapshot (`reviewed_candidate`
+equal to `original_candidate` at start). No Feishu raw records exposed.
+
+**Status: PASS** — `review-e2e.test.ts` (H1-02-C).
+
+### H1-02-D — APPROVE
+
+`approve()` calls the existing `HumanReviewService.applyReview` → candidate
+validation → governance rerun → canonical `commitApprovedCandidate` →
+repository write → readback verification. Final state `COMMITTED` on success;
+`commit.write_status=SUCCESS`, `readback_status=VERIFIED`; committed Lead
+reflects the ORIGINAL AI value; no false COMMITTED. A hard governance REJECT
+cannot be overridden by human approval (governance rerun guards it).
+
+**Status: PASS** — `review-e2e.test.ts` (H1-02-D).
+
+### H1-02-E — EDIT + APPROVE
+
+`editAndApprove()` applies ONLY the allowlisted edit (canonical P3 example
+`budget_max: 4000 → 4500`). Original AI candidate snapshot retained (4000);
+`reviewed_candidate` carries 4500; human before/after retained in `edits`;
+candidate revalidated; governance rerun; committed / readback value = 4500;
+stale AI evidence for the edited field is NOT reused (AI evidence entry
+dropped, replaced by `HUMAN_EDIT` marker — asserted).
+
+**Status: PASS** — `review-e2e.test.ts` (H1-02-E).
+
+### H1-02-F — REJECT
+
+`reject()` returns `state=REJECTED`, `commit=null`, zero repository/business
+writes (`lead=customer=link=0`), no COMMITTED result. Presented as a valid
+business decision, not an error.
+
+**Status: PASS** — `review-e2e.test.ts` (H1-02-F).
+
+### H1-02-G — Fail closed
+
+Invalid edited candidate (e.g. `budget_max = -5`) fails contract validation →
+`state=FAILED`, `commit=null`, zero business writes, sanitized
+`failure_reason` visible. No false COMMITTED. A hard governance REJECT after
+edit is likewise fail-closed.
+
+**Status: PASS** — `review-e2e.test.ts` (H1-02-G).
+
+### H1-02-H — Architecture boundary
+
+`apps/operator-workspace` presentation code imports only
+`@busos/workspace-review`. That package depends only on
+`@busos/human-review`, `@busos/golden-path`, `@busos/business-repository`,
+`@busos/contracts` — none of which are Feishu API / table IDs / field
+mappings / credentials / raw Feishu records. The browser bundle statically
+scans clean of `FEISHU_*`, `LUMEN_AUTH_PASSWORD`, `open-apis`, `app_token`.
+
+**Status: PASS** — `apps/operator-workspace/smoke.mjs` (secret scan) +
+static review.
+
+### H1-02-I — Product smoke
+
+Headless browser smoke drives the real UI module graph
+(`apps/operator-workspace/src/ui.ts`) through: Reviews list → open pending
+review → inspect candidate/governance/evidence → Approve → UI reflects
+terminal `COMMITTED` state/outcome.
+
+**Status: PASS** — `apps/operator-workspace/smoke-review.mjs`
+(`REVIEW_SMOKE_OK`) + `smoke.mjs` (`SMOKE_OK`).
+
+### H1-02-J — Regression
+
+- `packages/workspace-review` tsc clean; **7 passed / 0 failed**.
+- `packages/human-review` tsc clean; **42 passed / 2 skipped**.
+- `packages/workspace-read` tsc clean; **5 passed / 0 failed**.
+- `packages/business-repository` tsc clean; **37 passed / 1 skipped**.
+- `apps/operator-workspace` build clean; `smoke.mjs` SMOKE_OK;
+  `smoke-review.mjs` REVIEW_SMOKE_OK; no existing gate regression.
+- All relevant `@busos/*` packages typecheck clean.
+
+**Status: PASS.**

@@ -375,3 +375,71 @@ Only this module may know the Project/Task/Asset **table ids** and field names.
 `RealFeishuAdapter` reuses the same search + unwrap + `fromFeishu*Record` mapping
 as the field-scoped lookups used by `getProject` / `getTask` / `getAsset`.
 
+---
+
+## 9. Addendum — H1-02 Operator Workspace Review Surface (BUSOS-R2-H1-02, ADDITIVE)
+
+This section is additive to the frozen R1 interfaces above (and to the P3
+Human Review surface, task §7). It does **not** modify any existing
+`ReviewCase` / `ReviewState` / `ReviewAction` contract or the
+`HumanReviewService` semantics — it productises them behind a workspace
+application boundary.
+
+Frozen decisions respected: D008 (storage abstraction), D014 (contract-based
+interaction), D017 (BusinessRepository is the persistence boundary), D018
+(FeishuAdapter owns Feishu knowledge), D019 (write != success until readback
+VERIFIED). H1-02 is a product-surface integration: it reuses
+`HumanReviewService`, `InMemoryReviewStore`, `commitApprovedCandidate`,
+`govern`, the edit allowlist, and the fail-closed rules. It introduces **no**
+new ReviewRepository / RBAC / notifications / multi-reviewer / assignment
+engine / event bus.
+
+The UI (`apps/operator-workspace`) runs entirely client-side against the
+in-memory `FakeFeishuAdapter`; no Feishu credential ever reaches the browser.
+The production `RealFeishuAdapter` path is exercised only by the server-side
+simulator tests, never shipped to the client.
+
+### 9.1 WorkspaceReviewService (canonical, additive)
+
+```ts
+class WorkspaceReviewService {
+  constructor(repo: BusinessRepository, opts?: {
+    humanReview?: HumanReviewService;
+    now?: () => Date;
+  });
+  seedDemo(): void;                       // deterministic demo review cases
+  seedCases(cases: ReviewCase[]): void;
+  listReviews(): ReviewCase[];            // pending-first, then updated_at desc
+  getReview(caseId: string): ReviewCase | null;
+  approve(caseId, note?): Promise<ReviewOutcome>;
+  editAndApprove(caseId, patch: EditPatch, note?): Promise<ReviewOutcome>;
+  reject(caseId, note?): Promise<ReviewOutcome>;
+}
+```
+
+- `listReviews` / `getReview` are reads over an `InMemoryReviewStore` (H1-02 does
+  **not** authorize a new persistent Review database).
+- `approve` / `editAndApprove` / `reject` DELEGATE to the existing
+  `HumanReviewService.applyReview(reviewCase, action, repo, patch, note)`. They
+  do **not** reimplement ReviewState, ReviewAction, candidate validation,
+  governance, the edit allowlist, `commitApprovedCandidate`, readback
+  verification, or fail-closed. A repeat decision on a terminal case is refused.
+- Only canonical `ReviewCase` / `ReviewOutcome` leave this boundary — Feishu
+  record ids, table ids, field names, and credentials never appear (D018).
+
+### 9.2 BusinessRepository reuse (H1-02, write path)
+
+The commit path is the **existing** golden-path `commitApprovedCandidate`
+(reused by `HumanReviewService` via the `GoldenPathRepository` port):
+`findCustomerByIdentity` (exact phone/wechat) → `createCustomer` →
+`createLead` → `linkLeadCustomer` → readback verification (D019). H1-02 adds no
+new repository method. The same `BusinessRepository` instance backs both the
+H1-01 read surface and the H1-02 review surface in the demo.
+
+### 9.3 FeishuAdapter dependency (unchanged)
+
+No FeishuAdapter change. The review surface depends only on
+`@busos/human-review`, `@busos/golden-path`, `@busos/business-repository`,
+`@busos/contracts` — none of which are Feishu API / table IDs / field mappings /
+credentials / raw Feishu records (HR-F / H1-02-H).
+
