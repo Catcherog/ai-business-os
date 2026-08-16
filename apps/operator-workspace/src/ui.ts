@@ -11,7 +11,13 @@ import type {
   ReviewOutcome,
   EditPatch,
 } from '@busos/workspace-review';
-import { getService, getReviewService } from './api.js';
+import type {
+  RunDetail,
+  RunSummary,
+  RunOutcomeView,
+  RunStageView,
+} from '@busos/workspace-run';
+import { getService, getReviewService, getRunService } from './api.js';
 
 type View =
   | 'overview'
@@ -19,19 +25,21 @@ type View =
   | 'reviews'
   | 'review-detail'
   | 'runs'
+  | 'run-detail'
   | 'project-detail';
 
 const NAV: { id: View; label: string; tag?: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'projects', label: 'Projects', tag: 'LIVE' },
   { id: 'reviews', label: 'Reviews', tag: 'LIVE' },
-  { id: 'runs', label: 'Runs', tag: 'soon' },
+  { id: 'runs', label: 'Runs', tag: 'LIVE' },
 ];
 
 let svc: WorkspaceReadService;
 let active: View = 'overview';
 let selectedProjectId: string | null = null;
 let selectedReviewId: string | null = null;
+let selectedRunId: string | null = null;
 
 /* ----------------------------- tiny DOM helper ---------------------------- */
 function h<K extends keyof HTMLElementTagNameMap>(
@@ -68,6 +76,39 @@ function reviewStatePill(state: ReviewState): HTMLElement {
   return h('span', { class: `pill pill-${state}` }, [REVIEW_STATE_LABEL[state]]);
 }
 
+const RUN_STATUS_LABEL: Record<string, string> = {
+  RUNNING: '运行中',
+  SUCCEEDED: '成功',
+  FAILED: '系统失败',
+  REJECTED: '业务拒绝',
+  HUMAN_REQUIRED: '需人工决策',
+};
+
+const STAGE_STATUS_LABEL: Record<string, string> = {
+  completed: '已完成',
+  current: '进行中',
+  not_reached: '未到达',
+  failed: '失败',
+  rejected: '业务拒绝',
+  human_required: '需人工决策',
+};
+
+function runStatusPill(status: string): HTMLElement {
+  return h('span', { class: `pill pill-${status}` }, [RUN_STATUS_LABEL[status] ?? status]);
+}
+
+function fmtDuration(ms: number | null): string {
+  if (ms == null) return '—';
+  return ms >= 1000 ? `${(ms / 1000).toFixed(2)}s` : `${ms}ms`;
+}
+
+function fmtMeta(meta: Record<string, unknown> | undefined): string {
+  if (!meta || Object.keys(meta).length === 0) return '—';
+  return Object.entries(meta)
+    .map(([k, v]) => `${k}=${String(v)}`)
+    .join('   ');
+}
+
 /* --------------------------------- states -------------------------------- */
 function loading(msg: string): HTMLElement {
   return h('div', { class: 'state' }, [
@@ -90,7 +131,9 @@ function placeholder(title: string, body: string): HTMLElement {
 function renderNav(): HTMLElement {
   // Highlight the parent nav entry while inside a detail view.
   const navActive =
-    active === 'review-detail' ? 'reviews' : active === 'project-detail' ? 'projects' : active;
+    active === 'review-detail' || active === 'run-detail'
+      ? active.replace('-detail', '')
+      : active;
   const nav = h('nav', { class: 'nav', id: 'nav', 'aria-label': 'Primary' });
   for (const item of NAV) {
     const btn = h('button', {
@@ -117,14 +160,15 @@ function viewOverview(): HTMLElement {
   const card = h('div', { class: 'section' }, [
     h('h2', {}, ['Welcome']),
     h('p', {}, [
-      '本工作区是 AI Business OS 的第一个产品化界面。当前版本已接入两个垂直切片：',
-      h('strong', {}, ['Projects（只读）']), ' 与 ', h('strong', {}, ['Reviews（人工审阅）']), '。',
+      '本工作区是 AI Business OS 的第一个产品化界面。当前已接入三个垂直切片：',
+      h('strong', {}, ['Projects（只读）']), '、', h('strong', {}, ['Reviews（人工审阅）']),
+      ' 与 ', h('strong', {}, ['Runs（运行记录 / Trace 视图）']), '。',
     ]),
-    h('p', {}, ['Overview / Runs 为占位视图，将在后续迭代中接入。']),
+    h('p', {}, ['Overview 为只读概览占位；Runs 展示现有 P6 Orchestrator 执行可见性。']),
   ]);
-  const cta = h('button', { class: 'btn-back', type: 'button' }, ['打开 Reviews →']);
+  const cta = h('button', { class: 'btn-back', type: 'button' }, ['打开 Runs →']);
   cta.style.marginTop = '14px';
-  cta.addEventListener('click', () => navigate('reviews'));
+  cta.addEventListener('click', () => navigate('runs'));
   card.append(cta);
   wrap.append(card);
   return wrap;
@@ -589,13 +633,242 @@ function renderActions(rc: ReviewCase): HTMLElement {
   return panel;
 }
 
+/* ------------------------------- Runs list ------------------------------- */
+async function viewRuns(): Promise<HTMLElement> {
+  const wrap = h('div', {});
+  wrap.append(
+    h('div', { class: 'view-head' }, [
+      h('h1', {}, ['Runs']),
+      h('p', {}, ['业务流程运行记录（P6 Orchestrator）· 按最近更新排序 · 只读']),
+    ]),
+  );
+  const list = h('div', { class: 'card run-list' });
+  wrap.append(list);
+  list.append(loading('正在加载运行记录…'));
+
+  try {
+    const runs = await getRunService().listRuns();
+    list.replaceChildren();
+    if (runs.length === 0) {
+      list.append(empty('暂无运行记录。'));
+      return wrap;
+    }
+    for (const r of runs) list.append(runRow(r));
+  } catch (err) {
+    list.replaceChildren();
+    list.append(empty(`加载失败：${(err as Error).message}`));
+  }
+  return wrap;
+}
+
+function runRow(r: RunSummary): HTMLElement {
+  const row = h('div', { class: 'run-row', role: 'button', tabindex: '0' }, [
+    h('div', {}, [
+      h('div', { class: 'title' }, [esc(r.processId)]),
+      h('div', { class: 'sub' }, [
+        `stage ${esc(r.stage)} · ${r.startedAt}`,
+      ]),
+      h('div', { class: 'sub muted' }, [
+        `duration ${fmtDuration(r.durationMs)} · output ${esc(r.outputSummary)}`,
+        r.outcomeSummary ? ` · ${esc(r.outcomeSummary)}` : '',
+      ]),
+    ]),
+    h('div', { style: 'display:flex;gap:8px;align-items:center' }, [
+      runStatusPill(r.status),
+    ]),
+  ]);
+  const go = () => navigate('run-detail', r.processId);
+  row.addEventListener('click', go);
+  row.addEventListener('keydown', (e) => {
+    if ((e as KeyboardEvent).key === 'Enter' || (e as KeyboardEvent).key === ' ') go();
+  });
+  return row;
+}
+
+/* ------------------------------ Run detail ------------------------------- */
+async function viewRunDetail(processId: string): Promise<HTMLElement> {
+  const wrap = h('div', {});
+  const back = h('button', { class: 'btn-back', type: 'button' }, ['← Runs']);
+  back.addEventListener('click', () => navigate('runs'));
+  wrap.append(back);
+  wrap.append(loading('正在加载运行详情…'));
+
+  try {
+    const detail = await getRunService().getRun(processId);
+    wrap.replaceChildren(back);
+    if (!detail) {
+      wrap.append(empty('未找到该运行记录。'));
+      return wrap;
+    }
+
+    wrap.append(
+      h('div', { class: 'view-head' }, [
+        h('h1', {}, ['Run · ', esc(detail.processId)]),
+        h('p', {}, [RUN_STATUS_LABEL[detail.status] ?? detail.status]),
+      ]),
+    );
+
+    const grid = h('div', { class: 'detail-grid' });
+
+    // A. Execution
+    grid.append(
+      h('div', { class: 'section' }, [
+        h('h2', {}, ['执行（Execution）']),
+        kv([
+          ['Process ID', detail.processId],
+          ['Status', ''],
+          ['Started', detail.startedAt],
+          ['Ended', detail.endedAt ?? '（进行中 / 尚未产生）'],
+          ['Duration', fmtDuration(detail.durationMs)],
+          ['Dedup', detail.deduplicated ? '是（幂等重放）' : '否'],
+        ], { statusValue: detail.status }),
+      ]),
+    );
+
+    // B. Stage Progress
+    grid.append(
+      h('div', { class: 'section' }, [
+        h('h2', {}, ['阶段进度（Stage Progress）']),
+        ...detail.stages.map((s: RunStageView) => h('div', { class: 'stage-line' }, [
+          h('span', { class: 'stage-name' }, [esc(s.stage)]),
+          h('span', { class: `pill pill-${s.status}` }, [STAGE_STATUS_LABEL[s.status] ?? s.status]),
+          s.durationMs != null ? h('span', { class: 'muted' }, [` ${fmtDuration(s.durationMs)}`]) : h('span', {}, []),
+        ])),
+      ]),
+    );
+
+    // C. Output
+    grid.append(
+      h('div', { class: 'section' }, [
+        h('h2', {}, ['业务输出（Output）']),
+        detail.output
+          ? kv(outputRows(detail.output))
+          : h('p', { class: 'muted' }, ['（无业务输出）']),
+      ]),
+    );
+
+    wrap.append(grid);
+
+    // D. Error / Business Stop
+    wrap.append(renderOutcomeBlock(detail.outcome));
+
+    // E. Structured Trace
+    wrap.append(renderTrace(detail));
+  } catch (err) {
+    wrap.replaceChildren(back);
+    wrap.append(empty(`加载失败：${(err as Error).message}`));
+  }
+  return wrap;
+}
+
+function outputRows(output: NonNullable<RunDetail['output']>): [string, string][] {
+  const rows: [string, string][] = [];
+  if (output.leadId) rows.push(['Lead ID', output.leadId]);
+  if (output.customerId) rows.push(['Customer ID', output.customerId]);
+  if (output.projectId) rows.push(['Project ID', output.projectId]);
+  if (output.taskId) rows.push(['Task ID', output.taskId]);
+  if (output.assetId) rows.push(['Asset ID', output.assetId]);
+  if (output.assetUri) rows.push(['Asset URI', output.assetUri]);
+  return rows;
+}
+
+/**
+ * D. The mandatory semantic gate (H1-03-F): render a SYSTEM failure, a BUSINESS
+ * rejection, and a HUMAN-required outcome with DISTINCT presentations. A
+ * business rejection / human decision is NEVER shown as a system error.
+ */
+function renderOutcomeBlock(outcome: RunOutcomeView): HTMLElement {
+  if (outcome.kind === 'system_error') {
+    const box = h('div', { class: 'section outcome outcome-system' }, [
+      h('h2', {}, ['系统错误（System Failure）— 集成/系统故障']),
+      outcome.error
+        ? kv([
+            ['Code', outcome.error.code],
+            ['Stage', outcome.error.stage],
+            ['Disposition', outcome.error.disposition],
+            ['Message', outcome.error.message],
+          ])
+        : h('p', { class: 'muted' }, ['（无 error 明细）']),
+    ]);
+    return box;
+  }
+  if (outcome.kind === 'business_rejection') {
+    const box = h('div', { class: 'section outcome outcome-business' }, [
+      h('h2', {}, ['业务决策（Business Rejection）— 系统未失败']),
+      outcome.rejection
+        ? kv([
+            ['Stage', outcome.rejection.stage],
+            ['Reason Code', outcome.rejection.reasonCode],
+            ['Message', outcome.rejection.message],
+          ])
+        : h('p', { class: 'muted' }, ['（无 rejection 明细）']),
+    ]);
+    return box;
+  }
+  if (outcome.kind === 'human_required') {
+    const box = h('div', { class: 'section outcome outcome-human' }, [
+      h('h2', {}, ['需人工决策（Human Required）— 流程正常暂停']),
+      outcome.rejection
+        ? kv([
+            ['Stage', outcome.rejection.stage],
+            ['Reason Code', outcome.rejection.reasonCode],
+            ['Message', outcome.rejection.message],
+          ])
+        : h('p', { class: 'muted' }, ['（无 rejection 明细）']),
+    ]);
+    return box;
+  }
+  if (outcome.kind === 'running') {
+    return h('div', { class: 'section outcome' }, [
+      h('h2', {}, ['状态（Status）']),
+      h('p', { class: 'muted' }, ['运行中 — 尚未产生结构化 trace / 业务输出。']),
+    ]);
+  }
+  // success
+  return h('div', { class: 'section outcome' }, [
+    h('h2', {}, ['状态（Status）']),
+    h('p', { class: 'muted' }, ['执行成功 — 无错误。']),
+  ]);
+}
+
+/** E. Structured trace — a structured table, NOT a raw log / JSON dump. */
+function renderTrace(detail: RunDetail): HTMLElement {
+  const box = h('div', { class: 'section' }, [h('h2', {}, ['结构化 Trace（Structured Trace）'])]);
+  if (!detail.trace.length) {
+    box.append(h('p', { class: 'muted' }, ['（无结构化 trace — 运行中或记录不可用）']));
+    return box;
+  }
+  const tbl = h('table', { class: 'tbl trace-tbl' }, [
+    h('thead', {}, [h('tr', {}, [
+      h('th', {}, ['Stage']), h('th', {}, ['Status']), h('th', {}, ['Started']),
+      h('th', {}, ['Ended']), h('th', {}, ['Dur']), h('th', {}, ['Err']), h('th', {}, ['Metadata（allowlisted）']),
+    ])]),
+    h('tbody', {}, detail.trace.map((e) =>
+      h('tr', {}, [
+        h('td', {}, [esc(e.stage)]),
+        h('td', {}, [pill(e.status)]),
+        h('td', {}, [esc(e.startedAt)]),
+        h('td', {}, [esc(e.endedAt ?? '—')]),
+        h('td', {}, [e.durationMs != null ? String(e.durationMs) : '—']),
+        h('td', {}, [esc(e.errorCode ?? '—')]),
+        h('td', {}, [esc(fmtMeta(e.metadata))]),
+      ]),
+    )),
+  ]);
+  box.append(tbl);
+  box.append(h('p', { class: 'muted', style: 'margin-top:8px' }, [
+    'Trace metadata 仅含允许清单内的稳定引用（leadId / projectId / reasonCode / …）；prompt、密钥、凭据与第三方原始响应不会进入此视图。',
+  ]));
+  return box;
+}
+
 function kv(rows: [string, string][], opts: { statusValue?: string } = {}): HTMLElement {
   const dl = h('dl', { class: 'kv' });
   for (const [k, v] of rows) {
     dl.append(h('dt', {}, [k]));
     if (k === 'Status' && opts.statusValue) {
       const dd = h('dd', {}, []);
-      dd.append(pill(opts.statusValue));
+      dd.append(runStatusPill(opts.statusValue));
       dl.append(dd);
     } else {
       dl.append(h('dd', {}, [esc(v)]));
@@ -615,7 +888,8 @@ async function renderContent(): Promise<void> {
     case 'project-detail': node = await viewProjectDetail(selectedProjectId!); break;
     case 'reviews': node = await viewReviews(); break;
     case 'review-detail': node = await viewReviewDetail(selectedReviewId!); break;
-    case 'runs': node = placeholder('Runs', '业务流程运行视图将在 H1-03 接入。'); break;
+    case 'runs': node = await viewRuns(); break;
+    case 'run-detail': node = await viewRunDetail(selectedRunId!); break;
     default: node = viewOverview();
   }
   content.replaceChildren(node);
@@ -625,6 +899,7 @@ export function navigate(view: View, id?: string): void {
   active = view;
   if (view === 'project-detail' && id) selectedProjectId = id;
   if (view === 'review-detail' && id) selectedReviewId = id;
+  if (view === 'run-detail' && id) selectedRunId = id;
   const navHost = document.getElementById('nav');
   if (navHost) navHost.replaceWith(renderNav());
   void renderContent();

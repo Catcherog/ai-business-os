@@ -20,8 +20,13 @@ const alias = {
   '@busos/business-repository': resolve(repoRoot, 'packages/business-repository/src/index.ts'),
   '@busos/workspace-read': resolve(repoRoot, 'packages/workspace-read/src/index.ts'),
   '@busos/workspace-review': resolve(repoRoot, 'packages/workspace-review/src/index.ts'),
+  '@busos/workspace-run': resolve(repoRoot, 'packages/workspace-run/src/index.ts'),
+  '@busos/orchestrator': resolve(repoRoot, 'packages/orchestrator/src/index.ts'),
   '@busos/human-review': resolve(repoRoot, 'packages/human-review/src/index.ts'),
   '@busos/golden-path': resolve(repoRoot, 'packages/golden-path/src/index.ts'),
+  '@busos/project-lifecycle': resolve(repoRoot, 'packages/project-lifecycle/src/index.ts'),
+  '@busos/creative-production': resolve(repoRoot, 'packages/creative-production/src/index.ts'),
+  '@busos/lumen-adapter': resolve(repoRoot, 'packages/lumen-adapter/src/index.ts'),
   '@busos/service-agent-candidate': resolve(repoRoot, 'packages/service-agent-candidate/src/index.ts'),
   'node:crypto': resolve(__dirname, 'shims/node-crypto.mjs'),
 };

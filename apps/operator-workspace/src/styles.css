@@ -321,3 +321,56 @@ table.tbl tr:last-child td { border-bottom: none; }
   font-size: 12.5px;
   color: var(--muted);
 }
+
+/* ---- Runs surface (H1-03) ---- */
+.run-list { display: grid; gap: 12px; }
+.run-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--line);
+}
+.run-row:last-child { border-bottom: none; }
+.run-row:hover { background: #fafbfd; }
+.run-row .title { font-weight: 600; font-size: 15px; }
+.run-row .sub { color: var(--ink); font-size: 12.5px; margin-top: 3px; }
+
+/* run status pills (reuse .pill base) */
+.pill-SUCCEEDED { background: #e6f7ee; color: var(--ok); }
+.pill-RUNNING { background: #eef0f3; color: #5b6472; }
+.pill-FAILED { background: #fdeaea; color: var(--danger); }
+.pill-REJECTED { background: #fff3e0; color: var(--warn); }
+.pill-HUMAN_REQUIRED { background: #e7f0ff; color: var(--brand); }
+
+/* stage progress pills (reuse .pill base) */
+.pill-completed { background: #e6f7ee; color: var(--ok); }
+.pill-current { background: #eef0f3; color: #5b6472; }
+.pill-not_reached { background: #f3f4f6; color: #9aa1ad; }
+.pill-failed { background: #fdeaea; color: var(--danger); }
+.pill-rejected { background: #fff3e0; color: var(--warn); }
+.pill-human_required { background: #e7f0ff; color: var(--brand); }
+
+.stage-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+.stage-line:last-child { border-bottom: none; }
+.stage-name { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; }
+
+/* outcome blocks (semantic colour coding — system vs business vs human) */
+.outcome-system { border-color: #f3c2c2; }
+.outcome-system h2 { color: var(--danger); }
+.outcome-business { border-color: #f0d9a6; }
+.outcome-business h2 { color: var(--warn); }
+.outcome-human { border-color: #d6e3ff; }
+.outcome-human h2 { color: var(--brand); }
+
+table.trace-tbl th, table.trace-tbl td { font-size: 12.5px; vertical-align: top; }
+table.trace-tbl td:last-child { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); }

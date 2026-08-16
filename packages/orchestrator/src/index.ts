@@ -25,5 +25,6 @@ export type {
 
 export type {
   ProcessRegistry,
+  ProcessRegistryReadPort,
   ProcessExecutionRecord,
 } from './process-registry.js';

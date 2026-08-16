@@ -443,3 +443,81 @@ No FeishuAdapter change. The review surface depends only on
 `@busos/contracts` — none of which are Feishu API / table IDs / field mappings /
 credentials / raw Feishu records (HR-F / H1-02-H).
 
+---
+
+## 10. Addendum — H1-03 Operator Workspace Run / Trace Surface (BUSOS-R2-H1-03, ADDITIVE)
+
+This section is additive to the frozen R1 interfaces above (and to the P6
+Orchestrator contract). It does **not** modify any existing
+`BusinessProcessStatus` / `BusinessProcessStage` / `ProcessError` /
+`ProcessRejection` / `ProcessTraceEvent` contract or the `runBusinessProcess`
+semantics — it productises existing orchestrator execution state behind a
+read-only workspace application boundary.
+
+Frozen decisions respected: D008 (storage abstraction), D014 (contract-based
+interaction), D017 (BusinessRepository is the persistence boundary), D018
+(FeishuAdapter owns Feishu knowledge), D019 (write != success until readback
+VERIFIED). H1-03 is **read-only** — it never runs `runBusinessProcess`, never
+writes storage, and introduces **no** second state machine. It reuses the P6
+`ProcessRegistry` / `InMemoryProcessRegistry` and the P6
+`sanitizeTraceMetadata` / `sanitizeMessage` allowlist (§7 boundary reused).
+
+The UI (`apps/operator-workspace`) runs entirely client-side against the
+in-memory `FakeFeishuAdapter` + a shared `InMemoryProcessRegistry` (demo seed);
+no Feishu credential or secrets-bearing payload ever reaches the browser.
+
+### 10.1 ProcessRegistryReadPort (canonical, additive — lives in @busos/orchestrator)
+
+```ts
+interface ProcessRegistryReadPort {
+  listExecutions(opts?: { limit?: number }): BusinessProcessResult[];
+  getByProcessId(processId: string): BusinessProcessResult | null;
+}
+```
+
+- `InMemoryProcessRegistry` (P6-02) already implements **both** `ProcessRegistry`
+  (write/idempotency) and `ProcessRegistryReadPort` (read). H1-03 adds the
+  read port interface only — `ProcessRegistry` is unchanged.
+- `listExecutions` returns executions ordered `updatedAt` desc (deterministic);
+  `limit` caps the count. `getByProcessId` returns `null` when unknown.
+
+### 10.2 WorkspaceRunService (canonical, additive — @busos/workspace-run)
+
+```ts
+interface RunView {
+  processId: string;
+  status: 'SUCCEEDED' | 'FAILED' | 'REJECTED' | 'HUMAN_REQUIRED' | 'RUNNING';
+  startedAt: string | null;
+  endedAt: string | null;
+  durationMs: number | null;
+  stages: RunStageView[];
+  trace: RunTraceEventView[];
+  outcome:
+    | { kind: 'success'; outputRefs: Record<string, string> }
+    | { kind: 'system_error'; code: string; message: string }       // FAILED only
+    | { kind: 'business_rejection'; reasonCode: string; message: string } // REJECTED only
+    | { kind: 'human_required'; reasonCode: string; message: string }       // HUMAN_REQUIRED only
+    | { kind: 'running' };                                            // RUNNING only
+}
+
+class WorkspaceRunService {
+  constructor(registry: ProcessRegistryReadPort);
+  listRuns(opts?: { limit?: number }): RunView[];
+  getRun(processId: string): RunView | null;
+}
+```
+
+- `listRuns` / `getRun` map each canonical `BusinessProcessResult` into a
+  presentation-safe `RunView`. The mapping is a **pure** transform (no I/O, no
+  mutation) — it reuses P6 `sanitizeTraceMetadata` / `sanitizeMessage` so only
+  allowlisted stable refs survive into `trace` / `outputRefs`.
+- `RUNNING` is rendered **honestly**: `trace = []`, `output = null`,
+  `durationMs = null`, with exactly one `current` stage + the not-yet-reached
+  stages (registry-only knowledge; no fabricated trace/asset).
+- Semantic gate (§4): `FAILED` → `system_error` (a real system fault);
+  `REJECTED` / `HUMAN_REQUIRED` → `business_rejection` / `human_required`
+  (normal business / human pause) — **never** surfaced as a system error in the UI.
+- Only canonical run/trace view types leave this boundary — Feishu record ids,
+  table ids, field names, Lumen/Feishu credentials, raw third-party payloads,
+  and `source_image_base64` never appear (D018 / §9 boundary / §19).
+

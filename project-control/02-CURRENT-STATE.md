@@ -12,7 +12,7 @@ CURRENT PHASE:
 R2 — H1 Operator Workspace MVP
 
 CURRENT TASK:
-BUSOS-R2-H1-02 — Review Surface Integration
+BUSOS-R2-H1-03 — Run Detail / Trace Surface
 [COMPLETE]
 
 CURRENT ENGINEERING STATUS:
@@ -33,6 +33,25 @@ review cases seed the in-memory `FakeFeishuAdapter`; no Feishu credential reache
 the browser. Gates H1-02-A..H1-02-J all PASS. See
 `BUSOS-R2-H1-02-COMPLETION.md`.
 
+H1-03 COMPLETE — the placeholder **Runs** navigation is now a real, read-only Run
+Detail / Trace surface. A new minimal `@busos/workspace-run` `WorkspaceRunService`
+reads process executions from the existing `@busos/orchestrator`
+`ProcessRegistryReadPort` (additive; `InMemoryProcessRegistry` already implements
+both `ProcessRegistry` and `ProcessRegistryReadPort`) and maps each canonical
+`BusinessProcessResult` into a presentation-safe `RunView` / `RunStageView` /
+`RunTraceEventView` (no second state machine). It reuses the P6 contract directly
+(`BusinessProcessStatus` / `BusinessProcessStage` / `ProcessError` /
+`ProcessRejection` / `ProcessTraceEvent`) and the P6 `sanitizeTraceMetadata` /
+`sanitizeMessage` allowlist so no secret / token / prompt / raw third-party
+payload reaches the view models or the browser. The Operator Workspace
+(`apps/operator-workspace`) renders a deterministic Runs list (updated_at desc;
+RUNNING shown honestly as registry-only with empty trace / null output / null
+duration) and a Run Detail (status pill, per-stage structured trace, sanitized
+error, safe output refs). Deterministic demo executions seed the shared
+`InMemoryProcessRegistry`: A SUCCEEDED / B FAILED (system fault) / C RUNNING
+(honest) / D HUMAN_REQUIRED (normal pause, never a system error). Gates
+H1-03-A..H1-03-J all PASS. See `BUSOS-R2-H1-03-COMPLETION.md`.
+
 EXISTING CAPABILITIES (short list):
 - Candidate / Governance (Service Agent → `LeadCandidateV1`, deterministic governance)
 - Human Review (`@busos/human-review`: approve / edit+approve / reject)
@@ -49,12 +68,13 @@ ACTIVE BLOCKERS:
   R2 scope.
 
 NEXT AUTHORIZED WORK:
-H1-02 is CLOSED. Per the STOP rule, do not start H1-03 (Runs), H1-04 (AI action),
-or H1-05 without explicit owner authorization. They cannot be auto-started.
-H1-02 productized the existing R1/P3 Human Review capability as a workspace
-surface; it did NOT add a new review persistence database, RBAC, notifications,
-multi-reviewer workflow, assignment/inbox routing, event bus, or Feishu schema
-redesign. The next step after H1-02 closure is commit + push + clean tree.
+H1-03 is CLOSED. Per the STOP rule, do not start H1-04 (AI action), H1-05, or
+H2 / H3 / H4 without explicit owner authorization. They cannot be auto-started.
+H1-03 productized the existing R1/P6 Orchestrator execution visibility as a
+workspace surface; it did NOT add a new execution/run persistence database, a
+second state machine, live trace streaming, a re-run/retry UI, RBAC, or any
+business-mutation capability. The next step after H1-03 closure is commit + push
++ clean tree.
 
 IMPORTANT DEFERRED ITEMS:
 - BL-018 — live full-process E2E (P6-C); OPEN / NON-ENGINEERING LIVE DEPENDENCY.

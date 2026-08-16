@@ -865,3 +865,129 @@ terminal `COMMITTED` state/outcome.
 - All relevant `@busos/*` packages typecheck clean.
 
 **Status: PASS.**
+
+---
+
+## R2-H1-03 Gate — Operator Workspace Run Detail / Trace Surface (BUSOS-R2-H1-03)
+
+PASS only if all gates below pass. Status as of 2026-08-16: **PASS**.
+No live environment required for any H1-03 gate — the run surface reads from the
+in-memory `FakeFeishuAdapter` + a shared `InMemoryProcessRegistry` (deterministic
+demo seed) and reuses the existing P6 Orchestrator contract. H1-03 is strictly
+read-only and adds **no** second state machine.
+
+Scope lock: only H1-03 implemented. H1-04 (AI action), H1-05 are NOT started. No
+new run/execution persistence database, no live trace streaming, no re-run/retry
+UI, no RBAC, no business mutation.
+
+### H1-03-A — Authority / scope
+
+Baseline `508dbfc38f0a17fe533dd8d286e54be5d940b1e9` confirmed equal to
+`origin/main` (verified via `git ls-remote`). H1-01/H1-02 surfaces intact (4-nav
+constraint + Projects/Reviews read surfaces preserved). No H1-04/H1-05 work.
+`WorkspaceRunService` is a thin read adapter over `ProcessRegistryReadPort`.
+
+**Status: PASS.**
+
+### H1-03-B — Runs list read surface
+
+`WorkspaceRunService.listRuns()` returns deterministic seeded `RunView[]`
+(updated_at desc, `limit` respected), each backed by a canonical
+`BusinessProcessResult` from `ProcessRegistryReadPort`. `RUNNING` is rendered
+**honestly** — `trace = []`, `output = null`, `durationMs = null`, exactly one
+`current` stage + the not-yet-reached stages (registry-only; no fabricated
+trace/asset). `getRun(unknownId)` returns `null`.
+
+**Status: PASS** — `packages/workspace-run/tests/run-surface.test.ts` (H1-03-B).
+
+### H1-03-C — Run detail mapping
+
+`SUCCEEDED` → `outcome.kind = 'success'` with only stable `outputRefs`
+(leadId/customerId/projectId/taskId/assetId/assetUri). `FAILED` →
+`outcome.kind = 'system_error'` with `code` (e.g. `CREATIVE_GENERATION_FAILED`)
++ sanitized `message` + the failed `stage`. `REJECTED` → `business_rejection`;
+`HUMAN_REQUIRED` → `human_required`. `getRun(processId)` maps the full
+`RunView` (status / stages / sanitized trace / outcome).
+
+**Status: PASS** — `run-surface.test.ts` (H1-03-C).
+
+### H1-03-D — Real orchestrator wiring (no second state machine)
+
+A REAL `runBusinessProcess(input, fakeDeps, { registry })` (SUCCESS path) writes
+to the shared `InMemoryProcessRegistry`; `WorkspaceRunService` constructed with
+that same registry returns a `RunView` whose `status = 'SUCCEEDED'` and
+`outputRefs` match the process result. A FAILURE path → `status = 'FAILED'` →
+`system_error`. The service reuses the canonical `BusinessProcessResult`; it does
+NOT re-implement status/stage/error semantics.
+
+**Status: PASS** — `run-surface.test.ts` (H1-03-D, e2e via shared registry).
+
+### H1-03-E — Semantic gate (FAILED ≠ rejection/human)
+
+`FAILED` maps to `system_error` (a real system fault). `REJECTED` maps to
+`business_rejection` and `HUMAN_REQUIRED` maps to `human_required` — both are
+normal business / human pauses and are **never** surfaced as a system error in the
+UI. The mapping is exhaustively covered across all five status kinds.
+
+**Status: PASS** — `run-surface.test.ts` (H1-03-E).
+
+### H1-03-F — Trace sanitization / security boundary
+
+The view-model trace uses the P6 `sanitizeTraceMetadata` allowlist — keys like
+`apiKey` / `password` / `systemPrompt` / `source_image_base64` /
+`thirdPartyPayload` are dropped; only allowlisted stable refs
+(`leadId`/`governanceDecision`/…) survive. `sanitizeMessage` redacts
+token-like values (`sk-secret-999` / `hunter2` → `[REDACTED]`). A whole-app
+forbidden-token scan over the bundled UI graph finds no leaked secret/credential
+(raw Feishu/Lumen creds never enter the view models).
+
+**Status: PASS** — `run-surface.test.ts` (H1-03-F) + `apps/operator-workspace/smoke-run.mjs`
+(forbidden-token injection + whole-app scan).
+
+### H1-03-G — Deterministic demo seed
+
+`buildDemoRuns()` seeds the shared `InMemoryProcessRegistry` with four cases:
+A SUCCEEDED / B FAILED (system fault) / C RUNNING (honest, registry-only) /
+D HUMAN_REQUIRED (normal pause). The Runs list + Run Detail render all four
+correctly; C shows honest empty trace / null output / null duration.
+
+**Status: PASS** — `run-surface.test.ts` + `smoke-run.mjs` (open A/B/C/D).
+
+### H1-03-H — Architecture boundary
+
+`apps/operator-workspace` presentation code imports only `@busos/workspace-run`.
+That package depends only on `@busos/orchestrator` (the `ProcessRegistryReadPort`
++ `sanitizeTraceMetadata` / `sanitizeMessage`) and `@busos/contracts` — none of
+which are Feishu API / table IDs / field mappings / credentials / raw Feishu
+records / Lumen secrets. The browser bundle statically scans clean of `FEISHU_*`,
+`LUMEN_AUTH_PASSWORD`, `open-apis`, `app_token`, `apiKey`, `password`,
+`systemPrompt`, `source_image_base64`, `thirdPartyPayload`.
+
+**Status: PASS** — `apps/operator-workspace/smoke-run.mjs` (secret scan) +
+static review.
+
+### H1-03-I — Product smoke
+
+Headless browser smoke drives the real UI module graph
+(`apps/operator-workspace/src/ui.ts`) through: Runs list → open `proc_seed_b002`
+(FAILED) → verify stage / status / structured trace / sanitized error; open
+`proc_seed_a001` (SUCCEEDED) → safe output refs; open `proc_seed_d004`
+(HUMAN_REQUIRED) → rendered as a normal pause (NOT a system error); inject
+forbidden tokens into a stored record's trace metadata → re-open → assert stripped
++ legit refs preserved; whole-app forbidden scan.
+
+**Status: PASS** — `apps/operator-workspace/smoke-run.mjs` (`RUN_SMOKE_OK` ×5).
+
+### H1-03-J — Regression
+
+- `packages/workspace-run` tsc clean; **12 passed / 0 failed** (≥8 required).
+- `packages/orchestrator` tsc clean (regression fix: `ProcessExecutionRecord`
+  imported from local declaration, not `process-contract.js`); P6-02 suite intact.
+- `packages/workspace-read` / `workspace-review` / `human-review` /
+  `business-repository` tsc clean; existing suites green.
+- `apps/operator-workspace` build compiles cleanly (esbuild, aliases for
+  `@busos/*`); `smoke.mjs` SMOKE_OK; `smoke-review.mjs` REVIEW_SMOKE_OK;
+  `smoke-run.mjs` RUN_SMOKE_OK; no existing gate regression.
+- All relevant `@busos/*` packages typecheck clean.
+
+**Status: PASS.**
