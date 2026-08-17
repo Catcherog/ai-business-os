@@ -1,0 +1,101 @@
+{
+  "probe": "BUSOS-R2-H1-X01",
+  "evidenceClass": "TEMPORARY LIVE FEASIBILITY",
+  "cloudBaseEnvKeysInProbeProcess": [],
+  "run": {
+    "processId": "proc_96b272c3-d531-4ff2-9312-82b92b58fb2a",
+    "status": "SUCCEEDED",
+    "currentStage": null,
+    "completedStages": [
+      "CREATIVE_PRODUCTION"
+    ],
+    "durationMs": 37293,
+    "error": null,
+    "rejection": null,
+    "traceEvents": [
+      {
+        "stage": "CREATIVE_PRODUCTION",
+        "status": "STARTED",
+        "metadata": {
+          "projectId": "proj_4bf50f3ce7b5b5a1",
+          "idempotency": "h1x01_9c7d4897-9184-4ed7-a59c-03b3bf9dabe3"
+        }
+      },
+      {
+        "stage": "CREATIVE_PRODUCTION",
+        "status": "SUCCEEDED",
+        "metadata": {
+          "projectId": "proj_4bf50f3ce7b5b5a1",
+          "taskId": "task_4bd219af439a582f",
+          "assetId": "asset_9b75c0cb85c3ba96",
+          "idempotency": "h1x01_9c7d4897-9184-4ed7-a59c-03b3bf9dabe3"
+        }
+      }
+    ]
+  },
+  "business": {
+    "projectId": "proj_4bf50f3ce7b5b5a1",
+    "projectCommitStatus": "COMMITTED",
+    "taskId": "task_4bd219af439a582f",
+    "taskStatusReadback": "DONE",
+    "assetId": "asset_9b75c0cb85c3ba96",
+    "assetUri": "feishu-drive://RiSebWOlCogwmPx2qHIcf3Genqh",
+    "assetTypeReadback": "IMAGE",
+    "assetSourceReadback": "LUMEN",
+    "assetMimeTypeReadback": "image/png",
+    "assetUriReadback": "feishu-drive://RiSebWOlCogwmPx2qHIcf3Genqh"
+  },
+  "generation": {
+    "lumenAuthHttpStatus": 200,
+    "lumenEditHttpStatus": 200,
+    "generatedBytes": 781724,
+    "generatedSha256": "7f7e87634c81b96d0378929b800b13a3ea126bec51e9a3ff61f2d2795f026264",
+    "generatedMimeType": "image/png",
+    "lumenGenerateCalls": 1
+  },
+  "assetStorage": {
+    "driveFileTokenLength": 27,
+    "driveReadbackBytes": 781724,
+    "driveReadbackShaMatchesGenerated": true,
+    "tmpUrlReadbackShaMatchesGenerated": true,
+    "driveTrace": [
+      {
+        "step": "drive.tenant_access_token",
+        "httpStatus": 200,
+        "feishuCode": 0
+      },
+      {
+        "step": "drive.medias.upload_all",
+        "httpStatus": 200,
+        "feishuCode": 0,
+        "bytes": 781724
+      },
+      {
+        "step": "drive.tenant_access_token",
+        "httpStatus": 200,
+        "feishuCode": 0
+      },
+      {
+        "step": "drive.medias.download",
+        "httpStatus": 200,
+        "bytes": 781724
+      },
+      {
+        "step": "drive.medias.batch_get_tmp_download_url",
+        "httpStatus": 200,
+        "feishuCode": 0
+      },
+      {
+        "step": "drive.tmp_download_url.GET",
+        "httpStatus": 200,
+        "bytes": 781724
+      }
+    ]
+  },
+  "idempotency": {
+    "replayStatus": "SUCCEEDED",
+    "replayDeduplicated": true,
+    "replayProcessIdMatches": true,
+    "lumenGenerateCallsAfterReplay": 1
+  }
+}
