@@ -33,6 +33,13 @@ export interface RunSummary {
   /** `error.code` or `rejection.reasonCode` when present, else `null`. */
   outcomeSummary: string | null;
   deduplicated: boolean;
+  /**
+   * The Project this run is associated with, projected from
+   * `BusinessProcessOutput.projectId`. Enables the Project → Related Runs
+   * closed loop (H1-05) without a second state machine — it is a pure
+   * projection of the canonical output, never a new source of truth.
+   */
+  projectId: string | null;
 }
 
 /** View projection of one stage's state in the detail view. */

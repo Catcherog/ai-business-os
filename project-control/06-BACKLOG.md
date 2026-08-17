@@ -201,24 +201,26 @@ live-evidence dependency migrated to **BL-018** (BUSOS-P6-02 hygiene pass).
   a fake LIVE PASS; the task STOPS (no auto H1-05 / H2 / H3 / H4).
 - Suggested revisit phase: owner-authorized live closure run (H1-04 live gate or P6-C).
 
-## BL-018 — H1-05 MVP Closure Note (added 2026-08-17)
+## BL-018 — H1-05 Real Usage Closure Note (updated 2026-08-17)
 
-The **BUSOS-R2-H1-05 — Real Usage Closure / MVP Review** product walkthrough
-exercised the full H1-01 → H1-04 user journey end-to-end in the in-browser
-**DEMO** mode (Fake adapters + shared in-memory registry) and the server-only
-**CONNECTED** boundary probe. Findings:
+The **BUSOS-R2-H1-05 — Real Usage Closure** task **closed the operator loop** end-to-end in
+the in-browser **DEMO** mode (Fake adapters + shared in-memory registry) and verified the
+server-only **CONNECTED** boundary probe. Findings:
 
-- All four H1 success checkpoints H1-S1..H1-S7 pass on **engineering / DEMO**
-  evidence (see `BUSOS-R2-H1-05.md`). One genuine P1 product defect was found and
-  **fixed** during review: the Projects/Reviews/Runs nav entries were mislabelled
-  `LIVE`, contradicting the honest `IN-MEMORY` / `DEMO` footer + GVR badge. Corrected
-  to `DEMO` in `apps/operator-workspace/src/ui.ts`.
-- The **LIVE gate remains BLOCKED** under BL-018. No real Feishu Project write +
-  real Lumen generation + real Asset write + readback VERIFIED + UI Run/Asset view
-  was executed. This is reported honestly — the closure verdict is **B**
-  (`H1 ENGINEERING COMPLETE / MVP LIVE CLOSURE BLOCKED — BL-018`), never a faked
-  LIVE PASS.
-- Remaining product gaps are P2/P3 UI papercuts (BL-021..BL-023), non-blocking.
+- The full journey now passes as a coherent product: Overview (real aggregated KPIs +
+  activity) → Projects → Creative Action → Run → Review → return to Project with synced
+  state. All H1-S1..H1-S7 pass on **engineering / DEMO** (see `BUSOS-R2-H1-05.md`, gates
+  H1-05-A..J all PASS).
+- Two genuine product gaps were **fixed** during closure: BL-020 (nav `LIVE`→`DEMO`, fixed in
+  the earlier MVP-review pass) and, in this closure pass, **BL-021** (Project Detail now
+  auto-refreshes Tasks/Assets/Related Runs after a GVR via `reloadDynamic`) and **BL-022**
+  (Overview now aggregates real KPIs via `buildOverview`).
+- The **NORMAL LIVE gate remains BLOCKED** under BL-018. No real Feishu Project write + real
+  Lumen generation + real Asset write + readback VERIFIED + UI Run/Asset view was executed in
+  this task. This is reported honestly — the verdict is
+  `H1 ENGINEERING COMPLETE / TEMPORARY LIVE NOT RE-EXECUTED IN H1-05 / NORMAL LIVE DEFERRED —
+  BL-018`, never a faked LIVE PASS. (Temporary-live feasibility was already demonstrated by
+  H1-X01; H1-05 reuses that same GVR vertical slice and adds no new live action.)
 
 BL-018 remains **OPEN / NON-ENGINEERING LIVE DEPENDENCY**. H1-05 STOPS after
 commit + push; H2/H3/H4 are not auto-started.
@@ -240,26 +242,21 @@ commit + push; H2/H3/H4 are not auto-started.
 - Suggested revisit phase: none (resolved).
 
 ## BL-021 Project Detail panels do not auto-refresh after Generate Visual Reference
-- Type: DEFERRED (non-blocking)
-- Found in task: BUSOS-R2-H1-05 (walkthrough)
-- Description: After a successful DEMO `Generate Visual Reference`, the new Task
-  (DONE) + Asset are written to the shared registry and DO appear on the Runs
-  surface and (after manual refresh) on Project Detail. But the Project Detail
-  Tasks/Assets panels are not re-rendered automatically from the action result —
-  the operator must click "刷新项目详情". This is a minor UX papercut for the MVP.
-- Why non-blocking: data integrity is correct (shared registry), only the view
-  refresh timing is manual. The action result panel does show the outcome.
-- Suggested revisit phase: H2 (Operator Workspace polish) or a follow-up UI pass.
+- **CLOSED (2026-08-17) — fixed in BUSOS-R2-H1-05 (Real Usage Closure).**
+- Found in task: BUSOS-R2-H1-05 (walkthrough).
+- Resolution: `gvrPanel(projectId, onSuccess?)` now calls `onSuccess` (= `reloadDynamic`)
+  on `SUCCEEDED`, which re-renders the Project Detail Tasks / Assets / Related Runs via the
+  shared registry — no manual "刷新项目详情" required (state-consistency Case 1). The closure
+  smoke re-verifies the synced state on return to the Project. Non-blocking papercut eliminated.
 
 ## BL-022 Overview surface is a placeholder (no aggregate KPIs)
-- Type: DEFERRED (non-blocking)
-- Found in task: BUSOS-R2-H1-05 (walkthrough)
-- Description: The `Overview` nav is a bounded placeholder (per H1-01 scope lock) —
-  it does not yet aggregate project counts, pending reviews, or recent runs. This is
-  acceptable for the MVP but is the most obvious surface to enrich next.
-- Why non-blocking: H1 success definition (H1-S1) only requires the four nav
-  surfaces to exist and render; Overview content depth is explicitly out of H1 scope.
-- Suggested revisit phase: H2 (Operator Workspace polish).
+- **CLOSED (2026-08-17) — fixed in BUSOS-R2-H1-05 (Real Usage Closure).**
+- Found in task: BUSOS-R2-H1-05 (walkthrough).
+- Resolution: `buildOverview(read, review, run)` (new pure projection, `apps/operator-workspace/
+  src/overview-model.ts`) now aggregates real project counts + status breakdown + pending reviews
+  (clickable) + recent runs (clickable) + a cross-surface recent-activity feed. KPIs are computed
+  at render time from the live read services — no hardcoded values. Closure smoke asserts
+  `projects=2, pendingReviews=3, runs=4` derived from the real surfaces.
 
 ## BL-023 DEMO assetUri shown raw (`lumen-stub://...`)
 - Type: DEFERRED (non-blocking)

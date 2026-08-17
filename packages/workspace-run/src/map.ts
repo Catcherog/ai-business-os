@@ -68,6 +68,7 @@ export function toRunSummary(rec: ProcessExecutionRecord): RunSummary {
     outputSummary: summarizeOutput(r?.output),
     outcomeSummary: r?.error ? r.error.code : r?.rejection ? r.rejection.reasonCode : null,
     deduplicated: r?.deduplicated ?? false,
+    projectId: r?.output?.projectId ?? null,
   };
 }
 

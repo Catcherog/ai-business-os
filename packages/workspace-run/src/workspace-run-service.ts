@@ -41,4 +41,15 @@ export class WorkspaceRunService {
     if (!rec) return null;
     return toRunDetail(rec);
   }
+
+  /**
+   * H1-05 — Project → Related Runs. Filters the same list the Runs surface uses
+   * by `output.projectId` (projected onto `RunSummary.projectId`). This is the
+   * only addition that lets a Project Detail show its own executions; it reuses
+   * the existing read port and adds no second state machine.
+   */
+  async listRunsByProject(projectId: string): Promise<RunSummary[]> {
+    const all = await this.listRuns();
+    return all.filter((r) => r.projectId === projectId);
+  }
 }

@@ -20,6 +20,7 @@ import type {
 import type { BusinessProcessResult } from '@busos/orchestrator';
 import { getService, getReviewService, getRunService } from './api.js';
 import { runGenerateVisualReference } from './action.js';
+import { buildOverview, type OverviewModel } from './overview-model.js';
 
 type View =
   | 'overview'
@@ -151,28 +152,111 @@ function renderNav(): HTMLElement {
 }
 
 /* ------------------------------- views ----------------------------------- */
-function viewOverview(): HTMLElement {
+function kpiGrid(cards: { label: string; value: string; sub: string }[]): HTMLElement {
+  const grid = h('div', { class: 'kpi-grid' });
+  for (const c of cards) {
+    grid.append(h('div', { class: 'kpi' }, [
+      h('div', { class: 'kpi-value' }, [c.value]),
+      h('div', { class: 'kpi-label' }, [c.label]),
+      h('div', { class: 'kpi-sub' }, [c.sub]),
+    ]));
+  }
+  return grid;
+}
+
+function statusSummary(counts: Record<string, number>): string {
+  const parts = Object.entries(counts).map(([k, v]) => `${v} ${k}`);
+  return parts.length ? parts.join(' · ') : '—';
+}
+
+function overviewSection(title: string, content: HTMLElement): HTMLElement {
+  return h('div', { class: 'section overview-section' }, [h('h2', {}, [title]), content]);
+}
+
+function activityList(items: OverviewModel['recentActivity']): HTMLElement {
+  const list = h('div', { class: 'activity' });
+  if (!items.length) return h('p', { class: 'muted' }, ['（无）']);
+  for (const it of items) {
+    const row = h('div', { class: 'activity-row', role: 'button', tabindex: '0' }, [
+      h('span', { class: `dot dot-${it.kind}` }),
+      h('div', { class: 'activity-main' }, [
+        h('div', { class: 'title' }, [esc(it.label)]),
+        h('div', { class: 'sub muted' }, [it.sub]),
+      ]),
+      h('span', { class: 'muted' }, [it.at]),
+    ]);
+    const go = () => navigate(it.kind === 'project' ? 'project-detail' : it.kind === 'run' ? 'run-detail' : 'review-detail', it.id);
+    row.addEventListener('click', go);
+    row.addEventListener('keydown', (e) => {
+      if ((e as KeyboardEvent).key === 'Enter' || (e as KeyboardEvent).key === ' ') go();
+    });
+    list.append(row);
+  }
+  return list;
+}
+
+async function viewOverview(): Promise<HTMLElement> {
   const wrap = h('div', {});
   wrap.append(
     h('div', { class: 'view-head' }, [
       h('h1', {}, ['Operator Workspace']),
-      h('p', {}, ['AI Business OS · 运营工作台']),
+      h('p', {}, ['AI Business OS · 运营工作台 · 演示数据（in-memory）']),
     ]),
   );
-  const card = h('div', { class: 'section' }, [
-    h('h2', {}, ['Welcome']),
-    h('p', {}, [
-      '本工作区是 AI Business OS 的第一个产品化界面。当前已接入三个垂直切片：',
-      h('strong', {}, ['Projects（只读）']), '、', h('strong', {}, ['Reviews（人工审阅）']),
-      ' 与 ', h('strong', {}, ['Runs（运行记录 / Trace 视图）']), '。',
-    ]),
-    h('p', {}, ['Overview 为只读概览占位；Runs 展示现有 P6 Orchestrator 执行可见性。']),
-  ]);
-  const cta = h('button', { class: 'btn-back', type: 'button' }, ['打开 Runs →']);
-  cta.style.marginTop = '14px';
-  cta.addEventListener('click', () => navigate('runs'));
-  card.append(cta);
-  wrap.append(card);
+  const body = h('div', { class: 'overview-body' });
+  wrap.append(body);
+  body.append(loading('正在加载概览…'));
+
+  try {
+    const m = await buildOverview(getService(), getReviewService(), getRunService());
+    body.replaceChildren();
+
+    if (m.projects.length === 0 && m.runs.length === 0 && m.reviews.length === 0) {
+      body.append(empty('工作区暂无数据。'));
+      return wrap;
+    }
+
+    // KPI cards — real counts from the existing read surfaces.
+    body.append(kpiGrid([
+      { label: 'Projects', value: String(m.projects.length), sub: statusSummary(m.projectStatusCounts) },
+      { label: '待审阅', value: String(m.pendingReviews.length), sub: m.pendingReviews.length ? '需人工处理' : '全部已处理' },
+      { label: 'Runs', value: String(m.runs.length), sub: statusSummary(m.runStatusCounts) },
+      { label: '最近活动', value: String(m.recentActivity.length), sub: '跨三个业务面' },
+    ]));
+
+    // Project status breakdown.
+    body.append(overviewSection('项目状态', (() => {
+      const list = h('div', { class: 'status-list' });
+      const entries = Object.entries(m.projectStatusCounts);
+      if (!entries.length) return h('p', { class: 'muted' }, ['（无）']);
+      for (const [status, n] of entries) {
+        list.append(h('div', { class: 'status-row' }, [pill(status), h('span', { class: 'muted' }, [`${n} 个`])]));
+      }
+      return list;
+    })()));
+
+    // Needs attention — pending reviews (clickable → review detail).
+    if (m.pendingReviews.length) {
+      const list = h('div', { class: 'card link-list' });
+      for (const rc of m.pendingReviews) list.append(reviewRow(rc));
+      body.append(overviewSection('需要你处理 · 待审阅', list));
+    }
+
+    // Recent runs (clickable → run detail).
+    if (m.runs.length) {
+      const list = h('div', { class: 'card run-list' });
+      for (const r of m.runs.slice(0, 5)) list.append(runRow(r));
+      body.append(overviewSection('最近运行', list));
+    }
+
+    // Recent cross-surface activity feed.
+    if (m.recentActivity.length) {
+      body.append(overviewSection('最近活动', activityList(m.recentActivity)));
+    }
+  } catch (err) {
+    body.replaceChildren();
+    body.append(empty(`加载失败：${(err as Error).message}`));
+  }
   return wrap;
 }
 
@@ -243,7 +327,7 @@ function readFileAsBase64(file: File): Promise<string> {
 }
 
 /** Render the H1-04 action form inside a project-detail section. */
-function gvrPanel(projectId: string): HTMLElement {
+function gvrPanel(projectId: string, onSuccess?: () => Promise<void> | void): HTMLElement {
   const promptEl = h('textarea', {
     class: 'gvr-prompt', rows: '3',
     placeholder: '描述你想要的视觉调整，例如：把背景换成蓝色调',
@@ -284,6 +368,12 @@ function gvrPanel(projectId: string): HTMLElement {
           key,
         );
         renderGvrResult(statusEl, result, mode, projectId);
+        // H1-05 state-consistency: after a successful action, refresh the
+        // project's Tasks / Assets / Related Runs in place so the new output is
+        // visible without a manual "refresh" hunt (BL-021 fix, Case 1).
+        if (result.status === 'SUCCEEDED' && onSuccess) {
+          void onSuccess();
+        }
       } catch (e) {
         statusEl.replaceChildren(h('p', { class: 'err' }, ['生成失败：' + (e as Error).message]));
       } finally {
@@ -328,15 +418,75 @@ function renderGvrResult(
     rows.push(h('div', {}, [`assetUri: ${esc(result.output.assetUri)}`]));
     const runLink = h('button', { class: 'btn-back', type: 'button' }, ['查看 Run →']);
     runLink.addEventListener('click', () => navigate('run-detail', result.processId));
-    const refresh = h('button', { class: 'btn-back', type: 'button' }, ['刷新项目详情（查看新 Task / Asset）']);
-    refresh.addEventListener('click', () => navigate('project-detail', projectId));
-    rows.push(h('div', { class: 'gvr-actions' }, [runLink, refresh]));
+    rows.push(h('div', { class: 'gvr-actions' }, [runLink]));
+  } else if (result.status === 'HUMAN_REQUIRED' && result.rejection) {
+    // A normal business pause — NEVER rendered as a system failure.
+    rows.push(h('p', { class: 'human-note' }, [
+      `需人工决策（正常暂停，非系统失败）：${esc(result.rejection.reasonCode)} — ${esc(result.rejection.message)}`,
+    ]));
   } else if (result.status === 'REJECTED' && result.rejection) {
     rows.push(h('p', { class: 'err' }, [`业务拒绝：${esc(result.rejection.reasonCode)} — ${esc(result.rejection.message)}`]));
   } else if (result.status === 'FAILED' && result.error) {
     rows.push(h('p', { class: 'err' }, [`系统失败：${esc(result.error.code)} — ${esc(result.error.message)}`]));
+  } else {
+    rows.push(h('p', { class: 'muted' }, [`状态：${esc(result.status)}`]));
   }
   host.replaceChildren(...rows);
+}
+
+/* ---- Project Detail task / asset table builders (reused by reload) ---- */
+function projectTasksTable(tasks: Task[]): HTMLElement {
+  if (!tasks.length) return h('p', { class: 'muted' }, ['（暂无任务）']);
+  return h('table', { class: 'tbl' }, [
+    h('thead', {}, [h('tr', {}, [
+      h('th', {}, ['Title']), h('th', {}, ['Type']), h('th', {}, ['Status']), h('th', {}, ['Due']),
+    ])]),
+    h('tbody', {}, tasks.map((t: Task) =>
+      h('tr', {}, [
+        h('td', {}, [esc(t.title)]),
+        h('td', {}, [esc(t.task_type)]),
+        h('td', {}, [pill(t.status)]),
+        h('td', {}, [esc(t.due_date)]),
+      ]),
+    )),
+  ]);
+}
+
+function projectAssetsTable(assets: Asset[]): HTMLElement {
+  if (!assets.length) return h('p', { class: 'muted' }, ['（暂无素材）']);
+  return h('table', { class: 'tbl' }, [
+    h('thead', {}, [h('tr', {}, [
+      h('th', {}, ['Type']), h('th', {}, ['Source']), h('th', {}, ['URI']), h('th', {}, ['MIME']),
+    ])]),
+    h('tbody', {}, assets.map((a: Asset) =>
+      h('tr', {}, [
+        h('td', {}, [pill(a.asset_type)]),
+        h('td', {}, [esc(a.source)]),
+        h('td', {}, [esc(a.asset_uri)]),
+        h('td', {}, [esc(a.mime_type)]),
+      ]),
+    )),
+  ]);
+}
+
+/** H1-05 — populate the Project → Related Runs section from the run surface. */
+async function populateRelatedRuns(host: HTMLElement, projectId: string): Promise<void> {
+  host.replaceChildren(h('h2', {}, ['Related Runs（本项目关联运行）']), loading('正在加载关联运行…'));
+  try {
+    const runs = await getRunService().listRunsByProject(projectId);
+    if (!runs.length) {
+      host.replaceChildren(
+        h('h2', {}, ['Related Runs（本项目关联运行）']),
+        h('p', { class: 'muted' }, ['（该 Project 暂无关联 Run。可在下方 Generate Visual Reference 创建一个真实执行，完成后会显示在此处。）']),
+      );
+      return;
+    }
+    const list = h('div', { class: 'card run-list related-runs' });
+    for (const r of runs) list.append(runRow(r));
+    host.replaceChildren(h('h2', {}, [`Related Runs（本项目关联运行 · ${runs.length}）`]), list);
+  } catch (e) {
+    host.replaceChildren(h('h2', {}, ['Related Runs（本项目关联运行）']), empty(`加载失败：${(e as Error).message}`));
+  }
 }
 
 async function viewProjectDetail(projectId: string): Promise<HTMLElement> {
@@ -392,48 +542,39 @@ async function viewProjectDetail(projectId: string): Promise<HTMLElement> {
       ]),
     );
 
-    // Tasks section
-    const tasksTbl = h('table', { class: 'tbl' }, [
-      h('thead', {}, [h('tr', {}, [
-        h('th', {}, ['Title']), h('th', {}, ['Type']), h('th', {}, ['Status']), h('th', {}, ['Due']),
-      ])]),
-      h('tbody', {}, ws.tasks.map((t: Task) =>
-        h('tr', {}, [
-          h('td', {}, [esc(t.title)]),
-          h('td', {}, [esc(t.task_type)]),
-          h('td', {}, [pill(t.status)]),
-          h('td', {}, [esc(t.due_date)]),
-        ]),
-      )),
-    ]);
-    grid.append(h('div', { class: 'section' }, [
+    // Tasks section — referenced node so it can be refreshed in place.
+    const tasksSection = h('div', { class: 'section' }, [
       h('h2', {}, [`Tasks (${ws.tasks.length})`]),
-      ws.tasks.length ? tasksTbl : h('p', { class: 'muted' }, ['（暂无任务）']),
-    ]));
-
-    // Assets section
-    const assetsTbl = h('table', { class: 'tbl' }, [
-      h('thead', {}, [h('tr', {}, [
-        h('th', {}, ['Type']), h('th', {}, ['Source']), h('th', {}, ['URI']), h('th', {}, ['MIME']),
-      ])]),
-      h('tbody', {}, ws.assets.map((a: Asset) =>
-        h('tr', {}, [
-          h('td', {}, [pill(a.asset_type)]),
-          h('td', {}, [esc(a.source)]),
-          h('td', {}, [esc(a.asset_uri)]),
-          h('td', {}, [esc(a.mime_type)]),
-        ]),
-      )),
+      projectTasksTable(ws.tasks),
     ]);
-    grid.append(h('div', { class: 'section' }, [
-      h('h2', {}, [`Assets (${ws.assets.length})`]),
-      ws.assets.length ? assetsTbl : h('p', { class: 'muted' }, ['（暂无素材）']),
-    ]));
+    grid.append(tasksSection);
 
-    // H1-04 — Generate Visual Reference (DEMO: in-browser Fake adapters).
-    grid.append(gvrPanel(ws.project.project_id));
+    // Assets section — referenced node.
+    const assetsSection = h('div', { class: 'section' }, [
+      h('h2', {}, [`Assets (${ws.assets.length})`]),
+      projectAssetsTable(ws.assets),
+    ]);
+    grid.append(assetsSection);
+
+    // H1-05 — Related Runs (closed loop: Project → its executions).
+    const runsSection = h('div', { class: 'section' });
+    grid.append(runsSection);
+
+    // H1-04 — Generate Visual Reference (DEMO: in-browser Fake adapters). On a
+    // successful action, reloadDynamic refreshes Tasks / Assets / Related Runs
+    // in place (state-consistency, Case 1).
+    const reloadDynamic = async (): Promise<void> => {
+      const fresh = await svc.getProjectWorkspace(projectId);
+      if (!fresh) return;
+      tasksSection.replaceChildren(h('h2', {}, [`Tasks (${fresh.tasks.length})`]), projectTasksTable(fresh.tasks));
+      assetsSection.replaceChildren(h('h2', {}, [`Assets (${fresh.assets.length})`]), projectAssetsTable(fresh.assets));
+      await populateRelatedRuns(runsSection, projectId);
+    };
+    grid.append(gvrPanel(ws.project.project_id, reloadDynamic));
 
     wrap.append(grid);
+    // Populate the related-runs section after the static parts are mounted.
+    await populateRelatedRuns(runsSection, projectId);
   } catch (err) {
     wrap.replaceChildren(back);
     wrap.append(empty(`加载失败：${(err as Error).message}`));
@@ -811,17 +952,27 @@ function runRow(r: RunSummary): HTMLElement {
 /* ------------------------------ Run detail ------------------------------- */
 async function viewRunDetail(processId: string): Promise<HTMLElement> {
   const wrap = h('div', {});
-  const back = h('button', { class: 'btn-back', type: 'button' }, ['← Runs']);
-  back.addEventListener('click', () => navigate('runs'));
-  wrap.append(back);
+  const backRow = h('div', { class: 'back-row' });
+  const runsBack = h('button', { class: 'btn-back', type: 'button' }, ['← Runs']);
+  runsBack.addEventListener('click', () => navigate('runs'));
+  backRow.append(runsBack);
+  wrap.append(backRow);
   wrap.append(loading('正在加载运行详情…'));
 
   try {
     const detail = await getRunService().getRun(processId);
-    wrap.replaceChildren(back);
+    wrap.replaceChildren(backRow);
     if (!detail) {
       wrap.append(empty('未找到该运行记录。'));
       return wrap;
+    }
+
+    // H1-05 — Run → Project return path (closed loop). Only when the run is
+    // actually associated with a Project.
+    if (detail.output?.projectId) {
+      const projBack = h('button', { class: 'btn-back', type: 'button' }, ['← 返回项目']);
+      projBack.addEventListener('click', () => navigate('project-detail', detail.output!.projectId!));
+      backRow.append(projBack);
     }
 
     wrap.append(
@@ -878,7 +1029,7 @@ async function viewRunDetail(processId: string): Promise<HTMLElement> {
     // E. Structured Trace
     wrap.append(renderTrace(detail));
   } catch (err) {
-    wrap.replaceChildren(back);
+    wrap.replaceChildren(backRow);
     wrap.append(empty(`加载失败：${(err as Error).message}`));
   }
   return wrap;
@@ -1006,14 +1157,14 @@ async function renderContent(): Promise<void> {
   content.replaceChildren(loading('Loading…'));
   let node: HTMLElement;
   switch (active) {
-    case 'overview': node = viewOverview(); break;
+    case 'overview': node = await viewOverview(); break;
     case 'projects': node = await viewProjects(); break;
     case 'project-detail': node = await viewProjectDetail(selectedProjectId!); break;
     case 'reviews': node = await viewReviews(); break;
     case 'review-detail': node = await viewReviewDetail(selectedReviewId!); break;
     case 'runs': node = await viewRuns(); break;
     case 'run-detail': node = await viewRunDetail(selectedRunId!); break;
-    default: node = viewOverview();
+    default: node = await viewOverview(); break;
   }
   content.replaceChildren(node);
 }

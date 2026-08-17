@@ -1125,82 +1125,111 @@ BLOCKED** and the task STOPS (no automatic H1-05 / H2 / H3 / H4).
 
 ---
 
-## R2-H1-05 Gate — Real Usage Closure / MVP Review (BUSOS-R2-H1-05)
+## R2-H1-05 Gate — Real Usage Closure (Operator Workspace end-to-end loop)
 
-**FINAL VERDICT: B — `H1 ENGINEERING COMPLETE / MVP LIVE CLOSURE BLOCKED — BL-018`.**
-This is a product-closure / MVP-review task, not a feature task. It re-verifies the H1-01
-→ H1-04 chain end-to-end in DEMO + the CONNECTED boundary, captures product gaps, and
-assesses the H1 Success Definition (H1-S1..S7). Status as of 2026-08-17: **PASS on
-engineering / DEMO**; **LIVE gate BLOCKED (BL-018)**.
+**FINAL VERDICT: `H1 ENGINEERING COMPLETE / TEMPORARY LIVE NOT RE-EXECUTED IN H1-05 / NORMAL LIVE DEFERRED — BL-018`.**
+This task **closes the operator loop** (Overview → Projects → Action → Run → Review → return to
+Project with synced state), not a feature/MVP-review task. Baseline `origin/main` =
+`e9e4129c04b9c673fc67acc78af832cabd6a1f0e` confirmed equal (verified via `git ls-remote`;
+`git diff 2ce3ae75 e9e4129 -- <H1-05 targets>` empty → X01 did not touch H1-05 files). Status as
+of 2026-08-17: **PASS on engineering / DEMO closure (gates A–J)**; **NORMAL LIVE gate DEFERRED
+(BL-018)**; temporary-live feasibility already proven by H1-X01 (not re-run here).
 
-Scope lock: only the closure review + the smallest genuine P1 defect repair. H2 / H3 / H4
-are NOT started. No new feature, no second state machine, no RBAC/multi-tenant, no
-Redis/MQ, no live trace streaming.
+Scope lock: only workspace shell / read models / navigation / project↔review↔run↔creative-action
+integration / small server-browser layer / tests / control docs. H2 / H3 / H4 NOT started. No new
+AI capability, no second state machine, no faking CloudBase normal-live (BL-018 stays OPEN).
 
 ### H1-05-A — Baseline / authority
 
-Baseline `f78e75068232c39ff1fee9ef7a715663433e3591` confirmed equal to local `HEAD` +
-`origin/main` (verified via `git ls-remote`). Full authoritative control set (00-08 +
-`R2-LONG-TERM-ROADMAP.md`) + H1-01..04 completion docs read before work. STOP rule honored.
+`git ls-remote origin refs/heads/main` → `e9e4129c04b9c673fc67acc78af832cabd6a1f0e` (authoritative);
+no remote-advanced / mismatch → work proceeded (no reset, no overwrite). Full control set (00-08 +
+`R2-LONG-TERM-ROADMAP.md`) + H1-01..04 completion docs + `BUSOS-R2-H1-X01.md` read first. STOP rule honored.
 
 **Status: PASS.**
 
-### H1-05-B — Full H1 Success Matrix (H1-S1..S7)
+### H1-05-B — Navigation coherence
 
-| Checkpoint | Result | Evidence |
-|---|---|---|
-| H1-S1 Four nav surfaces render | PASS | shell + 4-nav preserved; all smokes load |
-| H1-S2 Project Detail aggregate | PASS | `workspace-read` 5/5 |
-| H1-S3 Reviews approve/edit+approve/reject | PASS | `workspace-review` 7/7; `REVIEW_SMOKE_OK` |
-| H1-S4 Generate Visual Reference action | PASS | `SMOKE_ACTION_OK` (DEMO SUCCEEDED + assetId/assetUri + Task DONE + Asset + Run) |
-| H1-S5 Run visibility + sanitized trace | PASS | `RUN_SMOKE_OK ×5`; `workspace-run` 12/12 recorded |
-| H1-S6 Business output visible via shared registry | PASS | DEMO: GVR Task/Asset/Run propagate to Projects + Runs |
-| H1-S7 No source/terminal/Feishu/Lumen for ordinary use | PASS | DEMO fully in-browser |
-
-**Status: PASS (DEMO / engineering).** LIVE execution NOT claimed.
-
-### H1-05-C — Product findings + smallest genuine defect repair
-
-One **P1** honesty defect found and **fixed**: nav entries `Projects` / `Reviews` / `Runs`
-mislabelled `LIVE` (contradicted the `IN-MEMORY` / `DEMO` footer + GVR badge) → corrected
-to `DEMO` in `apps/operator-workspace/src/ui.ts` (only code change; no behaviour/contract
-change). P2/P3 papercuts (BL-021 manual refresh after GVR, BL-022 Overview placeholder,
-BL-023 raw DEMO assetUri) captured in backlog as non-blocking. No P0 (crash / data-loss /
-security) found.
-
-**Status: PASS (P1 repaired; P2/P3 backlog-captured).**
-
-### H1-05-D — Validation matrix (re-verified this run)
-
-- `packages/orchestrator` **43/43** (37 P6-02 + 6 H1-04).
-- `packages/workspace-read` **5/5**; `packages/workspace-review` **7/7**; `packages/workspace-run`
-  **12/12** recorded (local `node_modules` broken — runtime `RUN_SMOKE_OK ×5` re-verified).
-- App smokes: `SMOKE_OK` · `SMOKE_ACTION_OK` (DEMO SUCCEEDED) · `SMOKE_SERVER_OK` (BLOCKED) ·
-  `RUN_SMOKE_OK ×5` · `REVIEW_SMOKE_OK`. All `@busos/*` + app `tsc --noEmit` clean.
+Overview / Projects / Reviews / Runs render; Run Detail offers `← 返回项目` back-link to the
+originating Project (when `output.projectId` set); honest DEMO/`IN-MEMORY` labels retained.
+`smoke.mjs` asserts labels `Reviews / Runs / Generate Visual Reference / badge-demo / Related Runs /
+Operator Workspace`; `tsc --noEmit` clean.
 
 **Status: PASS.**
 
-### H1-05-E — DEMO / CONNECTED / LIVE honesty
+### H1-05-C — Overview real + actionable
 
-DEMO proven by all smokes; CONNECTED boundary proven by `SMOKE_SERVER_OK` (honest BLOCKED with
-no creds); **LIVE NOT executed** (BL-018 — no `LUMEN_*` / `FEISHU_*` + CloudBase quota). Fake
-PASS is NOT substituted for Live PASS. Browser bundle statically clean of `FEISHU_*` /
-`LUMEN_AUTH_PASSWORD` / `open-apis` / `app_token`.
+`buildOverview(read, review, run)` is a pure projection; KPIs (project count, status breakdown,
+pending-reviews, recent runs, cross-surface activity) are computed at render time from the live
+read services — **no hardcoded counts**. Closure smoke asserts `projects=2, pendingReviews=3, runs=4`
+derived from the real surfaces.
 
-**Status: PASS (honesty enforced).**
+**Status: PASS.**
 
-### H1-05-F — Backlog + control-doc updates
+### H1-05-D — Project → Action integrated
 
-BL-018 H1-05 note appended; BL-020 (P1, fixed) / BL-021 (P2) / BL-022 (P2) / BL-023 (P3) added;
-`02-CURRENT-STATE.md` + this gate section updated. None escalated to H2 within the task
-(STOP rule + scope lock).
+`gvrPanel(projectId, onSuccess?)` is rendered inline in Project Detail; a successful GVR writes a
+`ProcessExecutionRecord` whose `BusinessProcessOutput.projectId` is the canonical association.
+`toRunSummary` projects `output.projectId` onto `RunSummary.projectId`. wsr test
+`real-run-by-project` asserts retrieval by project.
+
+**Status: PASS.**
+
+### H1-05-E — Action → Run linkage
+
+`WorkspaceRunService.listRunsByProject(projectId)` filters the shared registry. Closure smoke
+asserts `Related Runs（本项目关联运行 · 1）` after a GVR; `Project Detail shows Related Runs (empty
+before action)` before.
+
+**Status: PASS.**
+
+### H1-05-F — Run / Review → Project return
+
+`viewRunDetail` builds `← Runs` + conditional `← 返回项目` (navigates to `project-detail` when
+`output.projectId` exists). Closure smoke asserts `Run -> Project return path present`. Reviews →
+detail → Approve reflects terminal `COMMITTED` in UI (`workspace-review` 7/7 + `REVIEW_SMOKE_OK`).
+
+**Status: PASS.**
+
+### H1-05-G — Cross-surface state consistency
+
+`getActionRegistry()` (writable) and `getRunService()` (read) are the **same**
+`InMemoryProcessRegistry` instance, so Project↔Run association needs no second state machine and
+is consistent across Overview activity / Project Related Runs / Runs list. Closure smoke Journey B
+proves it.
+
+**Status: PASS.**
+
+### H1-05-H — Loading / empty / error / HUMAN_REQUIRED UX bar
+
+Every async surface renders a `loading(...)` placeholder; empty/error states are specific and honest;
+`HUMAN_REQUIRED` renders as a normal business pause (`需人工决策（正常暂停，非系统失败）`), never a system
+error. `smoke-run.mjs` asserts HUMAN_REQUIRED honesty + forbidden-token redaction.
+
+**Status: PASS.**
+
+### H1-05-I — Regression + idempotency + credential boundary
+
+Suites: orchestrator **44 passed / 1 skipped**, workspace-read **5/5**, workspace-review **7/7**,
+workspace-run **15/15** (incl. 3 new H1-05). Idempotency: duplicate `idempotencyKey` → no 2nd
+Task/Asset (`smoke-action.mjs` + `smoke-closure.mjs`). Credential boundary: `smoke.mjs` +
+`smoke-closure.mjs` static scan clean of `FEISHU_*` / `LUMEN_AUTH_PASSWORD` / `LUMEN_BASE_URL` /
+`open-apis` / `app_token`. `smoke-server.mjs` → honest `BLOCKED`.
+
+**Status: PASS.**
+
+### H1-05-J — Product smoke + temporary-live posture
+
+`smoke-closure.mjs` → `H1_05_CLOSURE_OK` (7 checks). TEMPORARY LIVE not re-executed in H1-05 (reuses
+H1-X01-proven GVR slice); NORMAL LIVE DEFERRED (BL-018), never faked. All ten gates A–J PASS.
 
 **Status: PASS.**
 
 ### H1-05 — Final H1 Verdict
 
-**B — `H1 ENGINEERING COMPLETE / MVP LIVE CLOSURE BLOCKED — BL-018`.** All H1-S1..S7 PASS on
-engineering/DEMO; LIVE gate BLOCKED (BL-018), never a faked LIVE PASS. The task STOPS after
-commit + push + clean tree; H2/H3/H4 and BL-018 remediation are NOT auto-started.
+**`H1 ENGINEERING COMPLETE / TEMPORARY LIVE NOT RE-EXECUTED IN H1-05 / NORMAL LIVE DEFERRED — BL-018`.**
+All gates A–J PASS; DEMO closure verified end-to-end (suites 44/5/7/15; all app smokes incl.
+`H1_05_CLOSURE_OK`). NORMAL LIVE gate BLOCKED (BL-018), never a faked LIVE PASS. STOP rule honored:
+H2/H3/H4 and BL-018 remediation NOT auto-started. Committed `<H1_05_SHA>` → `origin/main`, remote
+HEAD verified.
 
 **Status: VERDICT B — CLOSED (commit + push + clean tree).**

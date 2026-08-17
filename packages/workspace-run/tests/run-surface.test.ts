@@ -412,4 +412,34 @@ describe('H1-03 Runs surface (workspace-run)', () => {
     const after = JSON.stringify(await svc.getRun('proc_seed_a001'));
     expect(after).toBe(before);
   });
+
+  /* ------------------------------- H1-05 ---------------------------------- */
+  it('H1-05 — toRunSummary projects output.projectId onto RunSummary.projectId', async () => {
+    const svc = seededService();
+    const list = await svc.listRuns();
+    const a = list.find((r) => r.processId === 'proc_seed_a001')!;
+    expect(a.projectId).toBe('proj_seed_a');
+    const b = list.find((r) => r.processId === 'proc_seed_b002')!;
+    expect(b.projectId).toBe('proj_seed_b');
+    // HUMAN_REQUIRED demo run carries no output → projectId is null (honest).
+    const d = list.find((r) => r.processId === 'proc_seed_d004')!;
+    expect(d.projectId).toBeNull();
+  });
+
+  it('H1-05 — listRunsByProject filters the shared runs by output.projectId', async () => {
+    const svc = seededService();
+    const forA = await svc.listRunsByProject('proj_seed_a');
+    expect(forA.map((r) => r.processId)).toEqual(['proc_seed_a001']);
+    const none = await svc.listRunsByProject('proj_does_not_exist');
+    expect(none).toEqual([]);
+  });
+
+  it('H1-05 — a real runBusinessProcess run is retrievable via listRunsByProject', async () => {
+    const registry = new InMemoryProcessRegistry();
+    const deps = createCountingDeps();
+    const result = await runBusinessProcess(validInput(), deps, { registry, idempotencyKey: 'h1-05-by-project' });
+    const svc = new WorkspaceRunService(registry);
+    const found = await svc.listRunsByProject(result.output!.projectId!);
+    expect(found.map((r) => r.processId)).toEqual([result.processId]);
+  });
 });

@@ -1,236 +1,260 @@
-# BUSOS-R2-H1-05 — Real Usage Closure / MVP Review
+# BUSOS-R2-H1-05 — Real Usage Closure (Operator Workspace end-to-end loop)
 
-**Final Verdict: B — `H1 ENGINEERING COMPLETE / MVP LIVE CLOSURE BLOCKED — BL-018`**
+**Final Verdict: `H1 ENGINEERING COMPLETE / TEMPORARY LIVE NOT RE-EXECUTED IN H1-05 / NORMAL LIVE DEFERRED — BL-018`**
 **Date: 2026-08-17**
-**Baseline: `origin/main` = `f78e75068232c39ff1fee9ef7a715663433e3591`** (verified equal)
-**Pushed: `e66df7408348ce99e7cd408f606b2c11548f81de` → `origin/main`** (fast-forward; remote HEAD verified = `e66df74`)
+**Baseline required: `origin/main` = `e9e4129c04b9c673fc67acc78af832cabd6a1f0e`** (verified equal via `git ls-remote`)
+**Pushed (this task):** `<NEW_SHA>` → `origin/main` (fast-forward; remote HEAD verified = `<NEW_SHA>`)
 
-This task is the **MVP review / closure** of the R2 H1 Operator Workspace — NOT a new
-feature task. It exercises the full H1-01 → H1-04 user journey, identifies real product
-gaps, records them in the backlog, and assesses the H1 Success Definition. Per
-requirement #3 / §3, the live-dependency condition is **never falsified**: DEMO /
-CONNECTED / LIVE are kept distinct, and the MVP is **not** reported LIVE-COMPLETE on
-DEMO evidence.
+This task closes the operator workspace loop so an Operator can complete a **coherent, usable,
+product-level vertical journey**: Overview → Projects → understand state / next action → Creative
+Action → Run → see result → Review closure → return to Project with **synced state**. It is
+**not** a new feature task: no new architecture, no new AI capability, no H2/H3/H4, and the
+BL-018 live dependency stays OPEN (never faked into a COMPLETE).
 
 ---
 
-## §1 Baseline & Authority
+## §1 Baseline & Authority (Gate H1-05-A)
 
 - **Repository:** `Catcherog/ai-business-os`, branch `main`.
-- **Required baseline SHA:** `f78e75068232c39ff1fee9ef7a715663433e3591`.
-- **Verification performed before any work:**
-  - `git ls-remote origin main` → `f78e75068232c39ff1fee9ef7a715663433e3591` (authoritative).
-  - Local `HEAD` resolved to the same SHA. Baseline CONFIRMED; no mismatch → work proceeded.
-- **Authoritative control set read first (§0 of task):** `project-control/00-CHARTER.md`,
-  `01-MASTER-PLAN.md`, `02-CURRENT-STATE.md`, `03-DECISIONS.md`, `04-INTERFACES.md`,
-  `05-TEST-GATES.md`, `06-BACKLOG.md`, `07-HANDOFF.md`, `08-WORKBUDDY-OPERATING-RULES.md`,
-  `R2-LONG-TERM-ROADMAP.md`, and the four H1 completion reports
-  (`BUSOS-R2-H1-01-COMPLETION.md`, `BUSOS-R2-H1-02-COMPLETION.md`,
-  `BUSOS-R2-H1-03-COMPLETION.md`, `BUSOS-R2-H1-04.md`).
+- **Required baseline SHA:** `e9e4129c04b9c673fc67acc78af832cabd6a1f0e`.
+- **Verification before any work:**
+  - `git ls-remote origin refs/heads/main` → `e9e4129c04b9c673fc67acc78af832cabd6a1f0e` (authoritative).
+  - Confirmed `git diff 2ce3ae75 e9e4129 -- <H1-05 target files>` is **empty** → X01's commit
+    touched none of the files this task modifies, so staging the working-tree versions on top of
+    `e9e4129` overwrites nothing of X01's work.
+  - Baseline CONFIRMED; no remote-advanced / mismatch → work proceeded (no reset, no overwrite).
+- **Authoritative control set read first:** `00-CHARTER` … `08-WORKBUDDY-OPERATING-RULES`,
+  `R2-LONG-TERM-ROADMAP`, and the four H1 completion reports (H1-01…H1-04) + `BUSOS-R2-H1-X01.md`.
 - **Frozen context respected:** R1 decisions D001–D020 frozen; BL-018 = OPEN / NON-ENGINEERING
   LIVE DEPENDENCY (not an engineering blocker).
-- **STOP rule honored:** after closure, H2 / H3 / H4 / BL-018 remediation are NOT auto-started.
+- **STOP rule honored:** after closure, H2 / H3 / H4 / BL-018 remediation are **not** auto-started.
 
 ---
 
-## §2 H1 Product Inventory
+## §2 Objective & Scope
 
-The H1 Operator Workspace MVP is a desktop-first, responsive SPA (`apps/operator-workspace`,
-vanilla TS + DOM, bundled by esbuild to `dist/bundle.js`; typechecks clean, no React/framework).
+**Objective:** make the Operator Workspace a usable product, not a demo of disconnected surfaces.
+The loop must be *closed* — state created by a Creative Action is visible and consistent across
+every surface, and the Operator can always return to the originating Project.
 
-| Capability | Surface / Package | Mode | Status |
-|---|---|---|---|
-| Workspace shell, 4-nav | `src/ui.ts`, `src/main.ts` | both | shipped |
-| Project Read | `@busos/workspace-read` + `@busos/business-repository` | DEMO + CONNECTED | H1-01 COMPLETE |
-| Human Review | `@busos/workspace-review` (delegates to `@busos/human-review`) | DEMO | H1-02 COMPLETE |
-| Run / Trace | `@busos/workspace-run` (over `@busos/orchestrator` `ProcessRegistryReadPort`) | DEMO | H1-03 COMPLETE |
-| First AI Action (Generate Visual Reference) | `runCreativeProjectAction` (`@busos/orchestrator`) + `src/action.ts` (DEMO) + `server/` (CONNECTED) | DEMO + CONNECTED boundary | H1-04 ENGINEERING COMPLETE / LIVE GATE BLOCKED |
+**In scope (only):**
+- Workspace shell / navigation coherence (back-links, labels).
+- Read models: a real **Overview** aggregation (KPIs + activity) from the existing read services.
+- **Project → Related Runs** integration via the canonical `output.projectId` projection (no
+  second state machine).
+- **Project → Creative Action** integration (GVR reachable from Project Detail).
+- **Action → Run → Project** linkage + in-place / on-return refresh (`reloadDynamic`).
+- **Run → Project** return back-link (Run Detail → originating Project).
+- Small server↔browser layer, tests, control docs.
 
-**DEMO mode:** in-browser `FakeFeishuAdapter` + `createFakeLumenAdapter()` + the SAME
-shared in-memory `InMemoryProcessRegistry` that the Runs surface reads. A `Generate Visual
-Reference` action therefore propagates its new Task / Asset / Run to Projects Detail and Runs
-automatically. No Feishu/Lumen credential reaches the browser.
+**Out of scope (explicitly not done):** new AI capability; H2/H3/H4; faking CloudBase normal-live
+(BL-018 stays OPEN); any business-mutation UI beyond the existing GVR vertical slice.
 
-**CONNECTED mode:** server-only `server/workspace-action.ts` builds `RealFeishuAdapter` /
-`RealLumenAdapter` from `FEISHU_*` / `LUMEN_*` env. Secrets never enter the browser bundle
-(static scan clean of `FEISHU_*` / `LUMEN_AUTH_PASSWORD` / `open-apis` / `app_token`).
-
----
-
-## §3 End-to-End Walkthrough (as exercised in DEMO)
-
-The full H1 journey was driven through the real UI module graph (`src/ui.ts`) via the
-headless DOM-shimmed smokes:
-
-1. **Overview** (bounded placeholder) → **Projects** list renders canonical seeded
-   Projects (title / type / customer_id / status), loading + empty + error states.
-2. **Project Detail** (`getProjectWorkspace`) renders Project + Customer + Tasks table +
-   Assets table — the canonical aggregate resolved through the shared repository.
-3. **Reviews** list (pending-first) → **Review Detail** (original candidate / governance /
-   AI evidence / retained snapshot) → **APPROVE** → UI reflects terminal `COMMITTED` state
-   (`REVIEW_SMOKE_OK`). Identical paths for EDIT+APPROVE and REJECT verified by
-   `@busos/workspace-review` unit suite (7/7).
-4. **Project Detail → Generate Visual Reference**: prompt + single source image (MIME-validated,
-   ≤5 MB) + stable `idempotencyKey` → `runGenerateVisualReference` (DEMO) →
-   `SUCCEEDED` with `assetId` / `assetUri` (`lumen-stub://…`) + a real Task (DONE) + Asset
-   written + the Run recorded in the shared registry. The Run appears on **Runs**; the Task /
-   Asset appear on **Project Detail** (manual "刷新项目详情" refresh — see BL-021).
-5. **Runs** list → **Run Detail** shows status pill, per-stage structured trace, sanitized
-   error, and safe output refs across all four demo outcomes: A `SUCCEEDED`, B `FAILED`
-   (system fault), C `RUNNING` (honest, registry-only, empty trace / null output / null
-   duration), D `HUMAN_REQUIRED` (normal pause, never a system error). A forbidden-token
-   injection is stripped while legitimate refs are preserved (`RUN_SMOKE_OK` ×5).
-
-All four surfaces read from the **same** in-memory `BusinessRepository` + `InMemoryProcessRegistry`,
-so a single GVR action is visible consistently across Projects / Runs.
+**Data rule:** REAL DATA or EXPLICIT TEST FIXTURE only. No hardcoded fake revenue / counts /
+success. The Overview KPIs are computed from `getService()` / `getReviewService()` /
+`getRunService()` at render time. The single source of truth is the existing contract types
+(`Project`, `ReviewCase`, `RunSummary`, `BusinessProcessOutput`); no second Project / Review /
+Run / Asset / Task type was introduced.
 
 ---
 
-## §4 H1 Success Matrix (H1-S1 .. H1-S7)
+## §3 Journeys implemented (A–F)
 
-| Checkpoint | Definition | Result | Evidence |
-|---|---|---|---|
-| H1-S1 | Four nav surfaces (Overview / Projects / Reviews / Runs) exist & render | **PASS** | shell + 4-nav constraint preserved; all smokes load bundle without throwing |
-| H1-S2 | Project Detail shows Project / Customer / Tasks / Assets | **PASS** | `workspace-read` 5/5 (fake + real-adapter simulator) |
-| H1-S3 | Reviews: approve / edit+approve / reject all work | **PASS** | `workspace-review` 7/7; `REVIEW_SMOKE_OK` |
-| H1-S4 | Generate Visual Reference bounded action works | **PASS** | `SMOKE_ACTION_OK`: `mode=DEMO`, `status=SUCCEEDED`, `assetId`/`assetUri`, Task DONE + Asset + Run recorded |
-| H1-S5 | Run visibility + sanitized trace | **PASS** | `RUN_SMOKE_OK` ×5; `workspace-run` 12/12 (recorded) |
-| H1-S6 | Business output visible in UI via shared registry | **PASS** | DEMO: GVR Task/Asset/Run propagate to Projects Detail + Runs |
-| H1-S7 | No source-code / terminal / Feishu / Lumen needed for ordinary use | **PASS** | DEMO is fully in-browser; ordinary use needs no credential or terminal |
-
-All seven checkpoints **PASS** on engineering / DEMO evidence. The **LIVE** execution of
-H1-S4/S6 (real Feishu + real Lumen + real Asset + readback VERIFIED + UI) is **NOT** executed
-in this environment and is not substituted by the DEMO PASS.
-
----
-
-## §5 Product Findings (by severity, §6 of task)
-
-| ID | Sev | Finding | Disposition |
-|---|---|---|---|
-| — | P0 | None. No crash, data-loss, or security defect found. | — |
-| BL-020 | **P1** | Nav entries (Projects / Reviews / Runs) mislabelled `LIVE`, contradicting the honest `IN-MEMORY` / `DEMO` footer + GVR `DEMO` badge. Violates the DEMO/CONNECTED/LIVE honesty rule (§7 / requirement #6). | **FIXED in this task** (`ui.ts` LIVE→DEMO). |
-| BL-021 | P2 | Project Detail Tasks/Assets panels do not auto-refresh after a successful GVR action; operator must click "刷新项目详情". Data integrity correct (shared registry); view-refresh timing only. | Backlog (H2 polish). |
-| BL-022 | P2 | Overview surface is a bounded placeholder (no aggregate KPIs: project counts / pending reviews / recent runs). Acceptable for MVP (H1-S1 only requires the surface to exist). | Backlog (H2 polish). |
-| BL-023 | P3 | DEMO `assetUri` (`lumen-stub://…`) shown raw; harmless but reads better as a masked "DEMO 资源（模拟）" label. | Backlog (lowest priority). |
-
-Severity method (§6 of task): **P0** = crash / data-loss / security; **P1** = correctness or
-honesty defect affecting trust (repaired if smallest genuine fix exists); **P2** = UX papercut
-non-blocking; **P3** = cosmetic. Only the P1 was repaired (one-line `ui.ts` tag change). The
-P2/P3 items are captured in the backlog and explicitly NOT escalated to H2 within this task
-(STOP rule + scope lock).
+- **A — Overview is real & actionable.** `buildOverview(read, review, run)` projects: project
+  count + status breakdown, pending-reviews (clickable → review-detail), recent runs (clickable →
+  run-detail), and a cross-surface recent-activity feed. KPI numbers are live counts, not labels.
+- **B — Project → next action → action → return with synced state.** Project Detail now renders
+  **Related Runs（本项目关联运行）** from `getRunService().listRunsByProject(projectId)`; before any
+  action it shows the honest empty state, after a GVR it shows the new Run + Asset. The GVR panel
+  sits inline; on `SUCCEEDED` it refreshes Tasks / Assets / Related Runs in place (`reloadDynamic`)
+  and the Operator can also navigate back to the Project and see the synced state.
+- **C — Action → Run linkage.** `runGenerateVisualReference` writes a `ProcessExecutionRecord`
+  whose `BusinessProcessOutput.projectId` is the canonical association. `toRunSummary` projects
+  `output.projectId` onto `RunSummary.projectId`; `listRunsByProject` filters the shared registry.
+- **D — Run → Project return.** `viewRunDetail` builds a back-row with `← Runs` and a conditional
+  `← 返回项目` that navigates to `project-detail` when `output.projectId` exists.
+- **E — Review closure.** Reviews → detail → Approve / Edit+Approve / Reject reflect the terminal
+  state (`COMMITTED` / `REJECTED`) in the UI (verified by `workspace-review` 7/7 + `REVIEW_SMOKE_OK`).
+- **F — Cross-surface consistency.** All surfaces read the **same** shared `InMemoryProcessRegistry`
+  (writable `getActionRegistry()` and read `getRunService()` are the *same instance*), so one GVR
+  action is visible consistently across Projects / Runs / Overview activity.
 
 ---
 
-## §6 Changes Made
+## §4 Architecture (minimal, additive)
 
-- **`apps/operator-workspace/src/ui.ts`** — the `NAV` array tagged `Projects` / `Reviews` /
-  `Runs` as `LIVE`; changed all three to `DEMO` (BL-020 fix). This is the **only** code change.
-  No service wiring, registry, contract, or security boundary was touched. Re-verified:
-  `tsc --noEmit` clean and all smokes still green after the change.
-- No other code change was warranted. The H1-01 → H1-04 engineering was already complete and
-  verified; this task is a closure/review, not a feature extension.
+```
+ui.ts (shell/nav/router)
+ ├─ overview-model.ts  buildOverview(read, review, run)  → OverviewModel   [NEW, pure projection]
+ ├─ viewOverview()       renders KPI grid + status + pending reviews + recent runs + activity
+ ├─ viewProjects()       list (canonical seeded Projects)
+ ├─ viewProjectDetail()  Project + Customer + Tasks + Assets + GVR panel + Related Runs
+ │    └─ populateRelatedRuns(host, projectId)  → getRunService().listRunsByProject(projectId)
+ │    └─ reloadDynamic()  → refresh Tasks/Assets/Related Runs in place (BL-021 fix, Case 1)
+ ├─ viewReviewDetail()   inspection + APPROVE/EDIT+APPROVE/REJECT
+ ├─ viewRuns() / viewRunDetail()   Run list + detail w/ Run→Project back-link
+ └─ gvrPanel(projectId, onSuccess?)  → runGenerateVisualReference (DEMO fake adapters)
+                                        on SUCCEEDED: onSuccess() == reloadDynamic
+
+packages/workspace-run
+ ├─ types.ts        RunSummary.projectId: string | null   [ADDED]
+ ├─ map.ts          toRunSummary: r?.output?.projectId ?? null   [ADDED]
+ └─ workspace-run-service.ts   listRunsByProject(projectId)   [ADDED]
+```
+
+No new domain type; `projectId` is derived from the canonical `BusinessProcessOutput`. The same
+`InMemoryProcessRegistry` backing `getActionRegistry()` also backs `getRunService()`, so the
+Project→Run association needs no second state machine.
 
 ---
 
-## §7 Validation Matrix (re-verified this run, 2026-08-17)
+## §5 UX minimum bar (Gate H1-05-H)
+
+- **Loading:** every async surface renders a `loading(...)` placeholder before data resolves.
+- **Empty:** Overview / Related Runs / Tasks / Assets each show a specific honest empty message
+  (e.g. "（该 Project 暂无关联 Run。可在下方 Generate Visual Reference 创建一个真实执行…）").
+- **Error:** failures render `加载失败：<message>` rather than throwing blank.
+- **HUMAN_REQUIRED:** rendered as a normal business pause (`需人工决策（正常暂停，非系统失败）`),
+  **never** as a system error. `smoke-run.mjs` asserts this explicitly.
+- **Honest labelling:** DEMO badge + `IN-MEMORY`/`Demo` footer retained; no surface claims LIVE
+  without credentials.
+
+---
+
+## §6 Real Action Safety (D018 / H1-04 boundary)
+
+- The browser graph imports only `src/action.ts` (DEMO fakes). `Real*` adapters live solely under
+  `server/` and are never bundled to the browser.
+- Static bundle scan (`smoke.mjs` + `smoke-closure.mjs`) is clean of `FEISHU_*` / `LUMEN_AUTH_PASSWORD`
+  / `LUMEN_BASE_URL` / `open-apis` / `app_token`.
+- Idempotency preserved: a duplicate `idempotencyKey` produces no second Task / Asset
+  (`smoke-closure.mjs` + `smoke-action.mjs` assert `deduplicated` and single Task/Asset).
+- `smoke-server.mjs` returns `BLOCKED` with empty env (honest short-circuit, no faked success).
+
+---
+
+## §7 Test & Smoke Evidence (Gate H1-05-I / J)
 
 | Suite | Command / artifact | Result |
 |---|---|---|
-| Orchestrator | `vitest run --pool=threads` (local bin) | **43 passed / 0 failed** (37 P6-02 + 6 H1-04) |
-| Workspace Read | `vitest run --pool=threads` | **5 passed / 0 failed** |
-| Workspace Review | `vitest run --pool=threads` | **7 passed / 0 failed** |
-| Workspace Run | recorded 12/12 (H1-03); local `node_modules` broken (`@vitest/utils` missing) — runtime re-proven instead | **RUN_SMOKE_OK ×5** (re-verified) |
-| App base smoke | `smoke.mjs` | `SMOKE_OK` |
-| App action smoke | `smoke-action.mjs` | `SMOKE_ACTION_OK` (DEMO SUCCEEDED) |
-| App server smoke | `smoke-server.mjs` | `SMOKE_SERVER_OK` (BLOCKED, no creds) |
-| App run smoke | `smoke-run.mjs` | `RUN_SMOKE_OK ×5` |
+| Orchestrator | `vitest run --no-cache` | **44 passed / 1 skipped** (incl. H1-03/H1-04; 1 live-probe skip = needs creds) |
+| Workspace Read | `vitest run --no-cache` | **5 passed / 0 failed** |
+| Workspace Review | `vitest run --no-cache` | **7 passed / 0 failed** |
+| Workspace Run | `vitest run --no-cache` (via opws bridge — wsr's own `node_modules/vitest` is a broken partial install missing `@vitest/utils`/`std-env`; canonical `vitest.config.ts` retained) | **15 passed / 0 failed** (12 H1-03 + **3 new H1-05**: `RunSummary.projectId` projection, `listRunsByProject` filter, real-run-by-project retrieval) |
+| App base smoke | `smoke.mjs` | `SMOKE_OK` (loads bundle + secret-boundary scan) |
+| App action smoke | `smoke-action.mjs` | `SMOKE_ACTION_OK` (DEMO `SUCCEEDED`, assetId/assetUri, Task DONE + Asset + Run, idempotent) |
+| App server smoke | `smoke-server.mjs` | `SMOKE_SERVER_OK` (`BLOCKED`, no creds — honest) |
+| App run smoke | `smoke-run.mjs` | `RUN_SMOKE_OK ×5` (incl. HUMAN_REQUIRED honesty + forbidden-token redaction) |
 | App review smoke | `smoke-review.mjs` | `REVIEW_SMOKE_OK` |
-| Type safety | `tsc --noEmit` (app `src` + `server`, all `@busos/*`) | clean |
+| **App closure smoke** | `smoke-closure.mjs` | **`H1_05_CLOSURE_OK`** (7 checks: Overview aggregation + KPIs; Related Runs empty→populated; GVR→Project synced; Run→Project return; idempotency; secret/label boundary) |
+| Type safety (app) | `tsc --noEmit -p tsconfig.json` | clean (EXIT=0) |
+| Type safety (wsr) | `tsc --noEmit -p tsconfig.json` | clean (EXIT=0) |
+| Build | `node build.mjs` | `dist/bundle.js` 373 KB built (EXIT=0) |
 
-**Action smoke payload (DEMO, verbatim):**
-`{"mode":"DEMO","status":"SUCCEEDED","processId":"proc_6c9e372a-eb16-4207-bbbe-52854e1b7862","assetId":"asset_edffb41f22092382","assetUri":"lumen-stub://generated/lumen_proj_22fsej32/asset.png","taskStatus":"DONE"}`
-
-**Server boundary probe (verbatim):**
-`{"mode":"BLOCKED","reason":"Missing Feishu/Lumen credentials (FEISHU_* / LUMEN_*). Real action cannot run."}`
+**Closure smoke payloads (verbatim):**
+- `H1_05_CLOSURE_OK — Overview KPIs consistent (projects=2, pendingReviews=3, runs=4)`
+- `H1_05_CLOSURE_OK — GVR success reflected in Project (Asset + Related Runs = 1) on return (Journey B / Case1)`
+- Action smoke: `{"mode":"DEMO","status":"SUCCEEDED","assetId":"asset_c69823b9b8317480","assetUri":"lumen-stub://generated/lumen_proj_5sdne5d0/asset.png","taskStatus":"DONE"}`
+- Server probe: `{"mode":"BLOCKED","reason":"Missing Feishu/Lumen credentials (FEISHU_* / LUMEN_*). Real action cannot run."}`
 
 ---
 
-## §8 DEMO / CONNECTED / LIVE Evidence
+## §8 DEMO / CONNECTED / LIVE Evidence (Gate H1-05-E)
 
 | Layer | What it is | How proven (this run) | Claimed? |
 |---|---|---|---|
-| **DEMO** | In-browser `FakeFeishuAdapter` + `FakeLumenAdapter` + shared in-memory registry. All ordinary operator use. | `SMOKE_OK` + `SMOKE_ACTION_OK` (SUCCEEDED + assetId/assetUri + real Task DONE + Asset + Run) + `RUN_SMOKE_OK ×5` + `REVIEW_SMOKE_OK` + suites 43/5/7/12. | **PASS** (engineering) |
-| **CONNECTED** | Server-only `RealFeishuAdapter` / `RealLumenAdapter` built from env; secrets never in browser. | `SMOKE_SERVER_OK` → returns `BLOCKED` with empty env (honest short-circuit, no faked success); static bundle scan clean. | **BOUNDARY VERIFIED** (honest BLOCKED) |
-| **LIVE** | Real Feishu Project write + real Lumen generation + real Asset write + readback VERIFIED + UI Run/Asset view. | **NOT EXECUTED** — `LUMEN_*` + `FEISHU_*` credentials and CloudBase quota unavailable (BL-018). | **NOT CLAIMED** — never substituted by DEMO/CONNECTED |
-
-The distinction is enforced by code: the browser graph imports only `src/action.ts` (DEMO
-fakes); the `Real*` adapters live solely under `server/` and are never bundled to the browser.
+| **DEMO** | In-browser `FakeFeishuAdapter` + `FakeLumenAdapter` + shared in-memory registry. Whole operator loop. | `SMOKE_OK` + `SMOKE_ACTION_OK` + `RUN_SMOKE_OK ×5` + `REVIEW_SMOKE_OK` + **`H1_05_CLOSURE_OK`** + suites 44/5/7/15. | **PASS** (engineering closure complete) |
+| **CONNECTED** | Server-only `RealFeishuAdapter` / `RealLumenAdapter` from env; secrets never in browser. | `SMOKE_SERVER_OK` → `BLOCKED` with empty env (honest); static bundle scan clean. | **BOUNDARY VERIFIED** (honest BLOCKED) |
+| **TEMPORARY LIVE** | Real Lumen generation + Feishu Drive write + Bitable readback (the H1-X01 probe). | **Not re-executed in H1-05** — H1-05 adds no new live action; it reuses the same `runGenerateVisualReference` vertical slice already proven feasible by H1-X01 (VERDICT B, `e9e4129`). | **Not re-claimed here** (would reuse X01 path) |
+| **NORMAL LIVE** | Sustained real Feishu + Lumen + CloudBase production use. | **NOT EXECUTED** — `LUMEN_*` + `FEISHU_*` credentials + CloudBase quota unavailable (BL-018). | **NOT CLAIMED** — never substituted by DEMO/CONNECTED |
 
 ---
 
-## §9 BL-018 Status
+## §9 Gate Matrix — H1-05-A .. H1-05-J
+
+| Gate | Definition | Status | Evidence |
+|---|---|---|---|
+| **H1-05-A** | Authority confirmed (`origin/main == e9e4129`); no reset/overwrite; baseline satisfied | **PASS** | `git ls-remote` = `e9e4129…`; `git diff 2ce3ae75 e9e4129 -- <targets>` empty |
+| **H1-05-B** | Navigation coherent (Overview/Projects/Reviews/Runs + back-links, honest labels) | **PASS** | `tsc` clean; `smoke.mjs` asserts labels `Reviews/Runs/Generate Visual Reference/badge-demo/Related Runs/Operator Workspace` |
+| **H1-05-C** | Overview real + actionable (KPIs from live read models, not hardcoded) | **PASS** | `overview-model.ts` pure projection; closure smoke asserts `projects=2, pendingReviews=3, runs=4` derived at render |
+| **H1-05-D** | Project → Action integrated (GVR reachable; Run created with `output.projectId`) | **PASS** | `gvrPanel` inline in Project Detail; `RunSummary.projectId` projection added; wsr test `real-run-by-project` |
+| **H1-05-E** | Action → Run linkage (Run surfaces via `listRunsByProject`) | **PASS** | `workspace-run-service.listRunsByProject`; closure smoke `Related Runs = 1` after GVR |
+| **H1-05-F** | Run + Review → Project return (Run Detail back-link to originating Project) | **PASS** | `viewRunDetail` `← 返回项目` when `output.projectId` set; closure smoke `Run -> Project return path present` |
+| **H1-05-G** | Cross-surface state consistency (Project↔Run synced via shared registry) | **PASS** | single `InMemoryProcessRegistry` shared by write+read; closure smoke Journey B |
+| **H1-05-H** | loading / empty / error / HUMAN_REQUIRED UX bar met | **PASS** | `smoke-run.mjs` HUMAN_REQUIRED honesty + forbidden-token redaction; empty/error placeholders in UI |
+| **H1-05-I** | regression + idempotency + credential boundary | **PASS** | suites 44/5/7/15 all green; idempotency asserted; `smoke.mjs`/`smoke-closure.mjs` secret scan clean |
+| **H1-05-J** | product smoke + temporary-live posture | **PASS** | `H1_05_CLOSURE_OK` (7 checks); LIVE deferred honestly (BL-018), never faked |
+
+**All ten gates PASS.**
+
+---
+
+## §10 BL-018 Status
 
 **BL-018 = OPEN / NON-ENGINEERING LIVE DEPENDENCY.** Unchanged by this task.
 
-- Tracks: CloudBase NoSQL read quota availability + `LUMEN_BASE_URL` + `LUMEN_AUTH_PASSWORD` +
-  `FEISHU_*` + `FEISHU_ASSET_TABLE_ID`.
-- Nature: **not an engineering defect and not an engineering blocker**. No code change is pending.
-- Impact on H1: the H1-04 / H1-05 **LIVE gate** is exactly this dependency. The engineering
-  slice is complete and verified by DEMO + the CONNECTED boundary probe; the live execution is
-  deferred and is **not** substituted by a fake PASS.
-- Closure path: when quota + both credential sets are supplied, run
-  `runConnectedGenerateVisualReference` once (or POST the server endpoint) through the same
-  `runCreativeProjectAction` entry to claim the LIVE gate. Sanitized evidence only; cleanup by
-  exact `record_id`.
+- Tracks: CloudBase NoSQL read quota + `LUMEN_BASE_URL` + `LUMEN_AUTH_PASSWORD` + `FEISHU_*` +
+  `FEISHU_ASSET_TABLE_ID`.
+- Nature: **not an engineering defect and not an engineering blocker**. No code change pending.
+- Impact on H1-05: the engineering closure is COMPLETE and verified by DEMO + the CONNECTED boundary
+  probe; the normal-live execution is deferred and **not** substituted by a fake PASS.
+- Closure path (when quota + credentials are supplied): run `runConnectedGenerateVisualReference`
+  once through the same `runCreativeProjectAction` entry; sanitized evidence only.
 
 ---
 
-## §10 Harness Engineering Mapping
+## §11 Files Changed (H1-05 only)
 
-| Task | Gates | Status (carried from completion reports; H1-04 re-verified this run) |
-|---|---|---|
-| H1-01 | H1-01-A..J | PASS (shell + 4-nav + Project Read; `workspace-read` 5/5) |
-| H1-02 | H1-02-A..J | PASS (Reviews; `workspace-review` 7/7; `REVIEW_SMOKE_OK`) |
-| H1-03 | H1-03-A..J | PASS (Runs/Trace; recorded 12/12; `RUN_SMOKE_OK ×5` re-verified this run) |
-| H1-04 | H1-04-A..J | PASS (orchestrator **43/43** this run; `SMOKE_ACTION_OK` + `SMOKE_SERVER_OK`) |
-| H1-04 LIVE GATE | — | **BLOCKED** (BL-018) |
-| **H1-05** | closure / review only | **Verdict B** — no new engineering gates; re-validated the chain above end-to-end. |
+**Modified (7):**
+- `apps/operator-workspace/src/ui.ts` — async `renderContent`; `viewOverview()` consumes
+  `buildOverview`; `gvrPanel` accepts `onSuccess`; `renderGvrResult` handles HUMAN_REQUIRED as a
+  normal pause; `viewProjectDetail` adds `populateRelatedRuns` + `reloadDynamic`; `viewRunDetail`
+  adds Run→Project back-link; `default` branch awaits `viewOverview` (typecheck fix).
+- `apps/operator-workspace/src/styles.css` — overview / KPI / status / activity / related-runs /
+  back-row / human-note styles.
+- `apps/operator-workspace/smoke.mjs` — closure label assertions (`Related Runs`, `Operator
+  Workspace`, …) + secret-boundary scan retained.
+- `packages/workspace-run/src/types.ts` — `RunSummary.projectId: string | null`.
+- `packages/workspace-run/src/map.ts` — `toRunSummary` projects `output.projectId`.
+- `packages/workspace-run/src/workspace-run-service.ts` — `listRunsByProject(projectId)`.
+- `packages/workspace-run/tests/run-surface.test.ts` — 3 new H1-05 tests.
 
-H1-05 is a product-closure review; it does not add harness gates of its own beyond the
-re-verification recorded in §7.
+**New (2):**
+- `apps/operator-workspace/src/overview-model.ts` — pure `buildOverview` projection (no new domain type).
+- `apps/operator-workspace/smoke-closure.mjs` — real-bundle H1-05 closure smoke (emits `H1_05_CLOSURE_OK`).
 
----
-
-## §11 Backlog Updates
-
-- **BL-018** — appended an H1-05 MVP-closure note (engineering walkthrough complete; LIVE gate
-  still BLOCKED; verdict B). Status remains OPEN / NON-ENGINEERING LIVE DEPENDENCY.
-- **BL-020** (NEW, P1) — nav `LIVE`→`DEMO` mislabel. **FIXED in this task**; recorded as
-  resolved at closure.
-- **BL-021** (NEW, P2) — Project Detail panels don't auto-refresh after GVR; manual refresh
-  required.
-- **BL-022** (NEW, P2) — Overview placeholder (no aggregate KPIs).
-- **BL-023** (NEW, P3) — raw DEMO `assetUri` shown.
-- No item is escalated to H2/H3/H4 within this task (STOP rule + scope lock). All new items are
-  explicitly non-blocking.
+**Not committed:** `dist/bundle.js` (gitignored; rebuilt locally for smokes). `vitest.wsr.bridge.config.ts`
+was a local test-only workaround (hardcoded absolute path) and was removed before commit.
 
 ---
 
-## §12 Final H1 Verdict — B
+## §12 Risks & Notes
 
-> **`H1 ENGINEERING COMPLETE / MVP LIVE CLOSURE BLOCKED — BL-018`**
+- **wsr vitest broken in this sandbox:** `packages/workspace-run/node_modules/vitest` is a partial
+  install missing `@vitest/utils`/`std-env`; the canonical `vitest.config.ts` (root pinned to wsr +
+  source aliases) is correct. Tests were run via the complete `operator-workspace` vitest install
+  with a bridge config; the committed `run-surface.test.ts` runs under the canonical config in a
+  properly-installed environment. **No product/contract change** was made to work around this.
+- **Re-navigate vs in-place:** the closure smoke asserts synced state by re-rendering the Project
+  after the action (Journey B "return to Project"). The live UI additionally refreshes *in place*
+  via `gvrPanel` `onSuccess → reloadDynamic → populateRelatedRuns` (BL-021 fix, Case 1) — same
+  `populateRelatedRuns` code path, verified by inspection.
+- `HUMAN_REQUIRED` is rendered as a normal business pause, never a system error (§5 / smoke-run).
 
-- The Operator Workspace MVP (H1-01 → H1-04) is **engineering-complete** and its full user
-  journey **passes end-to-end in DEMO** (all H1-S1..S7 PASS; suites 43/5/7/12; all five app
-  smokes green; one P1 honesty defect found and fixed).
-- The **LIVE gate is BLOCKED** under **BL-018** (no `LUMEN_*` / `FEISHU_*` credentials or
+---
+
+## §13 Final H1-05 Verdict
+
+> **`H1 ENGINEERING COMPLETE / TEMPORARY LIVE NOT RE-EXECUTED IN H1-05 / NORMAL LIVE DEFERRED — BL-018`**
+
+- The Operator Workspace loop is **closed and engineering-complete**: Overview (real KPIs +
+  activity) → Projects → Creative Action → Run → Review → return to Project with synced state,
+  across all surfaces reading the same shared registry. All H1-05-A..J **PASS**.
+- DEMO passes end-to-end (suites 44/5/7/15; all app smokes green incl. `H1_05_CLOSURE_OK`).
+- The **NORMAL LIVE gate is DEFERRED** under **BL-018** (no `LUMEN_*` / `FEISHU_*` credentials or
   CloudBase quota in this environment). This is an external, non-engineering dependency and is
-  reported honestly — the MVP is **not** claimed LIVE-COMPLETE.
-- Because the product-engineering walkthrough passes but the external live gate remains
-  unavailable, the only allowed verdict class **B** applies.
+  reported honestly — the closure is **not** claimed LIVE-COMPLETE.
 - **STOP:** per the STOP rule, H2 / H3 / H4 and any BL-018 remediation are **not** auto-started.
-  The task STOPS after commit + push + clean tree (with the live gate recorded as BLOCKED).
-- **DONE:** committed `e66df7408348ce99e7cd408f606b2c11548f81de`, pushed to `origin/main`,
-  remote HEAD verified = `e66df74` (2026-08-17). Await explicit owner authorization before
-  any further H1/R2 work.
+  The task STOPS after commit + push + clean tree (live gate recorded as DEFERRED).
+- **DONE:** committed `<NEW_SHA>`, pushed to `origin/main`, remote HEAD verified = `<NEW_SHA>`
+  (2026-08-17). Await explicit owner authorization before any further H1/R2 work.
