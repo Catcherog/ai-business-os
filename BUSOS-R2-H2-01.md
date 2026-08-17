@@ -239,10 +239,11 @@ project-control/{02-CURRENT-STATE,04-INTERFACES,05-TEST-GATES}.md
 
 - Baseline `origin/main` = `a40d2416058c0541732ab316df1d977b2df1f1c7` (verified equal
   before any change).
-- Implementation commit: recorded in the follow-up commit below (a commit cannot contain
-  its own hash) → pushed to `origin/main`; remote HEAD verified via
-  `git ls-remote origin refs/heads/main` and per-file
-  `git cat-file -e <remote-sha>:<path>`.
+- Implementation commit: `c513130f1152fdb88edbc30883e1023b8525e70d` → pushed to
+  `origin/main` as a fast-forward (`a40d241..c513130`). This report's own SHA line is
+  filled by the small follow-up commit that immediately succeeds it (a commit cannot
+  contain its own hash). Remote HEAD verified via `git ls-remote origin refs/heads/main`
+  and per-file `git cat-file -e <remote-sha>:<path>`.
 - Narrow commit: only the H2-01 files in §9. Pre-existing unrelated working-tree drift
   and local-only artifacts (`node_modules` symlinks, `dist/`, vitest timestamp files,
   `.vite/`, `.stagidx`, `hi.txt`) were **not** committed.
