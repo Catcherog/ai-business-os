@@ -3,6 +3,7 @@
 **Status: ENGINEERING COMPLETE — LIVE GATE BLOCKED (BL-018)**
 **Date: 2026-08-17**
 **Baseline: `origin/main` = `91e614360d08c65c3fca4739f66b4ebaca3f549e`** (verified equal)
+**Pushed: `af04cc97acf9fa4e211434bc75499c8ed82eb346` → `origin/main` (fast-forward from `91e61436`); remote HEAD verified = `af04cc9`**
 
 This task delivers the **first real AI-assisted business action** — `Generate Visual
 Reference` — behind the Operator Workspace Project Detail view. An existing Project
@@ -69,7 +70,9 @@ Exported from `packages/orchestrator/src/index.ts`.
 
 ### 1.5 Reproducible engineering entry (requirement #1)
 - Root `package.json`: npm workspaces (`packages/*`, `apps/*`) + `verify`
-  (`typecheck && test && build && smoke`). `ci` = `npm ci && npm run verify`.
+  (`typecheck && test && build && smoke`). `ci` = `npm install && npm run verify`
+  (committed lockfile pins the tree; `npm install` chosen over `npm ci` for resilience
+  in this sandbox's restricted-network / shared-cache-EPERM conditions).
 - `apps/operator-workspace` `package.json` / `tsconfig.json` (with `@busos/*` path
   aliases) / `build.mjs` (esbuild → `dist/bundle.js` browser + `server/dist/*.js` node).
 - `.github/workflows/ci.yml` — minimal CI running `npm ci && npm run verify`.
@@ -148,19 +151,19 @@ Exported from `packages/orchestrator/src/index.ts`.
   `LUMEN_AUTH_PASSWORD` + `FEISHU_*` + `FEISHU_ASSET_TABLE_ID` + CloudBase quota are
   available, run `runConnectedGenerateVisualReference` once (or POST the server endpoint)
   to claim the live gate. This is **not** substituted by the DEMO PASS.
-- `package-lock.json` could **not** be generated in this environment: `npm install
-  --package-lock-only` failed with `EPERM` on the shared npm cache index
-  (`_cacache/index-v5/...`, antivirus/lock). The reproducible entry is otherwise
-  complete (root `package.json` workspaces + `verify` script + `.github/workflows/ci.yml`).
-  Until a lockfile is committed, `npm install` (not `npm ci`) restores the tree from
-  `package.json`; CI uses `npm install` for the same reason. This is an environment
-  limitation, not a code defect — in a clean clone with network the lockfile resolves
-  normally.
+- The single root `package-lock.json` (**59246 bytes**) **was generated and committed**.
+  It was produced with an isolated npm cache (`--cache=/tmp/npm-lock-cache`) to bypass a
+  shared `_cacache/index-v5` `EPERM` (antivirus/lock) that blocked the default cache in
+  this sandbox. The reproducible entry is complete: root `package.json` workspaces +
+  `verify` script + committed lockfile + `.github/workflows/ci.yml`. CI's `ci` script
+  uses `npm install` (not `npm ci`) as a deliberate robustness choice in this restricted
+  environment; the committed lockfile still pins the dependency tree, and `npm ci` would
+  also resolve in a clean clone with network.
 
 ---
 
 ## 6. STOP
 H1-04 engineering is complete and all engineering gates pass. The live gate is BLOCKED
 (BL-018) and is reported honestly. Per the STOP rule, **H1-05 / H2 / H3 / H4 are NOT
-started**. Next step: commit + push `origin/main`, verify remote SHA, publish this
-report. Await explicit owner authorization before any further H1/R2 work.
+started**. **DONE: committed `af04cc9`, pushed to `origin/main`, remote HEAD verified =
+`af04cc9` (2026-08-17).** Await explicit owner authorization before any further H1/R2 work.
