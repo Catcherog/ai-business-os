@@ -1229,7 +1229,7 @@ H1-X01-proven GVR slice); NORMAL LIVE DEFERRED (BL-018), never faked. All ten ga
 **`H1 ENGINEERING COMPLETE / TEMPORARY LIVE NOT RE-EXECUTED IN H1-05 / NORMAL LIVE DEFERRED — BL-018`.**
 All gates A–J PASS; DEMO closure verified end-to-end (suites 44/5/7/15; all app smokes incl.
 `H1_05_CLOSURE_OK`). NORMAL LIVE gate BLOCKED (BL-018), never a faked LIVE PASS. STOP rule honored:
-H2/H3/H4 and BL-018 remediation NOT auto-started. Committed `<H1_05_SHA>` → `origin/main`, remote
+H2/H3/H4 and BL-018 remediation NOT auto-started. Committed `69470f9263b126d311fc2ff3cf935e46bc1188e6` → `origin/main`, remote
 HEAD verified.
 
 **Status: VERDICT B — CLOSED (commit + push + clean tree).**
