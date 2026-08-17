@@ -1122,3 +1122,85 @@ CloudBase quota availability + `LUMEN_BASE_URL`+`LUMEN_AUTH_PASSWORD` + `FEISHU_
 complete and verified by the DEMO path + CONNECTED probe; the live execution is NOT
 substituted by a fake PASS. H1-04 is reported **ENGINEERING COMPLETE / LIVE GATE
 BLOCKED** and the task STOPS (no automatic H1-05 / H2 / H3 / H4).
+
+---
+
+## R2-H1-05 Gate — Real Usage Closure / MVP Review (BUSOS-R2-H1-05)
+
+**FINAL VERDICT: B — `H1 ENGINEERING COMPLETE / MVP LIVE CLOSURE BLOCKED — BL-018`.**
+This is a product-closure / MVP-review task, not a feature task. It re-verifies the H1-01
+→ H1-04 chain end-to-end in DEMO + the CONNECTED boundary, captures product gaps, and
+assesses the H1 Success Definition (H1-S1..S7). Status as of 2026-08-17: **PASS on
+engineering / DEMO**; **LIVE gate BLOCKED (BL-018)**.
+
+Scope lock: only the closure review + the smallest genuine P1 defect repair. H2 / H3 / H4
+are NOT started. No new feature, no second state machine, no RBAC/multi-tenant, no
+Redis/MQ, no live trace streaming.
+
+### H1-05-A — Baseline / authority
+
+Baseline `f78e75068232c39ff1fee9ef7a715663433e3591` confirmed equal to local `HEAD` +
+`origin/main` (verified via `git ls-remote`). Full authoritative control set (00-08 +
+`R2-LONG-TERM-ROADMAP.md`) + H1-01..04 completion docs read before work. STOP rule honored.
+
+**Status: PASS.**
+
+### H1-05-B — Full H1 Success Matrix (H1-S1..S7)
+
+| Checkpoint | Result | Evidence |
+|---|---|---|
+| H1-S1 Four nav surfaces render | PASS | shell + 4-nav preserved; all smokes load |
+| H1-S2 Project Detail aggregate | PASS | `workspace-read` 5/5 |
+| H1-S3 Reviews approve/edit+approve/reject | PASS | `workspace-review` 7/7; `REVIEW_SMOKE_OK` |
+| H1-S4 Generate Visual Reference action | PASS | `SMOKE_ACTION_OK` (DEMO SUCCEEDED + assetId/assetUri + Task DONE + Asset + Run) |
+| H1-S5 Run visibility + sanitized trace | PASS | `RUN_SMOKE_OK ×5`; `workspace-run` 12/12 recorded |
+| H1-S6 Business output visible via shared registry | PASS | DEMO: GVR Task/Asset/Run propagate to Projects + Runs |
+| H1-S7 No source/terminal/Feishu/Lumen for ordinary use | PASS | DEMO fully in-browser |
+
+**Status: PASS (DEMO / engineering).** LIVE execution NOT claimed.
+
+### H1-05-C — Product findings + smallest genuine defect repair
+
+One **P1** honesty defect found and **fixed**: nav entries `Projects` / `Reviews` / `Runs`
+mislabelled `LIVE` (contradicted the `IN-MEMORY` / `DEMO` footer + GVR badge) → corrected
+to `DEMO` in `apps/operator-workspace/src/ui.ts` (only code change; no behaviour/contract
+change). P2/P3 papercuts (BL-021 manual refresh after GVR, BL-022 Overview placeholder,
+BL-023 raw DEMO assetUri) captured in backlog as non-blocking. No P0 (crash / data-loss /
+security) found.
+
+**Status: PASS (P1 repaired; P2/P3 backlog-captured).**
+
+### H1-05-D — Validation matrix (re-verified this run)
+
+- `packages/orchestrator` **43/43** (37 P6-02 + 6 H1-04).
+- `packages/workspace-read` **5/5**; `packages/workspace-review` **7/7**; `packages/workspace-run`
+  **12/12** recorded (local `node_modules` broken — runtime `RUN_SMOKE_OK ×5` re-verified).
+- App smokes: `SMOKE_OK` · `SMOKE_ACTION_OK` (DEMO SUCCEEDED) · `SMOKE_SERVER_OK` (BLOCKED) ·
+  `RUN_SMOKE_OK ×5` · `REVIEW_SMOKE_OK`. All `@busos/*` + app `tsc --noEmit` clean.
+
+**Status: PASS.**
+
+### H1-05-E — DEMO / CONNECTED / LIVE honesty
+
+DEMO proven by all smokes; CONNECTED boundary proven by `SMOKE_SERVER_OK` (honest BLOCKED with
+no creds); **LIVE NOT executed** (BL-018 — no `LUMEN_*` / `FEISHU_*` + CloudBase quota). Fake
+PASS is NOT substituted for Live PASS. Browser bundle statically clean of `FEISHU_*` /
+`LUMEN_AUTH_PASSWORD` / `open-apis` / `app_token`.
+
+**Status: PASS (honesty enforced).**
+
+### H1-05-F — Backlog + control-doc updates
+
+BL-018 H1-05 note appended; BL-020 (P1, fixed) / BL-021 (P2) / BL-022 (P2) / BL-023 (P3) added;
+`02-CURRENT-STATE.md` + this gate section updated. None escalated to H2 within the task
+(STOP rule + scope lock).
+
+**Status: PASS.**
+
+### H1-05 — Final H1 Verdict
+
+**B — `H1 ENGINEERING COMPLETE / MVP LIVE CLOSURE BLOCKED — BL-018`.** All H1-S1..S7 PASS on
+engineering/DEMO; LIVE gate BLOCKED (BL-018), never a faked LIVE PASS. The task STOPS after
+commit + push + clean tree; H2/H3/H4 and BL-018 remediation are NOT auto-started.
+
+**Status: VERDICT B — CLOSED (commit + push + clean tree).**

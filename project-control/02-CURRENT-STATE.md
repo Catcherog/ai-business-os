@@ -12,8 +12,8 @@ CURRENT PHASE:
 R2 — H1 Operator Workspace MVP
 
 CURRENT TASK:
-BUSOS-R2-H1-04 — First Real AI Action Vertical Slice (Generate Visual Reference)
-[ENGINEERING COMPLETE — LIVE GATE BLOCKED per BL-018]
+BUSOS-R2-H1-05 — Real Usage Closure / MVP Review
+[FINAL VERDICT B — H1 ENGINEERING COMPLETE / MVP LIVE CLOSURE BLOCKED per BL-018]
 
 CURRENT ENGINEERING STATUS:
 H1-01 COMPLETE — Operator Workspace shell (Overview / Projects / Reviews / Runs)
@@ -79,6 +79,22 @@ available in this environment. Per requirement #7 this task is reported as
 does NOT auto-start H1-05/H2/H3/H4. Gates H1-04-A..H1-04-J defined in
 `05-TEST-GATES.md`; see `BUSOS-R2-H1-04.md` for the full completion report.
 
+H1-05 COMPLETE — **Real Usage Closure / MVP Review** (product walkthrough + usability
+audit + smallest genuine defect repair + backlog capture). The full H1-01 → H1-04
+user journey was exercised end-to-end in the in-browser **DEMO** mode and the
+server-only **CONNECTED** boundary probe. All H1 success checkpoints H1-S1..H1-S7
+PASS on engineering / DEMO evidence (orchestrator **43/43**, workspace-read **5/5**,
+workspace-review **7/7**, workspace-run **12/12** recorded + `RUN_SMOKE_OK ×5`, all
+five app smokes green). One genuine **P1** product defect was found and **fixed**: the
+Projects / Reviews / Runs nav entries were mislabelled `LIVE` (contradicting the honest
+`IN-MEMORY` / `DEMO` footer + GVR badge) — corrected to `DEMO` in
+`apps/operator-workspace/src/ui.ts` (the only code change). P2/P3 UI papercuts
+(BL-021 manual refresh after GVR, BL-022 Overview placeholder, BL-023 raw DEMO
+assetUri) are captured in the backlog as non-blocking. **Final verdict B:**
+`H1 ENGINEERING COMPLETE / MVP LIVE CLOSURE BLOCKED — BL-018`. The LIVE gate remains
+BLOCKED (BL-018); the MVP is NOT claimed LIVE-COMPLETE. See `BUSOS-R2-H1-05.md` for the
+full 12-section closure report.
+
 EXISTING CAPABILITIES (short list):
 - Candidate / Governance (Service Agent → `LeadCandidateV1`, deterministic governance)
 - Human Review (`@busos/human-review`: approve / edit+approve / reject)
@@ -98,15 +114,16 @@ ACTIVE BLOCKERS:
   CONNECTED boundary probe; only the live execution is deferred.
 
 NEXT AUTHORIZED WORK:
-H1-04 ENGINEERING is CLOSED; its LIVE gate is BLOCKED under BL-018 (reported
-honestly, not a fake PASS). Per the STOP rule, do NOT start H1-05 (Real Usage
-Closure / MVP Review), H2 / H3 / H4, or any re-run/retry/live-trace UI without
-explicit owner authorization — they cannot be auto-started. H1-04 added the first
-business-mutation action (Generate Visual Reference) through the narrow
-`runCreativeProjectAction` + a server-only CONNECTED boundary; it did NOT add a
-second state machine, RBAC/multi-tenant, Redis/MQ, or live trace streaming. The
-next step after H1-04 closure is commit + push + clean tree (with the live gate
-recorded as BLOCKED).
+H1-05 (Real Usage Closure / MVP Review) is COMPLETE and pushed; its final verdict is
+**B** (`H1 ENGINEERING COMPLETE / MVP LIVE CLOSURE BLOCKED — BL-018`). The H1 MVP
+engineering is closed and the product walkthrough passes; the LIVE gate remains BLOCKED
+under BL-018 (reported honestly, not a fake PASS). Per the STOP rule, do NOT start
+H2 / H3 / H4, BL-018 remediation, or any re-run/retry/live-trace UI without explicit
+owner authorization — they cannot be auto-started. The next step after H1-05 closure is
+commit + push + clean tree (with the live gate recorded as BLOCKED). The only remaining
+authorized future step that would move the LIVE gate is an owner-authorized live closure
+run supplying `LUMEN_BASE_URL` + `LUMEN_AUTH_PASSWORD` + `FEISHU_*` + `FEISHU_ASSET_TABLE_ID`
++ CloudBase quota, then re-running `runConnectedGenerateVisualReference` once.
 
 IMPORTANT DEFERRED ITEMS:
 - BL-018 — live full-process E2E (P6-C); OPEN / NON-ENGINEERING LIVE DEPENDENCY.

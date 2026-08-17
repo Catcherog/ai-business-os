@@ -32,9 +32,9 @@ type View =
 
 const NAV: { id: View; label: string; tag?: string }[] = [
   { id: 'overview', label: 'Overview' },
-  { id: 'projects', label: 'Projects', tag: 'LIVE' },
-  { id: 'reviews', label: 'Reviews', tag: 'LIVE' },
-  { id: 'runs', label: 'Runs', tag: 'LIVE' },
+  { id: 'projects', label: 'Projects', tag: 'DEMO' },
+  { id: 'reviews', label: 'Reviews', tag: 'DEMO' },
+  { id: 'runs', label: 'Runs', tag: 'DEMO' },
 ];
 
 let svc: WorkspaceReadService;

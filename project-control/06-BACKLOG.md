@@ -201,6 +201,76 @@ live-evidence dependency migrated to **BL-018** (BUSOS-P6-02 hygiene pass).
   a fake LIVE PASS; the task STOPS (no auto H1-05 / H2 / H3 / H4).
 - Suggested revisit phase: owner-authorized live closure run (H1-04 live gate or P6-C).
 
+## BL-018 — H1-05 MVP Closure Note (added 2026-08-17)
+
+The **BUSOS-R2-H1-05 — Real Usage Closure / MVP Review** product walkthrough
+exercised the full H1-01 → H1-04 user journey end-to-end in the in-browser
+**DEMO** mode (Fake adapters + shared in-memory registry) and the server-only
+**CONNECTED** boundary probe. Findings:
+
+- All four H1 success checkpoints H1-S1..H1-S7 pass on **engineering / DEMO**
+  evidence (see `BUSOS-R2-H1-05.md`). One genuine P1 product defect was found and
+  **fixed** during review: the Projects/Reviews/Runs nav entries were mislabelled
+  `LIVE`, contradicting the honest `IN-MEMORY` / `DEMO` footer + GVR badge. Corrected
+  to `DEMO` in `apps/operator-workspace/src/ui.ts`.
+- The **LIVE gate remains BLOCKED** under BL-018. No real Feishu Project write +
+  real Lumen generation + real Asset write + readback VERIFIED + UI Run/Asset view
+  was executed. This is reported honestly — the closure verdict is **B**
+  (`H1 ENGINEERING COMPLETE / MVP LIVE CLOSURE BLOCKED — BL-018`), never a faked
+  LIVE PASS.
+- Remaining product gaps are P2/P3 UI papercuts (BL-021..BL-023), non-blocking.
+
+BL-018 remains **OPEN / NON-ENGINEERING LIVE DEPENDENCY**. H1-05 STOPS after
+commit + push; H2/H3/H4 are not auto-started.
+
+## BL-020 H1 nav surfaces mislabelled LIVE (contradicted honest DEMO footer)
+- Type: **DEFERRED → FIXED IN H1-05 (non-blocking at closure)**
+- Found in task: BUSOS-R2-H1-05 (product usability review)
+- Description: `apps/operator-workspace/src/ui.ts` tagged the `Projects` /
+  `Reviews` / `Runs` nav entries as `LIVE`. The app is an in-memory DEMO (Fake
+  adapters) and its footer + `Generate Visual Reference` result badge already say
+  `DEMO` / `IN-MEMORY`. The `LIVE` tag violated the DEMO/CONNECTED/LIVE honesty rule
+  (requirement #6) and would mislead an operator into trusting seeded data as
+  production. Severity P1 (honesty/trust, not a crash).
+- Fix: changed all three nav tags `LIVE` → `DEMO` in `ui.ts`. No behaviour change;
+  the shared registry / service wiring is untouched.
+- Why non-blocking for engineering: does not affect any data path or contract; the
+  CONNECTED (server-only) boundary is the only place real credentials are used and
+  was already correctly labelled. The fix was applied during the H1-05 review itself.
+- Suggested revisit phase: none (resolved).
+
+## BL-021 Project Detail panels do not auto-refresh after Generate Visual Reference
+- Type: DEFERRED (non-blocking)
+- Found in task: BUSOS-R2-H1-05 (walkthrough)
+- Description: After a successful DEMO `Generate Visual Reference`, the new Task
+  (DONE) + Asset are written to the shared registry and DO appear on the Runs
+  surface and (after manual refresh) on Project Detail. But the Project Detail
+  Tasks/Assets panels are not re-rendered automatically from the action result —
+  the operator must click "刷新项目详情". This is a minor UX papercut for the MVP.
+- Why non-blocking: data integrity is correct (shared registry), only the view
+  refresh timing is manual. The action result panel does show the outcome.
+- Suggested revisit phase: H2 (Operator Workspace polish) or a follow-up UI pass.
+
+## BL-022 Overview surface is a placeholder (no aggregate KPIs)
+- Type: DEFERRED (non-blocking)
+- Found in task: BUSOS-R2-H1-05 (walkthrough)
+- Description: The `Overview` nav is a bounded placeholder (per H1-01 scope lock) —
+  it does not yet aggregate project counts, pending reviews, or recent runs. This is
+  acceptable for the MVP but is the most obvious surface to enrich next.
+- Why non-blocking: H1 success definition (H1-S1) only requires the four nav
+  surfaces to exist and render; Overview content depth is explicitly out of H1 scope.
+- Suggested revisit phase: H2 (Operator Workspace polish).
+
+## BL-023 DEMO assetUri shown raw (`lumen-stub://...`)
+- Type: DEFERRED (non-blocking)
+- Found in task: BUSOS-R2-H1-05 (walkthrough)
+- Description: In DEMO mode the generated Asset `assetUri` is the literal
+  `lumen-stub://generated/...` stub. It is correctly shown only after a SUCCEEDED
+  result and is not presented as a real URL, but the raw scheme is visible to the
+  operator. A small masking/label ("DEMO 资源（模拟）") would read more clearly.
+- Why non-blocking: no secret/leak risk (the stub is a fake value); purely cosmetic.
+- Suggested revisit phase: H2 (UI polish) — lowest priority.
+
 ## BL-019 golden-path real-adapter-simulator Flow B fails (`linkLeadCustomer: lead not found in Feishu`)
 - **CLOSED (2026-08-15) — test-harness regression repaired (BUSOS-P6-03).** The
   diagnostic history below is preserved verbatim.
