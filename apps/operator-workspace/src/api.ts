@@ -4,6 +4,7 @@ import type { ProcessRegistry, ProcessRegistryReadPort } from '@busos/orchestrat
 import { WorkspaceReadService, seedFakeWorkspace } from '@busos/workspace-read';
 import { WorkspaceReviewService } from '@busos/workspace-review';
 import { WorkspaceRunService, buildDemoRuns } from '@busos/workspace-run';
+import { MemoryService, InMemoryMemoryRepository, seedCanonicalMemory } from '@busos/memory';
 
 /**
  * Frontend data source for the Operator Workspace demo (H1-01 read surface +
@@ -27,17 +28,28 @@ let repo: BusinessRepository | null = null;
 // idempotency) and ProcessRegistryReadPort (read). The Runs surface reads it;
 // H1-04's runGenerateVisualReference writes new runs to it via the same instance.
 let runRegistry: InMemoryProcessRegistry | null = null;
+// H2-01 — canonical governed Memory foundation (read-only surface only).
+let memSvc: MemoryService | null = null;
 
 /** Seed the in-memory demo datasets and build the read + review + run services. Idempotent. */
 export async function initWorkspace(): Promise<void> {
-  if (readSvc && reviewSvc && runSvc) return;
+  if (readSvc && reviewSvc && runSvc && memSvc) return;
   // One shared in-memory repository backs both surfaces so a committed review
   // lead is visible through the canonical write path (no extra UI plumbing).
   repo = new BusinessRepository(createFakeFeishuAdapter());
-  await seedFakeWorkspace(repo);
+  const seeded = await seedFakeWorkspace(repo);
   readSvc = new WorkspaceReadService(repo);
   reviewSvc = new WorkspaceReviewService(repo);
   reviewSvc.seedDemo();
+
+  // H2-01 — seed the canonical governed memory for the demo customers (provenance
+  // anchored to the originating review case). Deterministic + idempotent.
+  memSvc = new MemoryService(new InMemoryMemoryRepository());
+  await seedCanonicalMemory(memSvc, {
+    customerId: seeded.customers[0].customer_id,
+    sourceCaseId: 'case_0001',
+    secondCustomerId: seeded.customers[1]?.customer_id,
+  });
 
   // Shared in-memory process registry for the Runs surface. Seeded with
   // deterministic demo runs; H1-04 passes the same instance to
@@ -92,3 +104,15 @@ export function getActionRepo(): BusinessRepository {
   if (!repo) throw new Error('Workspace not initialized — call initWorkspace() first.');
   return repo;
 }
+
+/**
+ * H2-01 — expose the canonical Memory service backing the read-only Project
+ * Detail "Memory / 上下文" section. Business logic lives in `MemoryService`,
+ * never in the UI; the browser bundle carries no credentials or write paths.
+ */
+export function getMemoryService(): MemoryService {
+  if (!memSvc) throw new Error('Workspace not initialized — call initWorkspace() first.');
+  return memSvc;
+}
+
+

@@ -1,0 +1,259 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "memory_record.v1",
+  "type": "object",
+  "required": [
+    "version",
+    "memory_id",
+    "scope",
+    "subject_type",
+    "subject_id",
+    "memory_type",
+    "content",
+    "source_type",
+    "source_ref",
+    "evidence_refs",
+    "confidence",
+    "status",
+    "supersedes_memory_id",
+    "superseded_by_memory_id",
+    "invalidation_reason",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "version": {
+      "const": "memory_record.v1"
+    },
+    "memory_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "scope": {
+      "type": "string",
+      "enum": [
+        "CUSTOMER",
+        "PROJECT"
+      ]
+    },
+    "subject_type": {
+      "type": "string",
+      "enum": [
+        "CUSTOMER",
+        "PROJECT"
+      ]
+    },
+    "subject_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "memory_type": {
+      "type": "string",
+      "enum": [
+        "PREFERENCE",
+        "FACT",
+        "DECISION",
+        "OUTCOME"
+      ]
+    },
+    "content": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "source_type": {
+      "type": "string",
+      "enum": [
+        "HUMAN_REVIEW",
+        "PROJECT",
+        "TASK",
+        "ASSET",
+        "PROCESS_RUN"
+      ]
+    },
+    "source_ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "evidence_refs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "required": [
+          "kind",
+          "ref"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "REVIEW_CASE",
+              "LEAD",
+              "CUSTOMER",
+              "PROJECT",
+              "TASK",
+              "ASSET",
+              "PROCESS_RUN"
+            ]
+          },
+          "ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ACTIVE",
+        "SUPERSEDED",
+        "INVALIDATED"
+      ]
+    },
+    "supersedes_memory_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "superseded_by_memory_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "invalidation_reason": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "subject_type"
+        ],
+        "properties": {
+          "subject_type": {
+            "const": "CUSTOMER"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "scope": {
+            "const": "CUSTOMER"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "subject_type"
+        ],
+        "properties": {
+          "subject_type": {
+            "const": "PROJECT"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "scope": {
+            "const": "PROJECT"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "ACTIVE"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "superseded_by_memory_id": {
+            "type": "null"
+          },
+          "invalidation_reason": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "SUPERSEDED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "superseded_by_memory_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "INVALIDATED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "invalidation_reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        }
+      }
+    }
+  ]
+}

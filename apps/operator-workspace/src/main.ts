@@ -5,6 +5,7 @@ import { renderApp } from './ui.js';
 // so it can run the REAL `runGenerateVisualReference` code path (DEMO mode) under
 // a DOM shim. Harmless in the browser; never used by the UI.
 export { runGenerateVisualReference, getActionRepo, getActionRegistry, getRunService, getRunRegistry } from './smoke-driver.js';
+export { getMemoryService } from './api.js';
 
 initWorkspace()
   .then(() => renderApp(getService()))

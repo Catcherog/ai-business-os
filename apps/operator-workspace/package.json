@@ -7,7 +7,7 @@
   "scripts": {
     "build": "node build.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "smoke": "node smoke.mjs && node smoke-action.mjs && node smoke-server.mjs",
+    "smoke": "node smoke.mjs && node smoke-action.mjs && node smoke-server.mjs && node smoke-memory.mjs",
     "smoke:run": "node smoke-run.mjs",
     "smoke:review": "node smoke-review.mjs",
     "verify": "npm run typecheck && npm run build && npm run smoke"
@@ -20,6 +20,7 @@
     "@busos/workspace-run": "file:../../packages/workspace-run",
     "@busos/orchestrator": "file:../../packages/orchestrator",
     "@busos/human-review": "file:../../packages/human-review",
+    "@busos/memory": "file:../../packages/memory",
     "@busos/golden-path": "file:../../packages/golden-path",
     "@busos/project-lifecycle": "file:../../packages/project-lifecycle",
     "@busos/creative-production": "file:../../packages/creative-production",

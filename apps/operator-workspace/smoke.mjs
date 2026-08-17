@@ -52,7 +52,7 @@ if (bundle) {
       failed = true;
     }
   }
-  for (const label of ['Reviews', 'Runs', 'Generate Visual Reference', 'badge-demo', 'Related Runs', 'Operator Workspace']) {
+  for (const label of ['Reviews', 'Runs', 'Generate Visual Reference', 'badge-demo', 'Related Runs', 'Operator Workspace', 'Memory', '项目上下文']) {
     if (!bundle.includes(label)) {
       console.error(`Expected UI label not found in bundle: ${label}`);
       failed = true;

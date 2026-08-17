@@ -4,7 +4,7 @@ import type {
   Task,
   Asset,
 } from '@busos/contracts';
-import type { WorkspaceReadService } from '@busos/workspace-read';
+import type { WorkspaceReadService, ProjectWorkspace } from '@busos/workspace-read';
 import type {
   ReviewCase,
   ReviewState,
@@ -18,7 +18,8 @@ import type {
   RunStageView,
 } from '@busos/workspace-run';
 import type { BusinessProcessResult } from '@busos/orchestrator';
-import { getService, getReviewService, getRunService } from './api.js';
+import type { MemoryRecordV1 } from '@busos/contracts';
+import { getService, getReviewService, getRunService, getMemoryService } from './api.js';
 import { runGenerateVisualReference } from './action.js';
 import { buildOverview, type OverviewModel } from './overview-model.js';
 
@@ -489,6 +490,58 @@ async function populateRelatedRuns(host: HTMLElement, projectId: string): Promis
   }
 }
 
+/* ---- H2-01 Memory / 上下文 (read-only) ---- */
+const MEMORY_TYPE_LABEL: Record<string, string> = {
+  PREFERENCE: '偏好', FACT: '事实', DECISION: '决策', OUTCOME: '结果',
+};
+function memoryTypePill(t: string): HTMLElement {
+  return h('span', { class: `pill pill-mem-${t}` }, [MEMORY_TYPE_LABEL[t] ?? t]);
+}
+function memoryRow(m: MemoryRecordV1): HTMLElement {
+  return h('div', { class: 'memory-row' }, [
+    h('div', {}, [
+      h('div', { class: 'title' }, [esc(m.content)]),
+      h('div', { class: 'sub' }, [`${m.memory_type} · ${m.scope} · 置信 ${(m.confidence * 100).toFixed(0)}%`]),
+      h('div', { class: 'sub muted' }, [`来源 ${esc(m.source_type)} / ${esc(m.source_ref)} · 证据 ${m.evidence_refs.length}`]),
+    ]),
+    h('div', {}, [memoryTypePill(m.memory_type)]),
+  ]);
+}
+
+/**
+ * H2-01 — populate the read-only "Memory / 项目上下文" section for the project
+ * plus its customer. Customer-wide memories apply inside every one of that
+ * customer's projects. No write path is exposed here; business logic lives in
+ * `MemoryService` (api.ts).
+ */
+async function populateMemory(host: HTMLElement, ws: ProjectWorkspace): Promise<void> {
+  host.replaceChildren(h('h2', {}, ['Memory / 项目上下文（只读）']), loading('正在加载记忆…'));
+  try {
+    const items = await getMemoryService().listForContext(
+      ws.project.project_id,
+      ws.customer?.customer_id,
+    );
+    if (!items.length) {
+      host.replaceChildren(
+        h('h2', {}, ['Memory / 项目上下文（只读）']),
+        h('p', { class: 'muted' }, ['（该客户 / 项目暂无已记录记忆）']),
+      );
+      return;
+    }
+    const list = h('div', { class: 'card memory-list' });
+    for (const m of items) list.append(memoryRow(m));
+    host.replaceChildren(
+      h('h2', {}, [`Memory / 项目上下文（只读 · ${items.length}）`]),
+      list,
+    );
+  } catch (e) {
+    host.replaceChildren(
+      h('h2', {}, ['Memory / 项目上下文（只读）']),
+      empty(`加载失败：${(e as Error).message}`),
+    );
+  }
+}
+
 async function viewProjectDetail(projectId: string): Promise<HTMLElement> {
   const wrap = h('div', {});
   const back = h('button', { class: 'btn-back', type: 'button' }, ['← Projects']);
@@ -556,6 +609,10 @@ async function viewProjectDetail(projectId: string): Promise<HTMLElement> {
     ]);
     grid.append(assetsSection);
 
+    // H2-01 — Memory / 项目上下文 (read-only surface over canonical memory).
+    const memorySection = h('div', { class: 'section' });
+    grid.append(memorySection);
+
     // H1-05 — Related Runs (closed loop: Project → its executions).
     const runsSection = h('div', { class: 'section' });
     grid.append(runsSection);
@@ -575,6 +632,8 @@ async function viewProjectDetail(projectId: string): Promise<HTMLElement> {
     wrap.append(grid);
     // Populate the related-runs section after the static parts are mounted.
     await populateRelatedRuns(runsSection, projectId);
+    // H2-01 — populate the read-only Memory / 上下文 section.
+    await populateMemory(memorySection, ws);
   } catch (err) {
     wrap.replaceChildren(back);
     wrap.append(empty(`加载失败：${(err as Error).message}`));

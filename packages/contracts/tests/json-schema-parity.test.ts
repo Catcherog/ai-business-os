@@ -5,15 +5,18 @@ import type { ZodTypeAny } from 'zod';
 import commitResultSchemaJson from '../../../contracts/commit_result.v1.schema.json';
 import governanceResultSchemaJson from '../../../contracts/governance_result.v1.schema.json';
 import leadCandidateSchemaJson from '../../../contracts/lead_candidate.v1.schema.json';
+import memoryRecordSchemaJson from '../../../contracts/memory_record.v1.schema.json';
 import {
   CommitResultV1Schema,
   GovernanceResultV1Schema,
   LeadCandidateV1Schema,
+  MemoryRecordV1Schema,
 } from '../src/index.js';
 import {
   canonicalCommitResult,
   canonicalGovernanceResult,
   canonicalLeadCandidate,
+  canonicalMemoryRecord,
   clone,
 } from './fixtures.js';
 
@@ -197,6 +200,156 @@ const commitResultSamples: Sample[] = [
   },
 ];
 
+/**
+ * H2-01 — memory_record.v1 samples. The lifecycle invariants (scope vs anchor,
+ * ACTIVE/SUPERSEDED/INVALIDATED consistency) are part of the contract, so the
+ * JSON Schema `allOf/if-then` rules and the Zod `superRefine` rules must agree
+ * sample by sample, exactly like the other three contracts.
+ */
+const memoryRecordSamples: Sample[] = [
+  { name: 'canonical', value: canonicalMemoryRecord, valid: true },
+  {
+    name: 'project-scoped outcome memory',
+    value: mutate(canonicalMemoryRecord, (m) => {
+      m.scope = 'PROJECT';
+      m.subject_type = 'PROJECT';
+      m.subject_id = 'proj_0001';
+      m.memory_type = 'OUTCOME';
+      m.content = '视觉参考生成成功，产出 1 个素材';
+      m.source_type = 'PROCESS_RUN';
+      m.source_ref = 'proc_0001';
+      m.evidence_refs = [
+        { kind: 'PROCESS_RUN', ref: 'proc_0001' },
+        { kind: 'ASSET', ref: 'asset_0001' },
+      ];
+    }),
+    valid: true,
+  },
+  {
+    name: 'superseded memory references its replacement',
+    value: mutate(canonicalMemoryRecord, (m) => {
+      m.status = 'SUPERSEDED';
+      m.superseded_by_memory_id = 'mem_ffffffffffffffff';
+    }),
+    valid: true,
+  },
+  {
+    name: 'invalidated memory states a reason',
+    value: mutate(canonicalMemoryRecord, (m) => {
+      m.status = 'INVALIDATED';
+      m.invalidation_reason = 'customer withdrew the preference';
+    }),
+    valid: true,
+  },
+  {
+    name: 'wrong version',
+    value: mutate(canonicalMemoryRecord, (m) => {
+      m.version = 'memory_record.v2';
+    }),
+    valid: false,
+  },
+  {
+    name: 'scope contradicts subject_type',
+    value: mutate(canonicalMemoryRecord, (m) => {
+      m.subject_type = 'PROJECT';
+      m.subject_id = 'proj_0001';
+      // scope stays CUSTOMER -> customer-wide claim from a project anchor
+    }),
+    valid: false,
+  },
+  {
+    name: 'empty evidence_refs (provenance missing)',
+    value: mutate(canonicalMemoryRecord, (m) => {
+      m.evidence_refs = [];
+    }),
+    valid: false,
+  },
+  {
+    name: 'unknown memory_type',
+    value: mutate(canonicalMemoryRecord, (m) => {
+      m.memory_type = 'VIBE';
+    }),
+    valid: false,
+  },
+  {
+    name: 'unknown source_type',
+    value: mutate(canonicalMemoryRecord, (m) => {
+      m.source_type = 'LLM_GUESS';
+    }),
+    valid: false,
+  },
+  {
+    name: 'unknown evidence kind',
+    value: mutate(canonicalMemoryRecord, (m) => {
+      m.evidence_refs = [{ kind: 'CHAT_MESSAGE', ref: 'msg_1' }];
+    }),
+    valid: false,
+  },
+  {
+    name: 'confidence out of range',
+    value: mutate(canonicalMemoryRecord, (m) => {
+      m.confidence = 1.4;
+    }),
+    valid: false,
+  },
+  {
+    name: 'empty content',
+    value: mutate(canonicalMemoryRecord, (m) => {
+      m.content = '';
+    }),
+    valid: false,
+  },
+  {
+    name: 'ACTIVE but superseded',
+    value: mutate(canonicalMemoryRecord, (m) => {
+      m.superseded_by_memory_id = 'mem_ffffffffffffffff';
+    }),
+    valid: false,
+  },
+  {
+    name: 'ACTIVE but carries invalidation_reason',
+    value: mutate(canonicalMemoryRecord, (m) => {
+      m.invalidation_reason = 'stale';
+    }),
+    valid: false,
+  },
+  {
+    name: 'SUPERSEDED without replacement reference',
+    value: mutate(canonicalMemoryRecord, (m) => {
+      m.status = 'SUPERSEDED';
+    }),
+    valid: false,
+  },
+  {
+    name: 'INVALIDATED without reason',
+    value: mutate(canonicalMemoryRecord, (m) => {
+      m.status = 'INVALIDATED';
+    }),
+    valid: false,
+  },
+  {
+    name: 'missing subject_id',
+    value: mutate(canonicalMemoryRecord, (m) => {
+      delete m.subject_id;
+    }),
+    valid: false,
+  },
+  {
+    name: 'extra property',
+    value: mutate(canonicalMemoryRecord, (m) => {
+      m.embedding = [0.1, 0.2];
+    }),
+    valid: false,
+  },
+  {
+    name: 'non ISO created_at',
+    value: mutate(canonicalMemoryRecord, (m) => {
+      m.created_at = '2026/08/17 10:00';
+    }),
+    valid: false,
+  },
+];
+
 const contracts = [
   {
     contract: 'lead_candidate.v1',
@@ -215,6 +368,12 @@ const contracts = [
     jsonSchema: commitResultSchemaJson,
     zodSchema: CommitResultV1Schema as ZodTypeAny,
     samples: commitResultSamples,
+  },
+  {
+    contract: 'memory_record.v1',
+    jsonSchema: memoryRecordSchemaJson,
+    zodSchema: MemoryRecordV1Schema as ZodTypeAny,
+    samples: memoryRecordSamples,
   },
 ];
 

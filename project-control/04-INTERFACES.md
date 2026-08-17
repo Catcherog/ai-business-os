@@ -599,3 +599,67 @@ function runCreativeProjectAction(
   CONNECTED trigger.
 - Single process / single operator. No RBAC, no multi-tenant, no Redis, no MQ.
 
+---
+
+## 12. Memory foundation (BUSOS-R2-H2-01)
+
+`@busos/memory` is the governed **intelligence layer over canonical entities**. It owns
+no business entity, runs no process, and stores no transcript — it stores governed
+*statements* that always point back at canonical records.
+
+### 12.1 Contract — `MemoryRecordV1`
+
+- `packages/contracts/src/memory-record.ts` + `contracts/memory_record.v1.schema.json`,
+  registered as `CONTRACT_VERSIONS.MEMORY_RECORD_V1 = 'memory_record.v1'`.
+- Anchor: `subject_type` (`CUSTOMER` | `PROJECT`) + `subject_id` — a canonical entity
+  that already exists. `scope` is an explicit retrieval partition and **must equal**
+  `subject_type` (contract-enforced), so a memory can never claim customer-wide
+  applicability while anchored to one project.
+- Classification: `memory_type` ∈ `PREFERENCE` | `FACT` | `DECISION` | `OUTCOME`.
+- Provenance: `source_type` ∈ `HUMAN_REVIEW` | `PROJECT` | `TASK` | `ASSET` |
+  `PROCESS_RUN`, plus `source_ref` and 1–16 `evidence_refs` (`{ kind, ref }`).
+- Lifecycle: `status` `ACTIVE` → `SUPERSEDED` | `INVALIDATED`, with
+  `supersedes_memory_id` / `superseded_by_memory_id` / `invalidation_reason` forming the
+  audit chain. Contract refinements make an inconsistent lifecycle unpersistable.
+- `isActiveMemory()` and `scopeForSubjectType()` are the single definitions of "this
+  memory currently counts" and "which partition this anchor implies", so no caller (UI,
+  service, or a future durable backend) can invent a weaker notion.
+
+### 12.2 Service boundary — `MemoryService`
+
+- CREATE `recordMemory` · READ `getMemory` / `listMemoriesForSubject` / `listForContext`
+  · CHANGE `supersedeMemory` / `invalidateMemory`. **No delete method exists.**
+- `MemoryRepository` port (`get` / `save` / `listBySubject`) with
+  `InMemoryMemoryRepository` as the only H2-01 implementation — the seam a durable
+  backend plugs into without touching business logic.
+- **Provenance is mandatory / fail closed**: a non-canonical `source_ref`, an empty
+  `evidence_refs`, or any non-canonical evidence ref raises
+  `ContractValidationError('memory.provenance', …)`. A canonical ref is
+  `^[a-z][a-z0-9_]*_[A-Za-z0-9]+$` or a stable URI (`lumen://`, `lumen-stub://`,
+  `feishu-drive://`) — a payload, prompt, blob, or credential can never be "evidence".
+- **Idempotency is structural**: `memory_id` = `mem_` + FNV-1a64 of
+  `subject_type|subject_id|memory_type|source_type|source_ref|content`. Identical
+  reprocessing → identical id → the existing record is returned, never a duplicate.
+  Changed content is a *different* id; correcting knowledge is an explicit
+  `supersedeMemory`, never an implicit overwrite. The hash uses BigInt (no
+  `node:crypto`) so it is isomorphic and browser-bundleable.
+- **Deterministic extraction only** (no LLM): `extractMemoriesFromReviewCase` (approved
+  review → `DECISION`) and `extractMemoriesFromProcessRun` (`SUCCEEDED` run →
+  `OUTCOME`). Both are duck-typed (`ReviewCaseLike` / `ProcessRunLike`), so
+  `@busos/memory` depends on `@busos/contracts` **only**, and both fail closed (`[]`)
+  when the provenance they would cite cannot be resolved.
+
+### 12.3 Read-only workspace surface
+
+`apps/operator-workspace` holds one `MemoryService` per workspace init (seeded via
+`seedCanonicalMemory`, exposed by `getMemoryService()`). Project Detail renders a
+**项目上下文 / Memory** section from `listForContext(project_id, customer_id)` — ACTIVE
+memories only, with type and provenance. No write control is exposed in the UI; all
+business logic stays in the service.
+
+### 12.4 Explicit non-goals (H2-01)
+
+No second database, no workflow engine, no chat history / prompt store, no embeddings,
+no vector index, no semantic retrieval, no autonomous LLM extraction, no Evaluation
+Center, no memory scoring/decay, no cross-customer aggregation.
+

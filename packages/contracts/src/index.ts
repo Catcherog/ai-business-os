@@ -82,6 +82,36 @@ export {
 } from './commit-result.js';
 
 export {
+  MEMORY_EVIDENCE_KINDS,
+  MEMORY_SCOPES,
+  MEMORY_SOURCE_TYPES,
+  MEMORY_STATUSES,
+  MEMORY_SUBJECT_TYPES,
+  MEMORY_TYPES,
+  MemoryEvidenceKindSchema,
+  MemoryEvidenceRefSchema,
+  MemoryRecordV1Schema,
+  MemoryScopeSchema,
+  MemorySourceTypeSchema,
+  MemoryStatusSchema,
+  MemorySubjectTypeSchema,
+  MemoryTypeSchema,
+  assertMemoryRecordV1,
+  isActiveMemory,
+  isMemoryRecordV1,
+  scopeForSubjectType,
+  validateMemoryRecordV1,
+  type MemoryEvidenceKind,
+  type MemoryEvidenceRef,
+  type MemoryRecordV1,
+  type MemoryScope,
+  type MemorySourceType,
+  type MemoryStatus,
+  type MemorySubjectType,
+  type MemoryType,
+} from './memory-record.js';
+
+export {
   AGENT_RUN_STATUSES,
   AgentRunSchema,
   AgentRunStatusSchema,

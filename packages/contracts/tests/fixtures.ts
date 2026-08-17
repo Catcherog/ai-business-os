@@ -5,6 +5,7 @@ import type {
   GovernanceResultV1,
   Lead,
   LeadCandidateV1,
+  MemoryRecordV1,
   Project,
   Session,
   Task,
@@ -155,6 +156,34 @@ export const canonicalTask: Task = {
   due_date: null,
   created_at: '2026-08-11T10:00:05.000Z',
   updated_at: '2026-08-11T10:00:05.000Z',
+};
+
+/**
+ * H2-01 canonical memory record — the customer preference learned from the
+ * reviewed GP-001 consultation ("新中式 / 偏深色 / 避免过度磨皮"), anchored to the
+ * customer and traceable back to the review case that produced it.
+ */
+export const canonicalMemoryRecord: MemoryRecordV1 = {
+  version: 'memory_record.v1',
+  memory_id: 'mem_0a1b2c3d4e5f6a7b',
+  scope: 'CUSTOMER',
+  subject_type: 'CUSTOMER',
+  subject_id: 'cust_0001',
+  memory_type: 'PREFERENCE',
+  content: '喜欢新中式、偏深色、避免过度磨皮',
+  source_type: 'HUMAN_REVIEW',
+  source_ref: 'case_0001',
+  evidence_refs: [
+    { kind: 'REVIEW_CASE', ref: 'case_0001' },
+    { kind: 'LEAD', ref: 'lead_0001' },
+  ],
+  confidence: 1,
+  status: 'ACTIVE',
+  supersedes_memory_id: null,
+  superseded_by_memory_id: null,
+  invalidation_reason: null,
+  created_at: '2026-08-17T10:00:00.000Z',
+  updated_at: '2026-08-17T10:00:00.000Z',
 };
 
 /** Deep clone helper so an invalid-case mutation cannot leak between tests. */

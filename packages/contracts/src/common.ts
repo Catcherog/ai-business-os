@@ -10,6 +10,8 @@ export const CONTRACT_VERSIONS = {
   LEAD_CANDIDATE_V1: 'lead_candidate.v1',
   GOVERNANCE_RESULT_V1: 'governance_result.v1',
   COMMIT_RESULT_V1: 'commit_result.v1',
+  /** BUSOS-R2-H2-01 — canonical governed memory record. */
+  MEMORY_RECORD_V1: 'memory_record.v1',
 } as const;
 
 export type ContractVersion =

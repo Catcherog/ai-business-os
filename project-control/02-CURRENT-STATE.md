@@ -9,11 +9,11 @@ BUSOS-P5-X03-STATUS.md, BUSOS-P6-01-PLAN.md). Detailed evidence for P1–P6 is
 preserved in those completion reports and git history — not duplicated here.
 
 CURRENT PHASE:
-R2 — H1 Operator Workspace MVP
+R2 — H2 Governed Intelligence (H1 Operator Workspace MVP closed)
 
 CURRENT TASK:
-BUSOS-R2-H1-05 — Real Usage Closure / MVP Review
-[FINAL VERDICT B — H1 ENGINEERING COMPLETE / MVP LIVE CLOSURE BLOCKED per BL-018]
+BUSOS-R2-H2-01 — Canonical Memory Foundation
+[COMPLETE — gates H2-01-A..J all PASS]
 
 CURRENT ENGINEERING STATUS:
 H1-01 COMPLETE — Operator Workspace shell (Overview / Projects / Reviews / Runs)
@@ -95,6 +95,30 @@ assetUri) are captured in the backlog as non-blocking. **Final verdict B:**
 BLOCKED (BL-018); the MVP is NOT claimed LIVE-COMPLETE. See `BUSOS-R2-H1-05.md` for the
 full 12-section closure report.
 
+H2-01 COMPLETE — **Canonical Memory Foundation**, the first H2 task. A new
+`MemoryRecordV1` contract (`packages/contracts/src/memory-record.ts` +
+`contracts/memory_record.v1.schema.json`, `CONTRACT_VERSIONS.MEMORY_RECORD_V1`) and a
+new `@busos/memory` package establish a typed, auditable **intelligence layer over
+canonical entities** — every memory is ANCHORED to an existing Customer or Project,
+carries MANDATORY provenance (`source_type` + `source_ref` + ≥1 canonical
+`evidence_refs`), and has an explicit lifecycle (`ACTIVE` → `SUPERSEDED` /
+`INVALIDATED`) so knowledge changes **without destructive deletion**. `MemoryService`
+is the only write path (CREATE / READ / SUPERSEDE / INVALIDATE — no delete method
+exists); provenance is fail-closed (a payload / prompt / blob / credential can never be
+stored as evidence) and idempotency is **structural** (`memory_id` = `mem_` + FNV-1a64
+of subject+type+source+content, so identical reprocessing returns the existing record
+and can never duplicate). Extraction is deterministic and rule-based only — approved
+human review → `DECISION`, successful process run → `OUTCOME` — both duck-typed and
+fail-closed; **no LLM extraction, no embeddings, no vector index, no semantic
+retrieval**. Persistence is `InMemoryMemoryRepository` behind a `MemoryRepository` port
+(the seam for a durable backend later); no new physical store was introduced. The
+Operator Workspace gained a **read-only** 项目上下文 / Memory section on Project Detail
+(`listForContext(project_id, customer_id)`, ACTIVE only, with provenance) verified
+headlessly by `smoke-memory.mjs` → `MEMORY_SMOKE_OK`. Suites: contracts **120**, memory
+**18**, business-repository **37/1 skipped**, workspace-read **5**, workspace-review
+**7**, workspace-run **15**, orchestrator **44/1 skipped**; all app smokes green; no
+existing test weakened. Gates H2-01-A..H2-01-J all PASS. See `BUSOS-R2-H2-01.md`.
+
 EXISTING CAPABILITIES (short list):
 - Candidate / Governance (Service Agent → `LeadCandidateV1`, deterministic governance)
 - Human Review (`@busos/human-review`: approve / edit+approve / reject)
@@ -103,6 +127,9 @@ EXISTING CAPABILITIES (short list):
 - Creative / Asset (`@busos/creative-production` + `@busos/lumen-adapter`)
 - Orchestrator / Trace (`@busos/orchestrator`: `runBusinessProcess`, process
   state, structured trace, error classification, idempotency, fail-closed)
+- Memory (`@busos/memory` + `MemoryRecordV1`: anchored governed knowledge with
+  mandatory provenance, structural idempotency, non-destructive auditable
+  lifecycle, deterministic rule-based extraction, read-only workspace surface)
 
 ACTIVE BLOCKERS:
 - none blocking R2 engineering
@@ -114,16 +141,16 @@ ACTIVE BLOCKERS:
   CONNECTED boundary probe; only the live execution is deferred.
 
 NEXT AUTHORIZED WORK:
-H1-05 (Real Usage Closure / MVP Review) is COMPLETE and pushed; its final verdict is
-**B** (`H1 ENGINEERING COMPLETE / MVP LIVE CLOSURE BLOCKED — BL-018`). The H1 MVP
-engineering is closed and the product walkthrough passes; the LIVE gate remains BLOCKED
-under BL-018 (reported honestly, not a fake PASS). Per the STOP rule, do NOT start
-H2 / H3 / H4, BL-018 remediation, or any re-run/retry/live-trace UI without explicit
-owner authorization — they cannot be auto-started. The next step after H1-05 closure is
-commit + push + clean tree (with the live gate recorded as BLOCKED). The only remaining
-authorized future step that would move the LIVE gate is an owner-authorized live closure
-run supplying `LUMEN_BASE_URL` + `LUMEN_AUTH_PASSWORD` + `FEISHU_*` + `FEISHU_ASSET_TABLE_ID`
-+ CloudBase quota, then re-running `runConnectedGenerateVisualReference` once.
+**None — awaiting explicit owner authorization.** H1 is closed (final verdict B,
+`H1 ENGINEERING COMPLETE / MVP LIVE CLOSURE BLOCKED — BL-018`) and H2-01 (Canonical
+Memory Foundation) is COMPLETE and pushed with gates A–J PASS. Per the STOP rule, do NOT
+start **H2-02**, the **Evaluation Center**, memory scoring/decay, embeddings / vector /
+semantic retrieval, LLM-based extraction, H3 / H4, or BL-018 remediation — none of these
+can be auto-started. Two independent future steps remain, each needing its own
+authorization: (a) the next H2 increment on top of the memory foundation; (b) an
+owner-authorized live closure run supplying `LUMEN_BASE_URL` + `LUMEN_AUTH_PASSWORD` +
+`FEISHU_*` + `FEISHU_ASSET_TABLE_ID` + CloudBase quota, then re-running
+`runConnectedGenerateVisualReference` once (the only thing that moves the LIVE gate).
 
 IMPORTANT DEFERRED ITEMS:
 - BL-018 — live full-process E2E (P6-C); OPEN / NON-ENGINEERING LIVE DEPENDENCY.
@@ -131,8 +158,11 @@ IMPORTANT DEFERRED ITEMS:
 - BL-016 — CLOSED (P5 owner override).
 - BL-017 — Feishu Lead DateTime write; DEFERRED / NON-BLOCKING maintenance item.
 - BL-019 — CLOSED (BUSOS-P6-03 golden-path simulator regression repaired).
-- H2 / H3 / H4 horizons — deferred per `R2-LONG-TERM-ROADMAP.md`; cannot be
-  auto-started.
+- H2 (beyond H2-01) / H3 / H4 horizons — deferred per `R2-LONG-TERM-ROADMAP.md`;
+  cannot be auto-started. H2-01 (Canonical Memory Foundation) is the only H2 task
+  authorized and completed so far; H2-02 and the Evaluation Center are NOT started.
+- Memory durability — H2-01 ships `InMemoryMemoryRepository` only; a durable backend
+  behind the `MemoryRepository` port is deferred (non-blocking, by design).
 
 NOTE ON STALE OBJECTIVES:
 Prior P3/P4/P5 "PRIMARY OBJECTIVE" text described past task objectives and is

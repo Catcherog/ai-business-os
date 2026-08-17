@@ -1233,3 +1233,135 @@ H2/H3/H4 and BL-018 remediation NOT auto-started. Committed `69470f9263b126d311f
 HEAD verified.
 
 **Status: VERDICT B — CLOSED (commit + push + clean tree).**
+
+---
+
+## R2-H2-01 Gate — Canonical Memory Foundation (BUSOS-R2-H2-01)
+
+**VERDICT: `COMPLETE` — all gates A–J PASS.**
+First H2 task after R2/H1 productization closure. Baseline `origin/main` =
+`a40d2416058c0541732ab316df1d977b2df1f1c7` confirmed equal via `git ls-remote` before any change.
+Delivers a canonical, typed, auditable **Memory** layer over existing canonical entities — NOT a
+second database, NOT a workflow engine, NOT chat history, NOT embeddings/vector/semantic retrieval,
+NOT autonomous LLM extraction. BL-018 untouched and stays **OPEN** (no live dependency in H2-01).
+Evidence report: `BUSOS-R2-H2-01.md`.
+
+### H2-01-A — Authority baseline
+
+`git ls-remote origin refs/heads/main` = `a40d2416058c0541732ab316df1d977b2df1f1c7`, exactly the
+authorized baseline, so no STOP was triggered. Local `HEAD` lags (known git-watcher lock); the real
+change set was therefore computed against the **remote** SHA
+(`git diff --name-status a40d2416 -- <paths>`), never against stale local `HEAD`. No reset,
+force-update, or destructive local operation was performed.
+
+**Status: PASS.**
+
+### H2-01-B — Canonical typed contract + JSON-Schema parity
+
+`MemoryRecordV1` lives in `packages/contracts/src/memory-record.ts` as a `.strict()` Zod schema
+registered under `CONTRACT_VERSIONS.MEMORY_RECORD_V1 = 'memory_record.v1'`, with the language-neutral
+twin `contracts/memory_record.v1.schema.json`. Four `superRefine` invariants are part of the contract
+(scope↔anchor agreement; `ACTIVE` ⇒ neither superseded nor invalidated; `SUPERSEDED` ⇒
+`superseded_by_memory_id`; `INVALIDATED` ⇒ `invalidation_reason`). `isActiveMemory` /
+`scopeForSubjectType` keep those semantics in one place. Contracts suite **120 passed** (15 new
+`memory-record` tests; `json-schema-parity` extended to 44 and covers the new schema).
+
+**Status: PASS.**
+
+### H2-01-C — Lifecycle without destructive deletion
+
+`MemoryService` exposes CREATE (`recordMemory`), READ (`getMemory` / `listMemoriesForSubject` /
+`listForContext`), CHANGE (`supersedeMemory` / `invalidateMemory`). **No delete method exists in the
+API.** `ACTIVE → SUPERSEDED / INVALIDATED` transitions are validated through
+`assertMemoryRecordV1` on both ends, so an inconsistent lifecycle cannot be persisted.
+
+**Status: PASS.**
+
+### H2-01-D — Provenance mandatory / fail closed
+
+`requireProvenance` rejects an absent or non-canonical `source_ref`, an empty `evidence_refs`, and any
+individual non-canonical evidence ref — raising `ContractValidationError('memory.provenance', …)`. A
+canonical ref is `^[a-z][a-z0-9_]*_[A-Za-z0-9]+$` or a stable URI (`lumen://`, `lumen-stub://`,
+`feishu-drive://`), so a payload / prompt / base64 blob / credential can never be stored as
+"evidence" — the write fails instead of degrading silently. Covered by dedicated tests (empty
+`source_ref`, no evidence, non-canonical evidence, empty content).
+
+**Status: PASS.**
+
+### H2-01-E — Idempotency is structural, not a dedupe pass
+
+`memory_id` is **derived**: `mem_` + FNV-1a64 of
+`subject_type|subject_id|memory_type|source_type|source_ref|content`. Reprocessing the identical
+source therefore produces the identical id and `recordMemory` returns the existing record — a
+duplicate cannot be created. Different content yields a different id (never a silent duplicate of the
+same id); correcting knowledge is an **explicit** `supersedeMemory`, never an implicit overwrite.
+`fnv1a64` uses BigInt, not `node:crypto`, so the derivation is isomorphic and bundles for the browser.
+
+**Status: PASS.**
+
+### H2-01-F — Supersede / invalidate preserve the audit chain
+
+`supersedeMemory` marks the old record `SUPERSEDED` with `superseded_by_memory_id` and creates the
+replacement `ACTIVE` with `supersedes_memory_id` pointing back; a byte-identical "replacement" is
+recognised and returns the existing record. `invalidateMemory` requires a non-empty reason. Both
+refuse to act on a non-active record. The superseded record remains fetchable by id and
+`listMemoriesForSubject(..., { activeOnly: false })` exposes the full chain — hidden from active
+reads, never destroyed.
+
+**Status: PASS.**
+
+### H2-01-G — Subject-scoped, exact retrieval
+
+`listMemoriesForSubject` is anchored on (`subject_type`, `subject_id`) and defaults to
+`activeOnly: true`. `listForContext(projectId, customerId?)` merges PROJECT-scoped memories with the
+customer-wide ACTIVE memories that apply to that project and dedupes by `memory_id`. Retrieval is
+exact and structural — no embeddings, no vector index, no semantic similarity (out of scope).
+
+**Status: PASS.**
+
+### H2-01-H — Deterministic extraction from existing canonical surfaces
+
+`extractMemoriesFromReviewCase` → `DECISION` anchored to the CUSTOMER (cited by `REVIEW_CASE` +
+`CUSTOMER`); `extractMemoriesFromProcessRun` → `OUTCOME` anchored to the PROJECT (cited by
+`PROCESS_RUN` + `ASSET`, only for a `SUCCEEDED` run carrying both ids). No LLM, no semantic parsing —
+fixed statements built from fields the source already exposes. Both **fail closed** (`[]`) when the
+provenance they would cite cannot be resolved. Both are duck-typed (`ReviewCaseLike` /
+`ProcessRunLike`), so `@busos/memory` depends on `@busos/contracts` **only**.
+
+**Status: PASS.**
+
+### H2-01-I — Operator Workspace read-only surface
+
+A new **项目上下文 / Memory** section in Project Detail renders
+`getMemoryService().listForContext(project_id, customer_id)` — ACTIVE memories with type pill and
+provenance; superseded/invalidated knowledge simply disappears from the operator's view. Read-only:
+no write control is exposed. `smoke-memory.mjs` drives the real SPA headlessly (Projects → 林晚晴
+project → Memory section shows the seeded preference → `listForContext` returns it ACTIVE with
+provenance intact) → `MEMORY_SMOKE_OK` ×2. Business logic stays in the service, never in the UI.
+
+**Status: PASS.**
+
+### H2-01-J — Regression, security boundary, and no test weakening
+
+Suites: contracts **120**, memory **18**, business-repository **37/1 skipped**, workspace-read
+**5**, workspace-review **7**, workspace-run **15**, orchestrator **44/1 skipped** (skip = H1-X01
+live probe, needs creds); `operator-workspace` `tsc --noEmit` clean. All app smokes green:
+`SMOKE_OK`, `SMOKE_ACTION_OK`, `SMOKE_SERVER_OK` (honest `BLOCKED`), `MEMORY_SMOKE_OK`,
+`REVIEW_SMOKE_OK`, `RUN_SMOKE_OK`. Bundle scan still clean of `FEISHU_*` / `LUMEN_AUTH_PASSWORD` /
+`LUMEN_BASE_URL` / `open-apis` / `app_token`; §4 status semantics untouched. **No existing test was
+weakened, skipped, or relaxed** — an earlier local edit that had narrowed
+`packages/workspace-run/vitest.config.ts` (dropping the pinned `root`, `test.include`, and 7
+aliases) was **restored byte-identically to the baseline** and re-verified at 15/15, leaving
+`workspace-run` with zero change in this task.
+
+**Status: PASS.**
+
+### H2-01 — Verdict
+
+**`COMPLETE`** — all gates A–J PASS; canonical Memory foundation in place with mandatory provenance,
+structural idempotency, and a non-destructive auditable lifecycle. Persistence remains in-memory
+behind the `MemoryRepository` port (the seam for a durable backend); no Evaluation Center, no
+embeddings/vector/semantic retrieval, no autonomous LLM extraction. BL-018 stays **OPEN**
+(untouched). STOP rule honored: H2-02 / Evaluation Center / H3 / H4 / BL-018 remediation NOT started.
+
+**Status: PASS — CLOSED (commit + push + remote verification).**
