@@ -1,0 +1,24 @@
+{
+  "name": "ai-business-os",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI Business OS — BUSOS multi-package monorepo (npm workspaces). H1-04 adds the narrow creative-project action and the Operator Workspace 'Generate Visual Reference' vertical slice.",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "build": "npm run build --workspace=@busos/operator-workspace",
+    "smoke": "npm run smoke --workspace=@busos/operator-workspace",
+    "verify": "npm run typecheck && npm run test && npm run build && npm run smoke",
+    "ci": "npm install && npm run verify"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.2",
+    "esbuild": "0.21.5",
+    "typescript": "5.6.3",
+    "vitest": "2.1.8"
+  }
+}

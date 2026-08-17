@@ -12,8 +12,8 @@ CURRENT PHASE:
 R2 — H1 Operator Workspace MVP
 
 CURRENT TASK:
-BUSOS-R2-H1-03 — Run Detail / Trace Surface
-[COMPLETE]
+BUSOS-R2-H1-04 — First Real AI Action Vertical Slice (Generate Visual Reference)
+[ENGINEERING COMPLETE — LIVE GATE BLOCKED per BL-018]
 
 CURRENT ENGINEERING STATUS:
 H1-01 COMPLETE — Operator Workspace shell (Overview / Projects / Reviews / Runs)
@@ -52,6 +52,33 @@ error, safe output refs). Deterministic demo executions seed the shared
 (honest) / D HUMAN_REQUIRED (normal pause, never a system error). Gates
 H1-03-A..H1-03-J all PASS. See `BUSOS-R2-H1-03-COMPLETION.md`.
 
+H1-04 ENGINEERING COMPLETE — the first **real AI action** vertical slice.
+`Generate Visual Reference` now lives on the Project Detail view: an existing
+Project runs through the real Creative Production + Lumen + Asset path via a NEW
+narrow `@busos/orchestrator` entry `runCreativeProjectAction` (CREATIVE_PRODUCTION
+only; it does NOT call `runBusinessProcess`, adds no second state machine, reuses the
+P6 status / trace / registry / sanitizer / error-classification). The Operator
+Workspace exposes two explicit modes: **DEMO** (in-browser `FakeFeishuAdapter` +
+`FakeLumenAdapter`, same shared `InMemoryProcessRegistry` as the Runs surface, so the
+new run + Task + Asset appear there) and **CONNECTED** (server-only
+`server/workspace-action.ts` building `RealFeishuAdapter` / `RealLumenAdapter` from
+env; secrets never reach the browser bundle). Idempotency (`idempotencyKey`) replay
+the recorded outcome on a double-click with zero new Task/Asset. Trace carries NO
+prompt / source_image / secret (P6 allowlist). The browser smoke
+(`smoke-action.mjs`) drives the real DEMO action end-to-end and asserts
+`SUCCEEDED` + `assetId`/`assetUri` + a real Task/Asset written + the run recorded in
+the shared registry + no secret leak. The server probe (`smoke-server.mjs`) asserts
+the CONNECTED boundary returns `BLOCKED` with no credentials — honest, never a faked
+LIVE result.
+
+**LIVE GATE STATUS: BLOCKED (BL-018).** The real Feishu Project + real Lumen
+generation + real Asset write + readback VERIFIED + UI Run/Asset view could NOT be
+executed because `LUMEN_*` + `FEISHU_*` live credentials / CloudBase quota are not
+available in this environment. Per requirement #7 this task is reported as
+**ENGINEERING COMPLETE / LIVE GATE BLOCKED** — it does NOT claim H1-04 LIVE PASS and
+does NOT auto-start H1-05/H2/H3/H4. Gates H1-04-A..H1-04-J defined in
+`05-TEST-GATES.md`; see `BUSOS-R2-H1-04.md` for the full completion report.
+
 EXISTING CAPABILITIES (short list):
 - Candidate / Governance (Service Agent → `LeadCandidateV1`, deterministic governance)
 - Human Review (`@busos/human-review`: approve / edit+approve / reject)
@@ -65,16 +92,21 @@ ACTIVE BLOCKERS:
 - none blocking R2 engineering
 - BL-018 = external live evidence dependency only (CloudBase quota + Lumen /
   Feishu live credentials). Not an engineering defect; tracked separately from
-  R2 scope.
+  R2 scope. **Directly blocks the H1-04 LIVE gate** (real Feishu Project + real
+  Lumen generation + real Asset write + readback VERIFIED + UI Run/Asset view).
+  The H1-04 engineering slice is complete and verified by the DEMO path + the
+  CONNECTED boundary probe; only the live execution is deferred.
 
 NEXT AUTHORIZED WORK:
-H1-03 is CLOSED. Per the STOP rule, do not start H1-04 (AI action), H1-05, or
-H2 / H3 / H4 without explicit owner authorization. They cannot be auto-started.
-H1-03 productized the existing R1/P6 Orchestrator execution visibility as a
-workspace surface; it did NOT add a new execution/run persistence database, a
-second state machine, live trace streaming, a re-run/retry UI, RBAC, or any
-business-mutation capability. The next step after H1-03 closure is commit + push
-+ clean tree.
+H1-04 ENGINEERING is CLOSED; its LIVE gate is BLOCKED under BL-018 (reported
+honestly, not a fake PASS). Per the STOP rule, do NOT start H1-05 (Real Usage
+Closure / MVP Review), H2 / H3 / H4, or any re-run/retry/live-trace UI without
+explicit owner authorization — they cannot be auto-started. H1-04 added the first
+business-mutation action (Generate Visual Reference) through the narrow
+`runCreativeProjectAction` + a server-only CONNECTED boundary; it did NOT add a
+second state machine, RBAC/multi-tenant, Redis/MQ, or live trace streaming. The
+next step after H1-04 closure is commit + push + clean tree (with the live gate
+recorded as BLOCKED).
 
 IMPORTANT DEFERRED ITEMS:
 - BL-018 — live full-process E2E (P6-C); OPEN / NON-ENGINEERING LIVE DEPENDENCY.

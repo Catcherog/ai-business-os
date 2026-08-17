@@ -191,7 +191,15 @@ live-evidence dependency migrated to **BL-018** (BUSOS-P6-02 hygiene pass).
 - Closure path: when quota is restored and both credential sets are supplied, run the
   SAME entrypoint once — `runBusinessProcess(input, { businessRepository: RealFeishuAdapter-based, lumen: RealLumenAdapter }, { idempotencyKey })` —
   and claim P6-C LIVE full-process E2E. Sanitized evidence only; cleanup by exact `record_id`.
-- Suggested revisit phase: owner-authorized live closure run (not P6-02 scope).
+- **H1-04 impact (2026-08-17):** the first real AI action — `Generate Visual Reference`
+  (`runCreativeProjectAction`, CREATIVE_PRODUCTION only) — is ENGINEERING COMPLETE and
+  verified via the in-browser DEMO path + the server-only CONNECTED boundary probe
+  (`smoke-server.mjs` → `BLOCKED` with no credentials). Its **LIVE gate** (real Feishu
+  Project + real Lumen generation + real Asset write + readback VERIFIED + UI Run/Asset
+  view) is the very dependency BL-018 tracks, and is **not executed** in this
+  environment. H1-04 is reported **ENGINEERING COMPLETE / LIVE GATE BLOCKED**, never as
+  a fake LIVE PASS; the task STOPS (no auto H1-05 / H2 / H3 / H4).
+- Suggested revisit phase: owner-authorized live closure run (H1-04 live gate or P6-C).
 
 ## BL-019 golden-path real-adapter-simulator Flow B fails (`linkLeadCustomer: lead not found in Feishu`)
 - **CLOSED (2026-08-15) — test-harness regression repaired (BUSOS-P6-03).** The

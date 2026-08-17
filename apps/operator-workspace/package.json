@@ -1,0 +1,35 @@
+{
+  "name": "@busos/operator-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AI Business OS — Operator Workspace SPA. DEMO mode runs in-browser with Fake adapters; the server-only CONNECTED boundary lives under server/.",
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "smoke": "node smoke.mjs && node smoke-action.mjs && node smoke-server.mjs",
+    "smoke:run": "node smoke-run.mjs",
+    "smoke:review": "node smoke-review.mjs",
+    "verify": "npm run typecheck && npm run build && npm run smoke"
+  },
+  "dependencies": {
+    "@busos/contracts": "file:../../packages/contracts",
+    "@busos/business-repository": "file:../../packages/business-repository",
+    "@busos/workspace-read": "file:../../packages/workspace-read",
+    "@busos/workspace-review": "file:../../packages/workspace-review",
+    "@busos/workspace-run": "file:../../packages/workspace-run",
+    "@busos/orchestrator": "file:../../packages/orchestrator",
+    "@busos/human-review": "file:../../packages/human-review",
+    "@busos/golden-path": "file:../../packages/golden-path",
+    "@busos/project-lifecycle": "file:../../packages/project-lifecycle",
+    "@busos/creative-production": "file:../../packages/creative-production",
+    "@busos/lumen-adapter": "file:../../packages/lumen-adapter",
+    "@busos/service-agent-candidate": "file:../../packages/service-agent-candidate"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.2",
+    "esbuild": "0.21.5",
+    "typescript": "5.6.3",
+    "vitest": "2.1.8"
+  }
+}

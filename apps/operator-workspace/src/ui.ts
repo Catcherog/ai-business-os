@@ -3,7 +3,7 @@ import type {
   Customer,
   Task,
   Asset,
-} from '@busos/business-repository';
+} from '@busos/contracts';
 import type { WorkspaceReadService } from '@busos/workspace-read';
 import type {
   ReviewCase,
@@ -17,7 +17,9 @@ import type {
   RunOutcomeView,
   RunStageView,
 } from '@busos/workspace-run';
+import type { BusinessProcessResult } from '@busos/orchestrator';
 import { getService, getReviewService, getRunService } from './api.js';
+import { runGenerateVisualReference } from './action.js';
 
 type View =
   | 'overview'
@@ -219,6 +221,124 @@ function projectRow(p: Project): HTMLElement {
   return row;
 }
 
+/* ------------------- Generate Visual Reference (H1-04) -------------------- */
+const GVR_MAX_BYTES = 5 * 1024 * 1024;
+const GVR_ALLOWED_MIME = ['image/png', 'image/jpeg', 'image/webp'];
+
+/** Stable de-duplication key for one (Project + prompt + image) intent. */
+function stableGvrKey(projectId: string, prompt: string, base64: string): string {
+  let hash = 5381;
+  const s = `gvr|${projectId}|${prompt}|${base64.length}`;
+  for (let i = 0; i < s.length; i++) hash = ((hash << 5) + hash + s.charCodeAt(i)) | 0;
+  return `gvr_${projectId}_${(hash >>> 0).toString(36)}`;
+}
+
+function readFileAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(typeof fr.result === 'string' ? fr.result : '');
+    fr.onerror = () => reject(new Error('读取文件失败'));
+    fr.readAsDataURL(file);
+  });
+}
+
+/** Render the H1-04 action form inside a project-detail section. */
+function gvrPanel(projectId: string): HTMLElement {
+  const promptEl = h('textarea', {
+    class: 'gvr-prompt', rows: '3',
+    placeholder: '描述你想要的视觉调整，例如：把背景换成蓝色调',
+  });
+  const fileEl = h('input', {
+    class: 'gvr-file', type: 'file', accept: 'image/png,image/jpeg,image/webp',
+  });
+  const genBtn = h('button', { class: 'btn-primary', type: 'button' }, ['Generate Visual Reference']);
+  const statusEl = h('div', { class: 'gvr-status' });
+
+  genBtn.addEventListener('click', () => {
+    void (async () => {
+      const prompt = promptEl.value.trim();
+      const file = fileEl.files ? fileEl.files[0] : undefined;
+      if (!prompt) { statusEl.replaceChildren(h('p', { class: 'err' }, ['请输入 prompt。'])); return; }
+      if (!file) { statusEl.replaceChildren(h('p', { class: 'err' }, ['请上传一张源图。'])); return; }
+      if (!GVR_ALLOWED_MIME.includes(file.type)) {
+        statusEl.replaceChildren(h('p', { class: 'err' }, ['仅支持 PNG / JPEG / WEBP。'])); return;
+      }
+      if (file.size > GVR_MAX_BYTES) {
+        statusEl.replaceChildren(h('p', { class: 'err' }, ['图片过大（≤ 5MB）。'])); return;
+      }
+      let pure = '';
+      try {
+        pure = (await readFileAsBase64(file)).split(',')[1] ?? '';
+      } catch (e) {
+        statusEl.replaceChildren(h('p', { class: 'err' }, ['读取文件失败：' + (e as Error).message]));
+        return;
+      }
+      if (!pure) { statusEl.replaceChildren(h('p', { class: 'err' }, ['源图解码失败。'])); return; }
+
+      const key = stableGvrKey(projectId, prompt, pure);
+      genBtn.setAttribute('disabled', 'true');
+      statusEl.replaceChildren(loading('正在生成视觉参考（DEMO / in-memory）…'));
+      try {
+        const { result, mode } = await runGenerateVisualReference(
+          { projectId, prompt, sourceImageBase64: pure, sourceImageMimeType: file.type },
+          key,
+        );
+        renderGvrResult(statusEl, result, mode, projectId);
+      } catch (e) {
+        statusEl.replaceChildren(h('p', { class: 'err' }, ['生成失败：' + (e as Error).message]));
+      } finally {
+        genBtn.removeAttribute('disabled');
+      }
+    })();
+  });
+
+  return h('div', { class: 'section gvr' }, [
+    h('h2', {}, ['Generate Visual Reference']),
+    h('p', { class: 'muted' }, ['DEMO 模式 · 浏览器内 Fake 适配器（非真实 Feishu / Lumen）。']),
+    h('label', { class: 'gvr-label' }, ['Prompt']),
+    promptEl,
+    h('label', { class: 'gvr-label' }, ['Source image (PNG / JPEG / WEBP, ≤ 5MB)']),
+    fileEl,
+    h('div', { class: 'gvr-actions' }, [genBtn]),
+    statusEl,
+  ]);
+}
+
+/** Render the action outcome (success shows asset refs + run/project links). */
+function renderGvrResult(
+  host: HTMLElement,
+  result: BusinessProcessResult,
+  mode: string,
+  projectId: string,
+): void {
+  const rows: (Node | string)[] = [
+    h('div', { class: 'gvr-result-head' }, [
+      h('span', {}, ['Result: ']),
+      runStatusPill(result.status),
+      h('span', { class: 'badge badge-demo' }, [mode]),
+    ]),
+    h('div', {}, [`processId: ${result.processId}`]),
+  ];
+  if (result.deduplicated) {
+    rows.push(h('div', { class: 'muted' }, ['（幂等命中：复用已有执行，未产生新写入）']));
+  }
+
+  if (result.status === 'SUCCEEDED' && result.output) {
+    rows.push(h('div', {}, [`assetId: ${esc(result.output.assetId)}`]));
+    rows.push(h('div', {}, [`assetUri: ${esc(result.output.assetUri)}`]));
+    const runLink = h('button', { class: 'btn-back', type: 'button' }, ['查看 Run →']);
+    runLink.addEventListener('click', () => navigate('run-detail', result.processId));
+    const refresh = h('button', { class: 'btn-back', type: 'button' }, ['刷新项目详情（查看新 Task / Asset）']);
+    refresh.addEventListener('click', () => navigate('project-detail', projectId));
+    rows.push(h('div', { class: 'gvr-actions' }, [runLink, refresh]));
+  } else if (result.status === 'REJECTED' && result.rejection) {
+    rows.push(h('p', { class: 'err' }, [`业务拒绝：${esc(result.rejection.reasonCode)} — ${esc(result.rejection.message)}`]));
+  } else if (result.status === 'FAILED' && result.error) {
+    rows.push(h('p', { class: 'err' }, [`系统失败：${esc(result.error.code)} — ${esc(result.error.message)}`]));
+  }
+  host.replaceChildren(...rows);
+}
+
 async function viewProjectDetail(projectId: string): Promise<HTMLElement> {
   const wrap = h('div', {});
   const back = h('button', { class: 'btn-back', type: 'button' }, ['← Projects']);
@@ -309,6 +429,9 @@ async function viewProjectDetail(projectId: string): Promise<HTMLElement> {
       h('h2', {}, [`Assets (${ws.assets.length})`]),
       ws.assets.length ? assetsTbl : h('p', { class: 'muted' }, ['（暂无素材）']),
     ]));
+
+    // H1-04 — Generate Visual Reference (DEMO: in-browser Fake adapters).
+    grid.append(gvrPanel(ws.project.project_id));
 
     wrap.append(grid);
   } catch (err) {

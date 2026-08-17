@@ -1,8 +1,13 @@
-import { initWorkspace } from './api.js';
+import { initWorkspace, getService } from './api.js';
 import { renderApp } from './ui.js';
 
+// Smoke seam (H1-04): expose the exact symbols the headless browser smoke drives
+// so it can run the REAL `runGenerateVisualReference` code path (DEMO mode) under
+// a DOM shim. Harmless in the browser; never used by the UI.
+export { runGenerateVisualReference, getActionRepo, getActionRegistry, getRunService, getRunRegistry } from './smoke-driver.js';
+
 initWorkspace()
-  .then((svc) => renderApp(svc))
+  .then(() => renderApp(getService()))
   .catch((err: unknown) => {
     const content = document.getElementById('content');
     const msg = err instanceof Error ? err.message : String(err);

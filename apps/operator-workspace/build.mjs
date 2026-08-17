@@ -40,8 +40,31 @@ await esbuild.build({
   outfile: resolve(__dirname, 'dist/bundle.js'),
   alias,
   define: { 'process.env.NODE_ENV': '"production"' },
+  charset: 'utf8',
   banner: { js: 'globalThis.process = globalThis.process || { env: {} };' },
   logLevel: 'info',
 });
 
 console.log('operator-workspace build complete -> dist/bundle.js');
+
+// ---- Server-only CONNECTED boundary (node platform, real crypto) ----
+// The browser bundle must NEVER include server/ — it lives only here, with the
+// real Feishu/Lumen adapters and credentials. Node keeps `node:crypto` native,
+// so we drop the browser shim alias for this build.
+const serverAlias = { ...alias };
+delete serverAlias['node:crypto'];
+await esbuild.build({
+  entryPoints: [
+    resolve(__dirname, 'server/action-driver.ts'),
+    resolve(__dirname, 'server/server.ts'),
+  ],
+  bundle: true,
+  format: 'esm',
+  platform: 'node',
+  target: 'node18',
+  outdir: resolve(__dirname, 'server/dist'),
+  alias: serverAlias,
+  banner: { js: 'globalThis.process = globalThis.process || { env: {} };' },
+  logLevel: 'info',
+});
+console.log('operator-workspace server build complete -> server/dist');

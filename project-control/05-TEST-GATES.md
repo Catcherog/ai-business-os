@@ -991,3 +991,134 @@ forbidden tokens into a stored record's trace metadata → re-open → assert st
 - All relevant `@busos/*` packages typecheck clean.
 
 **Status: PASS.**
+
+---
+
+## R2-H1-04 Gate — First Real AI Action Vertical Slice (BUSOS-R2-H1-04)
+
+PASS only if all gates below pass. Engineering status as of 2026-08-17:
+**ENGINEERING COMPLETE**. No live environment required for H1-04-A..H1-04-J — the
+action is exercised through the in-memory DEMO path and the server-only CONNECTED
+boundary probe. **LIVE GATE BLOCKED** under **BL-018** (real Feishu Project + real
+Lumen generation + real Asset write + readback VERIFIED + UI Run/Asset view not
+executed in this environment). Fake PASS is NOT substituted for Live Pass.
+
+Scope lock: only H1-04 implemented. H1-05 (Real Usage Closure / MVP Review), H2, H3,
+H4 are NOT started. No second state machine, no generic Action framework, no
+RBAC/multi-tenant, no Redis/MQ, no live trace streaming.
+
+### H1-04-A — Authority / scope
+
+Baseline `91e614360d08c65c3fca4739f66b4ebaca3f549e` confirmed equal to
+`origin/main` (verified via `git ls-remote` / local object DB). H1-01/H1-02/H1-03
+surfaces intact (4-nav constraint + Projects/Reviews/Runs surfaces preserved). No
+H1-05 work. `runCreativeProjectAction` is a thin additive entry in
+`@busos/orchestrator`; no existing package behaviour changed beyond the additive
+action.
+
+**Status: PASS.**
+
+### H1-04-B — Narrow entry (no runBusinessProcess, no second state machine)
+
+`apps/operator-workspace` triggers the NEW `runCreativeProjectAction` (CREATIVE_PRODUCTION
+only) — it does NOT call `runBusinessProcess`, adds no second state machine, and
+reuses the P6 status / trace / registry / sanitizer / error-classification. 6
+orchestrator unit tests (`packages/orchestrator/tests/creative-action.test.ts`) cover
+SUCCEEDED surfaces assetId/assetUri, empty-prompt→REJECTED, Lumen-fail→FAILED,
+idempotency replay, key-without-registry fails closed, and trace-leak.
+
+**Status: PASS** — `creative-action.test.ts` **6 passed / 0 failed**.
+
+### H1-04-C — DEMO browser action (end-to-end)
+
+Headless browser smoke drives the REAL in-browser `runGenerateVisualReference` (DEMO
+mode) against an existing Project: asserts `status === 'SUCCEEDED'`,
+`mode === 'DEMO'`, `output.assetId` + `output.assetUri` (lumen-stub://), a real
+Task (status DONE) + Asset written and visible on the project, and the run recorded
+in the shared `InMemoryProcessRegistry` (same instance the Runs surface reads).
+
+**Status: PASS** — `apps/operator-workspace/smoke-action.mjs` (`SMOKE_ACTION_OK`).
+
+### H1-04-D — Idempotency / no duplicate Task/Asset
+
+A duplicate `idempotencyKey` replays the recorded outcome with `deduplicated: true`
+and ZERO new Task/Asset (asserted in both the unit test and the browser smoke by
+re-running the same key and confirming task/asset counts stay 1).
+
+**Status: PASS** — `creative-action.test.ts` (dedup) + `smoke-action.mjs`.
+
+### H1-04-E — Trace / payload sanitization
+
+The action never emits the prompt, `source_image_base64`, or secrets into the trace.
+Unit test asserts the trace JSON contains none of: the prompt, the base64 image,
+`source_image`, `prompt`, `Bearer`, `password`, `token`, `secret`, `api_key`,
+`lumen-stub://`. Only allowlisted stable refs (projectId/taskId/assetId/idempotency/
+reasonCode) appear.
+
+**Status: PASS** — `creative-action.test.ts` (leak test).
+
+### H1-04-F — Browser secret boundary
+
+The browser bundle (`dist/bundle.js`) statically scans clean of `FEISHU_APP_SECRET`,
+`FEISHU_APP_ID`, `FEISHU_BASE_APP_TOKEN`, `FEISHU_*_TABLE_ID`, `LUMEN_AUTH_PASSWORD`,
+`LUMEN_BASE_URL`, `open-apis`, `app_token`. The CONNECTED `Real*` adapters + secrets
+live only in `server/` and are never imported by the browser graph.
+
+**Status: PASS** — `apps/operator-workspace/smoke-action.mjs` (forbidden-token scan).
+
+### H1-04-G — CONNECTED server boundary (honest BLOCKED)
+
+`server/workspace-action.ts` builds `RealFeishuAdapter` / `RealLumenAdapter` from
+`FEISHU_*` / `LUMEN_*` via `createFeishuAdapterFromEnv` / `createLumenAdapterFromEnv`;
+with no credentials it short-circuits to `BLOCKED` (carries a credential reason). The
+probe (`smoke-server.mjs`) asserts mode `BLOCKED` with empty env — never a faked
+LIVE success.
+
+**Status: PASS** — `apps/operator-workspace/smoke-server.mjs` (`SMOKE_SERVER_OK`).
+
+### H1-04-H — Two explicit modes, Fake labelled DEMO
+
+DEMO (in-browser fakes) and CONNECTED (server-only reals) are separate code paths.
+Fake/Demo data is labelled **DEMO** in the UI (badge + copy) and is never presented
+as LIVE. The server boundary is the only place real credentials are used.
+
+**Status: PASS** — static review of `src/action.ts` (DEMO) + `server/workspace-action.ts`
+(CONNECTED) + UI badge.
+
+### H1-04-I — Build / type safety / reproducible entry
+
+`apps/operator-workspace` typechecks clean (src + server, `tsc --noEmit`), bundles
+cleanly via esbuild to `dist/bundle.js` (browser, DEMO) AND `server/dist/*.js`
+(node, CONNECTED). Root npm workspace + single lockfile + minimal CI: `npm ci &&
+npm run verify` runs typecheck → test → build → smoke across workspaces.
+
+**Status: PASS** — app `tsc --noEmit` clean; `build.mjs` emits both bundles; root
+`verify` script defined.
+
+### H1-04-J — Regression
+
+- `packages/orchestrator` tsc clean; `vitest run --pool=forks` → **43 passed / 0 failed**
+  (37 P6-02 + 6 H1-04).
+- `packages/creative-production` / `lumen-adapter` / `business-repository` tsc clean;
+  existing suites green.
+- `apps/operator-workspace` typecheck clean (src+server); `smoke.mjs` SMOKE_OK;
+  `smoke-action.mjs` SMOKE_ACTION_OK; `smoke-server.mjs` SMOKE_SERVER_OK; no existing
+  gate regression.
+- All relevant `@busos/*` packages typecheck clean.
+
+**Status: PASS.**
+
+### H1-04 — LIVE GATE (real Feishu + real Lumen + real Asset + readback + UI)
+
+Run the SAME `runCreativeProjectAction` with REAL `BusinessRepository`
+(`RealFeishuAdapter`) + REAL `LumenPort` (`RealLumenAdapter`) through: existing Project
+→ `createTask` (CREATIVE_GENERATION/TODO) → `Lumen.generate` (prompt + single source
+image) → `createAsset` (IMAGE/LUMEN) → `updateTaskStatus` (DONE) → real Feishu/Lumen
+write + readback VERIFIED → Run + Asset visible in the Operator Workspace UI.
+
+**Status: BLOCKED** — tracked by **BL-018 (OPEN / NON-ENGINEERING LIVE DEPENDENCY)**:
+CloudBase quota availability + `LUMEN_BASE_URL`+`LUMEN_AUTH_PASSWORD` + `FEISHU_*`+
+`FEISHU_ASSET_TABLE_ID` not present in this environment. The engineering slice is
+complete and verified by the DEMO path + CONNECTED probe; the live execution is NOT
+substituted by a fake PASS. H1-04 is reported **ENGINEERING COMPLETE / LIVE GATE
+BLOCKED** and the task STOPS (no automatic H1-05 / H2 / H3 / H4).

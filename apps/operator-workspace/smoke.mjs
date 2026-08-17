@@ -1,8 +1,8 @@
 // Headless smoke test for the browser bundle: stubs a minimal DOM and imports
 // the built bundle to confirm it loads, seeds the fake workspace (exercising
 // the node:crypto shim), and renders without throwing. It then statically
-// scans the produced bundle for the Reviews surface and for any leaked
-// Feishu secrets / credentials / table ids (H1-02-H boundary proof).
+// scans the produced bundle for the Reviews/Runs surfaces and for any leaked
+// Feishu/Lumen secrets / credentials / table ids (H1-02-H / H1-04-F boundary).
 import { readFileSync } from 'node:fs';
 
 const mkEl = () => ({
@@ -19,14 +19,13 @@ globalThis.window = globalThis;
 let failed = false;
 process.on('unhandledRejection', (e) => { console.error('UNHANDLED', e); failed = true; });
 
-await import('file:///D:/360Downloads/Trae%20%E9%A1%B9%E7%9B%AE/AI%20Business%20OS/apps/operator-workspace/dist/bundle.js');
+await import(new URL('./dist/bundle.js', import.meta.url).href);
 await new Promise((r) => setTimeout(r, 800));
 
-// ---- static bundle scan (H1-02-I load + H1-02-H secret boundary) ----
-const bundlePath = 'D:/360Downloads/Trae 项目/AI Business OS/apps/operator-workspace/dist/bundle.js';
+// ---- static bundle scan (H1-02-I load + H1-02-H / H1-04-F secret boundary) ----
 let bundle = '';
 try {
-  bundle = readFileSync(bundlePath, 'utf8');
+  bundle = readFileSync(new URL('./dist/bundle.js', import.meta.url), 'utf8');
 } catch (e) {
   console.error('Cannot read bundle for scan:', e.message);
   failed = true;
@@ -42,6 +41,7 @@ const forbidden = [
   'FEISHU_TASK_TABLE_ID',
   'FEISHU_ASSET_TABLE_ID',
   'LUMEN_AUTH_PASSWORD',
+  'LUMEN_BASE_URL',
   'open-apis',
   'app_token',
 ];
@@ -52,9 +52,11 @@ if (bundle) {
       failed = true;
     }
   }
-  if (!bundle.includes('Reviews')) {
-    console.error('Reviews surface label not found in bundle');
-    failed = true;
+  for (const label of ['Reviews', 'Runs', 'Generate Visual Reference', 'badge-demo']) {
+    if (!bundle.includes(label)) {
+      console.error(`Expected UI label not found in bundle: ${label}`);
+      failed = true;
+    }
   }
 }
 

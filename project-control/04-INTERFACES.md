@@ -521,3 +521,81 @@ class WorkspaceRunService {
   table ids, field names, Lumen/Feishu credentials, raw third-party payloads,
   and `source_image_base64` never appear (D018 / §9 boundary / §19).
 
+---
+
+## 11. Addendum — H1-04 Workspace Action Boundary (BUSOS-R2-H1-04, ADDITIVE)
+
+This section is additive to the frozen R1 interfaces above (and to the P6
+Orchestrator contract). It adds the **first real AI action** — `Generate Visual
+Reference` — as a narrow vertical slice that reuses the existing Creative
+Production + Lumen + Asset path. It does **not** modify any existing
+`BusinessProcessStatus` / `BusinessProcessStage` / `ProcessError` /
+`ProcessRejection` / `ProcessTraceEvent` contract, does **not** call
+`runBusinessProcess`, and introduces **no** second state machine or generic Action
+framework.
+
+Frozen decisions respected: D008 (storage abstraction), D014 (contract-based
+interaction), D017 (BusinessRepository is the persistence boundary), D018
+(FeishuAdapter owns Feishu knowledge), D019 (write != success until readback
+VERIFIED). H1-04 reuses the P6 `ProcessRegistry` / `InMemoryProcessRegistry` and the
+P6 `sanitizeTraceMetadata` / `sanitizeMessage` allowlist.
+
+### 11.1 runCreativeProjectAction (canonical, additive — @busos/orchestrator)
+
+```ts
+interface CreativeProjectActionInput {
+  projectId: string;          // an EXISTING project (never recreated)
+  prompt: string;
+  sourceImageBase64: string;  // exactly one source image, restricted MIME/size
+  sourceImageMimeType: string;
+  title?: string;
+}
+
+function runCreativeProjectAction(
+  input: CreativeProjectActionInput,
+  deps: { businessRepository: BusinessRepository; lumen: LumenPort },
+  options?: { idempotencyKey?: string; registry?: ProcessRegistry; processId?: string },
+): Promise<BusinessProcessResult>;
+```
+
+- Runs **only** `CREATIVE_PRODUCTION` via the existing `executeCreativeProduction`
+  (Project → Task → Lumen → Asset → Task-DONE, with readback VERIFIED). A bounded
+  `Project → Task → Lumen → Asset` happy path; it never emits a trace, so the
+  prompt / source image base64 never leak.
+- Reuses P6 status / trace / registry / sanitizer / error-classification. Maps
+  `CREATIVE_SUCCESS` → `SUCCEEDED` (output `{ projectId, taskId, assetId, assetUri }`);
+  `BLOCKED` → `REJECTED` (business, never a fault); `FAILED` → classified system
+  error (`CREATIVE_GENERATION_FAILED` / `RETRYABLE`).
+- **Idempotency** — a supplied `idempotencyKey` replays the recorded outcome against
+  the shared `ProcessRegistry` with zero re-execution (a double-click cannot create
+  a second Task/Asset). A key without a registry fails closed (`INVALID_INPUT` /
+  `TERMINAL`).
+- **Trace sanitization** — every settled trace event carries only allowlisted stable
+  refs (projectId / taskId / assetId / idempotency / reasonCode); the prompt,
+  `source_image_base64`, `Bearer` / `password` / `token` / `secret` / `api_key` are
+  never present.
+
+### 11.2 Two explicit execution modes
+
+- **DEMO** (`apps/operator-workspace/src/action.ts`) — in-browser, against the
+  shared in-memory `FakeFeishuAdapter` + `createFakeLumenAdapter()` + the SAME
+  `InMemoryProcessRegistry` the Runs surface reads. The new run + Task + Asset appear
+  on the Runs surface and the Project Detail view. Fake data is labelled **DEMO**,
+  never LIVE.
+- **CONNECTED** (`apps/operator-workspace/server/workspace-action.ts`) — SERVER-ONLY.
+  Builds `RealFeishuAdapter` / `RealLumenAdapter` from `FEISHU_*` / `LUMEN_*` env
+  vars via `createFeishuAdapterFromEnv` / `createLumenAdapterFromEnv`; if credentials
+  are absent it short-circuits to `BLOCKED` (honest — never a faked LIVE result).
+  This module is **never** bundled into the browser SPA; secrets stay server-side.
+
+### 11.3 Security boundary (server-only secrets)
+
+- The browser bundle imports ONLY `src/action.ts` (DEMO fakes). It must NOT contain
+  `FEISHU_*` / `LUMEN_*` / `password` / `token` / `open-apis` / `app_token` — verified
+  by a static forbidden-token scan in `smoke-action.mjs`.
+- The CONNECTED `Real*` adapters + credentials live exclusively in `server/`, which
+  the browser never loads. A minimal Node HTTP server (`server/server.ts`) hosts the
+  static SPA and exposes `POST /api/actions/generate-visual-reference` as the only
+  CONNECTED trigger.
+- Single process / single operator. No RBAC, no multi-tenant, no Redis, no MQ.
+
