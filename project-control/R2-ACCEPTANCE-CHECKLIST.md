@@ -17,19 +17,43 @@
 
 ## 0. How to open the product (acceptance prerequisite)
 
-**Local browser DEMO (current supported path):**
+**Stable public preview (BUSOS-R2-X01 — preferred entry):**
+
+```text
+URL: <stable preview URL> — pending Owner-side Vercel deployment (see below)
+Build SHA: shown in the sidebar footer as "Build <sha> · BUSOS-R2-X01" (DEMO badge)
+```
+
+Once the Owner (or a Vercel-authenticated session) runs the one-command deploy,
+the preview is reachable without any local install:
+
+```bash
+cd <repo>
+vercel login            # Owner-provided Vercel account
+vercel link             # first-time link, or skip if already linked
+vercel --prod           # stable production URL: <project>.vercel.app
+```
+
+The static site is served from `apps/operator-workspace/dist` (self-contained:
+`index.html` + `bundle.js` + `styles.css`), the sidebar shows **IN-MEMORY · DEMO ·
+Build <sha> · BUSOS-R2-X01**, and every path falls back to `index.html` (no 404).
+
+**Local browser DEMO (fallback path):**
 
 ```bash
 cd apps/operator-workspace
-node build.mjs                 # builds dist/bundle.js (browser) + server/dist (node)
-# open dist/index.html OR run the static server, then open the served URL
+node build.mjs                 # builds dist/bundle.js + dist/index.html + dist/styles.css
+# open dist/index.html OR serve the dist/ directory, then open the served URL
 ```
 
-**Preconditions:**
+**Preconditions (both paths):**
 - Uses `FakeFeishuAdapter` + `FakeLumenAdapter` + shared in-memory `InMemoryProcessRegistry`. No Feishu/Lumen credential reaches the browser.
-- The UI footer/label shows `DEMO` / `IN-MEMORY`. Treat all data as seeded demo data.
+- The UI footer shows `DEMO` badge + `Build SHA` + `BUSOS-R2-X01`. Treat all data as seeded demo data.
 
-**Known limitation today:** there is **no stable public Preview URL yet** (tracked as recommended task **BUSOS-R2-X01**). Until X01 ships, manual acceptance uses the local DEMO build above. The UI does not yet render a `Build SHA` badge — that is an X01 acceptance requirement (protocol §11).
+**Known limitation:** the stable public URL is **deployment-ready but not yet live**
+— it is blocked only on Owner-side Vercel authentication (BLOCKED — EXTERNAL AUTH
+REQUIRED, tracked in `BUSOS-R2-X01.md`). Until deployed, manual acceptance uses the
+local DEMO build above.
 
 ---
 

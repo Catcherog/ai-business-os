@@ -12,17 +12,24 @@ CURRENT PHASE:
 R2 — H2 Governed Intelligence (H1 Operator Workspace MVP closed)
 
 CURRENT TASK:
-BUSOS-R2-GOV-01 — Verification, Preview & Audit Protocol
-[CONTROL / GOVERNANCE ONLY — gates GOV-01-A..J targeted PASS]
-- Establishes permanent audit/verification discipline for all R2+ work.
-- Authority source of truth = `origin/main` real remote SHA (re-query every task).
-- New governed files: `R2-VERIFICATION-AND-AUDIT-PROTOCOL.md`, `R2-AUDIT-INDEX.md`,
-  `R2-ACCEPTANCE-CHECKLIST.md`; updated `08-WORKBUDDY-OPERATING-RULES.md`,
-  `07-HANDOFF.md`; durable memory refreshed.
+BUSOS-R2-X01 — Stable Operator Workspace DEMO Preview + Closure-SHA protocol fix
+[ENGINEERING COMPLETE — DEPLOYMENT READY — PUBLIC PREVIEW BLOCKED (external auth)]
+- Build identity: every build bakes `Build SHA` (VERCEL_GIT_COMMIT_SHA → `git
+  rev-parse --short HEAD` → safe fallback) + `Release BUSOS-R2-X01` + `DEMO` badge.
+- Deployment-ready: root `vercel.json` (buildCommand / outputDirectory
+  `apps/operator-workspace/dist` / SPA fallback rewrite) + self-contained static
+  root (`dist/index.html` + `dist/styles.css` + `dist/bundle.js`).
+- Governance fix: non-self-referential Closure-SHA rule added to
+  `R2-VERIFICATION-AND-AUDIT-PROTOCOL.md` §4 (BASELINE / IMPLEMENTATION / CLOSURE /
+  REMOTE TIP verified externally).
+- PUBLIC PREVIEW BLOCKED — EXTERNAL AUTH REQUIRED: Vercel CLI present but not
+  authenticated in the execution environment; one-command deploy documented
+  (`vercel --prod` after `vercel login`). No URL was faked.
+- See `BUSOS-R2-X01.md` (Audit Packet) + `R2-ACCEPTANCE-CHECKLIST.md` (Owner journey).
 
 PRIOR TASK (closed):
-BUSOS-R2-H2-02 — Governed Memory Context Consumption
-[COMPLETE — gates H2-02-A..J all PASS]
+BUSOS-R2-GOV-01 — Verification, Preview & Audit Protocol
+[CONTROL / GOVERNANCE COMPLETE — PUSHED / REMOTE VERIFIED]
 
 CURRENT ENGINEERING STATUS:
 H1-01 COMPLETE — Operator Workspace shell (Overview / Projects / Reviews / Runs)
@@ -175,24 +182,28 @@ ACTIVE BLOCKERS:
   CONNECTED boundary probe; only the live execution is deferred.
 
 NEXT AUTHORIZED WORK:
-**None beyond GOV-01 — awaiting explicit owner authorization.** H1 is closed (final verdict B,
+**None beyond X01 — awaiting explicit owner authorization.** H1 is closed (final verdict B,
 `H1 ENGINEERING COMPLETE / MVP LIVE CLOSURE BLOCKED — BL-018`); H2-01 (Canonical Memory
 Foundation) and H2-02 (Governed Memory Context Consumption) are COMPLETE and pushed with
-gates A–J PASS. GOV-01 (this task) is a CONTROL/GOVERNANCE task and adds no product capability.
-Per the STOP rule and `R2-VERIFICATION-AND-AUDIT-PROTOCOL.md`, do NOT auto-start the
-**Evaluation Center**, memory scoring/decay, embeddings / vector / semantic retrieval,
-LLM-based extraction, **H2-03**, H3 / H4, or BL-018 remediation — none of these can be
-auto-started. Recommended next authorized increment (owner choice): **BUSOS-R2-X01 — Stable
-Operator Workspace DEMO Preview** (only ops/product task GOV-01 pre-authorized for planning
-priority; creates no external deployment by itself), **A. Golden Set + minimal Evaluation**,
-**B. Memory durability**, **C. stronger deterministic extraction**, or **D. BL-018 LIVE closure**
-(owner supplies `LUMEN_BASE_URL` + `LUMEN_AUTH_PASSWORD` + `FEISHU_*` + `FEISHU_ASSET_TABLE_ID` +
-CloudBase quota, then one live re-run of `runConnectedGenerateVisualReference`).
+gates A–J PASS. GOV-01 (governance protocol) is COMPLETE and pushed. X01 (this task) is
+ENGINEERING COMPLETE with a **deployment-ready** public DEMO preview; the actual stable
+public URL requires Owner-side Vercel authentication (`vercel login` / `vercel --prod`) —
+see `BUSOS-R2-X01.md` for the one-command deploy instruction. Per the STOP rule and
+`R2-VERIFICATION-AND-AUDIT-PROTOCOL.md`, do NOT auto-start the **Evaluation Center**, memory
+scoring/decay, embeddings / vector / semantic retrieval, LLM-based extraction, **H2-03**, H3 /
+H4, or BL-018 remediation — none of these can be auto-started. Owner choices for the next
+increment: **A. run the one-command X01 deploy and complete manual acceptance**, **B. Golden
+Set + minimal Evaluation**, **C. Memory durability**, **D. stronger deterministic extraction**,
+or **E. BL-018 LIVE closure** (owner supplies `LUMEN_BASE_URL` + `LUMEN_AUTH_PASSWORD` +
+`FEISHU_*` + `FEISHU_ASSET_TABLE_ID` + CloudBase quota, then one live re-run of
+`runConnectedGenerateVisualReference`).
 
 H2-03: **NOT STARTED / NOT AUTHORIZED.**
 
 IMPORTANT DEFERRED ITEMS:
 - BL-018 — live full-process E2E (P6-C); OPEN / NON-ENGINEERING LIVE DEPENDENCY.
+- PUBLIC PREVIEW — deployment-ready (X01) but not yet live at a stable public URL;
+  blocked only on Owner-side Vercel authentication (no new product work required).
 - BL-015 — P1-02 extraction gap ("新中式" alone); DEFERRED / NON-BLOCKING.
 - BL-016 — CLOSED (P5 owner override).
 - BL-017 — Feishu Lead DateTime write; DEFERRED / NON-BLOCKING maintenance item.
@@ -214,12 +225,14 @@ LATEST CONTROL DECISIONS:
 R1 decisions D001–D020 are FROZEN (see `03-DECISIONS.md`). R2 direction is set by
 `R2-LONG-TERM-ROADMAP.md`. No R1 frozen decision is re-opened by R2 planning.
 
-GOVERNANCE (BUSOS-R2-GOV-01): all R2+ work is now bound by
+GOVERNANCE (BUSOS-R2-GOV-01, refined by BUSOS-R2-X01): all R2+ work is now bound by
 `R2-VERIFICATION-AND-AUDIT-PROTOCOL.md` — `origin/main` real remote SHA is the sole code
 authority; evidence levels (ENGINEERING / DEMO / CONNECTED / LIVE / OWNER) replace bare
 `COMPLETE`/`PASS`; every task emits an Audit Packet and updates `R2-AUDIT-INDEX.md`; Owner
 manual acceptance lives in `R2-ACCEPTANCE-CHECKLIST.md`. Cross-task audit index:
-`R2-AUDIT-INDEX.md`.
+`R2-AUDIT-INDEX.md`. X01 froze the **closure-SHA rule** (protocol §4): a completion
+report never records its own commit SHA — the closure tip is verified externally via
+`git ls-remote origin refs/heads/main` after push and reported in handoff.
 
 ON TASK COMPLETION:
 Update this file with: task status, next authorized work, evidence location, and

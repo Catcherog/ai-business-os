@@ -33,9 +33,13 @@
 | H1-X01 | Temporary Live Feasibility Probe (CloudBase-free) — NOT a normal-live closure | `2ce3ae75` | `e9e4129c04b9c673fc67acc78af832cabd6a1f0e` | ENGINEERING PASS | NOT APPLICABLE | NOT APPLICABLE | TEMPORARY LIVE FEASIBILITY (BL-018 stays OPEN) | OWNER ACCEPTANCE PENDING | `BUSOS-R2-H1-X01.md` |
 | H2-01 | Canonical Memory Foundation | `a40d2416058c0541732ab316df1d977b2df1f1c7` | `9f64dd77abeccd3e54c56fce1221faf3518b4b21` (impl `c513130`, report `9f64dd7`) | ENGINEERING PASS | DEMO PRODUCT PASS (read-only Memory surface) | CONNECTED — UNKNOWN / not recorded | LIVE E2E — UNKNOWN / not recorded | OWNER ACCEPTANCE PENDING | `BUSOS-R2-H2-01.md` |
 | H2-02 | Governed Memory Context Consumption | `9f64dd77abeccd3e54c56fce1221faf3518b4b21` | `532234554eb0a7c8daf0422cd12f0c41be768a9c` | ENGINEERING PASS | DEMO PRODUCT PASS (context visibility) | CONNECTED BLOCKED (no creds) | LIVE E2E BLOCKED — BL-018 | OWNER ACCEPTANCE PENDING | `project-control/BUSOS-R2-H2-02.md` |
-| GOV-01 | Verification, Preview & Audit Protocol (governance only) | `532234554eb0a7c8daf0422cd12f0c41be768a9c` | `4e94a2f6290324b539e3b5d2383328919f26812e` (impl; + doc-correction follow-up) | ENGINEERING PASS (control files only) | NOT APPLICABLE | NOT APPLICABLE | NOT APPLICABLE | OWNER ACCEPTANCE PENDING | `project-control/BUSOS-R2-GOV-01.md` |
+| GOV-01 | Verification, Preview & Audit Protocol (governance only) | `532234554eb0a7c8daf0422cd12f0c41be768a9c` | `44c8c06bc6e8adac86838e760011c8caaae4ed84` (impl `4e94a2f`; record-final-SHA follow-up `44c8c06`) | ENGINEERING PASS (control files only) | NOT APPLICABLE | NOT APPLICABLE | NOT APPLICABLE | OWNER ACCEPTANCE PENDING | `project-control/BUSOS-R2-GOV-01.md` |
+| KB-SNAPSHOT | Feishu KB audit + snapshot for H2-03 (read-only / audit only, no code) | `44c8c06bc6e8adac86838e760011c8caaae4ed84` | `827ec73b4c824b393d6e196d996a659bd1346331` (snapshot; + index-row follow-up commit) | NOT APPLICABLE (audit/snapshot only) | NOT APPLICABLE | NOT APPLICABLE | NOT APPLICABLE | OWNER ACCEPTANCE PENDING | `project-control/BUSOS-KB-SNAPSHOT-v0.1.md` |
+| X01 | Stable Operator Workspace DEMO Preview + Closure-SHA protocol fix (ops/deploy, governance fix) | `44c8c06bc6e8adac86838e760011c8caaae4ed84` | impl `5c5d91bb904b2ad02bc504b6fbd58328ff5437d5`; closure = remote tip verified externally after push (see handoff) | ENGINEERING PASS | DEMO PRODUCT PASS (local build + static deploy readiness) | NOT APPLICABLE (DEMO preview only; CONNECTED server unchanged in repo) | LIVE E2E BLOCKED — BL-018 (unchanged) | OWNER ACCEPTANCE PENDING | `project-control/BUSOS-R2-X01.md` |
 
 > **Note on H1-04 / H1-05 Final SHA:** the implementation commit is recorded first; a small follow-up commit corrected the SHA line inside the completion report. The "Final SHA" above is the task-era tip. The report's own `Pushed:` line may cite the implementation commit — both are listed for traceability.
+>
+> **Note on closure-SHA semantics (X01, per protocol §4):** per the BUSOS-R2-X01 clarification, a closure commit is **not required to contain its own SHA** — its SHA is established externally via `git ls-remote origin refs/heads/main` after push and reported in the task handoff / next authority snapshot. GOV-01 used implementation SHA + a documentation follow-up; X01 freezes the non-self-referential closure-SHA rule. The X01 row above therefore records the implementation SHA and marks the closure tip as externally verified rather than self-recorded.
 >
 > **Note on Connectedness/Live for H1-01/02/03/H2-01:** these reports do not record an explicit CONNECTED/LIVE verdict line. They are marked `UNKNOWN / not recorded` rather than guessed. The H1-04/H1-05/H2-02 slices that introduced the CONNECTED boundary are explicitly `BLOCKED` under BL-018.
 
@@ -50,8 +54,8 @@
 
 ## Next task readiness (not authorized)
 
-- **BUSOS-R2-X01 — Stable Operator Workspace DEMO Preview** — recorded as the recommended next ops/product task. GOV-01 did NOT create any external deployment. Acceptance requirement to record when X01 is authorized: Preview must show `Mode` + `Build SHA`. See protocol §10/§11.
-- **H2-03** — NOT STARTED / NOT AUTHORIZED.
+- **BUSOS-R2-X01 — Stable Operator Workspace DEMO Preview** — AUTHORIZED and completed as the current task (row above). Deploy readiness shipped (build identity + `vercel.json` + self-contained `dist/`); public deployment requires Owner-side Vercel auth (`vercel login` / token) — see `BUSOS-R2-X01.md` and the acceptance checklist.
+- **H2-03** — NOT STARTED / NOT AUTHORIZED. (BUSOS-KB-SNAPSHOT v0.1 is a READ/AUDIT-only precursor, not H2-03 implementation.)
 - **Evaluation Center, Golden Set, Memory durability, embeddings/vector, H3, H4** — explicitly out of scope, not auto-started.
 
 ---
