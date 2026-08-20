@@ -3,7 +3,7 @@
 **Status:** ENGINEERING COMPLETE — DEPLOYMENT READY — PUBLIC PREVIEW BLOCKED (EXTERNAL AUTH REQUIRED) — PUSHED / REMOTE VERIFIED
 **Date:** 2026-08-20
 **Baseline:** `origin/main` = `44c8c06bc6e8adac86838e760011c8caaae4ed84` (re-verified via `git ls-remote`); remote advanced to `c31c4f1…` (BUSOS-KB-SNAPSHOT v0.1, READ/AUDIT-only) during the task — X01 closure rebased on top of it, no semantic conflict
-**Implementation SHA:** `5c5d91bb904b2ad02bc504b6fbd58328ff5437d5` (commit 1, product + protocol fix)
+**Implementation SHA:** `02af082ddbc5b1a2c72d3bfecdc999b8c4ce0973` (on-chain; authored as `5c5d91bb…`, same tree, rebased onto the KB-SNAPSHOT tip)
 **Closure SHA:** externally verified after push (`git ls-remote origin refs/heads/main`); see task handoff / next authority snapshot — per the X01 closure-SHA rule, this report does NOT self-record its own commit SHA.
 
 ---
@@ -24,7 +24,8 @@ OWNER ACCEPTANCE — PENDING
 ### AUTHORITY
 - Baseline remote SHA (task start): `44c8c06bc6e8adac86838e760011c8caaae4ed84` (verified equal to Owner-confirmed baseline via `git ls-remote`)
 - Remote advanced during X01: another window pushed `827ec73` + `c31c4f1` (BUSOS-KB-SNAPSHOT v0.1 — READ/AUDIT-only, no code; appended a KB-SNAPSHOT row to `R2-AUDIT-INDEX.md`). Inspected: no semantic conflict with X01 scope; X01 closure rebased on top of `c31c4f14216bafc74371160baf2e23472a5f1120` with the index merged (KB-SNAPSHOT row preserved + X01 row added).
-- Implementation SHA: `5c5d91bb904b2ad02bc504b6fbd58328ff5437d5` (commit 1, product + protocol fix; identical tree on both bases)
+- Implementation SHA: `02af082ddbc5b1a2c72d3bfecdc999b8c4ce0973` (on-chain; authored as `5c5d91bb…` with the identical tree, rebased onto the KB-SNAPSHOT tip `c31c4f1`)
+- Rebasing correction: the first push attempt based X01 trees on the pre-KB-SNAPSHOT baseline, which would have dropped `BUSOS-KB-SNAPSHOT-v0.1.md` from the remote tree. Detected via remote spot-check, corrected by a fast-forward repair commit that restores the KB snapshot file and fixes the on-chain implementation SHA above.
 - Closure SHA: external remote tip after push (recorded in handoff, not self-referenced)
 - Method: `git fetch origin && git ls-remote origin refs/heads/main` (not local memory / not hand-written SHA)
 
