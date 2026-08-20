@@ -701,7 +701,7 @@ Memory     = "系统关于这个客户 / 这个项目记住了什么"
 | 文档路径 | `project-control/BUSOS-KB-SNAPSHOT-v0.1.md`（仓库当前**没有** `project-control/AUDITS/`，按指令沿用既有控制文档位置，未新建目录体系） |
 | 索引登记 | `project-control/R2-AUDIT-INDEX.md` 追加一行（审计索引文件本身，属本任务变更集） |
 | Baseline SHA | `44c8c06bc6e8adac86838e760011c8caaae4ed84` |
-| Final remote SHA | 见完成报告（push 后 `git ls-remote` 实测填写） |
+| Final remote SHA | `827ec73b4c824b393d6e196d996a659bd1346331`（snapshot 提交；索引补记提交为任务期 tip，push 后 `git ls-remote` 实测值见完成报告） |
 | Engineering / Demo / Connected / Live | `NOT APPLICABLE`（本任务不含产品或代码变更） |
 | Owner acceptance | `PENDING` |
 
