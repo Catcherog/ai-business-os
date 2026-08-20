@@ -13,6 +13,8 @@ Must read:
 - `03-DECISIONS.md`
 - `04-INTERFACES.md`
 - current task file
+- **`R2-VERIFICATION-AND-AUDIT-PROTOCOL.md`** (governing audit/verification protocol — created by BUSOS-R2-GOV-01; binding for every task)
+- If the task has **any user-facing / product acceptance** surface: **`R2-ACCEPTANCE-CHECKLIST.md`** additionally
 
 Rule:
 > Execute only the current task. Do not automatically read the long-term roadmap
@@ -31,6 +33,7 @@ Read:
 - `02-CURRENT-STATE.md`
 - `06-BACKLOG.md`
 - `03-DECISIONS.md`
+- **`R2-VERIFICATION-AND-AUDIT-PROTOCOL.md`** (so the next task is scoped with the audit contract in mind)
 
 Purpose:
 > Select or refine the next bounded task from the roadmap / backlog. May explore
@@ -72,3 +75,11 @@ evidence against the predefined acceptance criteria."
 - Blockers
 - Deferred findings
 - Next task
+- **Baseline remote SHA** (from `git ls-remote origin refs/heads/main` at task start)
+- **Final remote SHA** (from `git ls-remote origin refs/heads/main` after push)
+- **Completion report** path (the Audit Packet)
+- **CI state** (`REMOTE CI: PASS/FAIL/PENDING/NOT VERIFIED IN CURRENT ENVIRONMENT`)
+- **Preview URL** (or `NONE — local DEMO only` until BUSOS-R2-X01 ships)
+- **Owner Acceptance state** (`PENDING` / `PASS` / `FAIL` — only the Owner may set PASS)
+
+> These six additions are mandatory per `R2-VERIFICATION-AND-AUDIT-PROTOCOL.md` §24. A handoff missing any of them is incomplete.

@@ -12,6 +12,15 @@ CURRENT PHASE:
 R2 — H2 Governed Intelligence (H1 Operator Workspace MVP closed)
 
 CURRENT TASK:
+BUSOS-R2-GOV-01 — Verification, Preview & Audit Protocol
+[CONTROL / GOVERNANCE ONLY — gates GOV-01-A..J targeted PASS]
+- Establishes permanent audit/verification discipline for all R2+ work.
+- Authority source of truth = `origin/main` real remote SHA (re-query every task).
+- New governed files: `R2-VERIFICATION-AND-AUDIT-PROTOCOL.md`, `R2-AUDIT-INDEX.md`,
+  `R2-ACCEPTANCE-CHECKLIST.md`; updated `08-WORKBUDDY-OPERATING-RULES.md`,
+  `07-HANDOFF.md`; durable memory refreshed.
+
+PRIOR TASK (closed):
 BUSOS-R2-H2-02 — Governed Memory Context Consumption
 [COMPLETE — gates H2-02-A..J all PASS]
 
@@ -166,16 +175,21 @@ ACTIVE BLOCKERS:
   CONNECTED boundary probe; only the live execution is deferred.
 
 NEXT AUTHORIZED WORK:
-**None — awaiting explicit owner authorization.** H1 is closed (final verdict B,
+**None beyond GOV-01 — awaiting explicit owner authorization.** H1 is closed (final verdict B,
 `H1 ENGINEERING COMPLETE / MVP LIVE CLOSURE BLOCKED — BL-018`); H2-01 (Canonical Memory
 Foundation) and H2-02 (Governed Memory Context Consumption) are COMPLETE and pushed with
-gates A–J PASS. Per the STOP rule, do NOT auto-start the **Evaluation Center**, memory
-scoring/decay, embeddings / vector / semantic retrieval, LLM-based extraction, H2-03,
-H3 / H4, or BL-018 remediation — none of these can be auto-started. Recommended next
-authorized increment (owner choice): **A. Golden Set + minimal Evaluation**, **B. Memory
-durability**, **C. stronger deterministic extraction**, or **D. BL-018 LIVE closure** (owner
-supplies `LUMEN_BASE_URL` + `LUMEN_AUTH_PASSWORD` + `FEISHU_*` + `FEISHU_ASSET_TABLE_ID` +
+gates A–J PASS. GOV-01 (this task) is a CONTROL/GOVERNANCE task and adds no product capability.
+Per the STOP rule and `R2-VERIFICATION-AND-AUDIT-PROTOCOL.md`, do NOT auto-start the
+**Evaluation Center**, memory scoring/decay, embeddings / vector / semantic retrieval,
+LLM-based extraction, **H2-03**, H3 / H4, or BL-018 remediation — none of these can be
+auto-started. Recommended next authorized increment (owner choice): **BUSOS-R2-X01 — Stable
+Operator Workspace DEMO Preview** (only ops/product task GOV-01 pre-authorized for planning
+priority; creates no external deployment by itself), **A. Golden Set + minimal Evaluation**,
+**B. Memory durability**, **C. stronger deterministic extraction**, or **D. BL-018 LIVE closure**
+(owner supplies `LUMEN_BASE_URL` + `LUMEN_AUTH_PASSWORD` + `FEISHU_*` + `FEISHU_ASSET_TABLE_ID` +
 CloudBase quota, then one live re-run of `runConnectedGenerateVisualReference`).
+
+H2-03: **NOT STARTED / NOT AUTHORIZED.**
 
 IMPORTANT DEFERRED ITEMS:
 - BL-018 — live full-process E2E (P6-C); OPEN / NON-ENGINEERING LIVE DEPENDENCY.
@@ -199,6 +213,13 @@ reports and git history.
 LATEST CONTROL DECISIONS:
 R1 decisions D001–D020 are FROZEN (see `03-DECISIONS.md`). R2 direction is set by
 `R2-LONG-TERM-ROADMAP.md`. No R1 frozen decision is re-opened by R2 planning.
+
+GOVERNANCE (BUSOS-R2-GOV-01): all R2+ work is now bound by
+`R2-VERIFICATION-AND-AUDIT-PROTOCOL.md` — `origin/main` real remote SHA is the sole code
+authority; evidence levels (ENGINEERING / DEMO / CONNECTED / LIVE / OWNER) replace bare
+`COMPLETE`/`PASS`; every task emits an Audit Packet and updates `R2-AUDIT-INDEX.md`; Owner
+manual acceptance lives in `R2-ACCEPTANCE-CHECKLIST.md`. Cross-task audit index:
+`R2-AUDIT-INDEX.md`.
 
 ON TASK COMPLETION:
 Update this file with: task status, next authorized work, evidence location, and

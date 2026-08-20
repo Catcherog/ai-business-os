@@ -1,0 +1,69 @@
+# R2 Audit Index
+
+> **Purpose:** Primary cross-task audit index for all R2+ work in `Catcherog/ai-business-os`.
+> **Governing protocol:** `R2-VERIFICATION-AND-AUDIT-PROTOCOL.md`.
+> **Authority:** values below are grounded in `git` history + completion reports + `02-CURRENT-STATE.md`. Unknown fields are marked `UNKNOWN` / `NOT RECORDED` — **never guessed**.
+> **Maintained by:** every task MUST update its row on completion (baseline SHA, final SHA, status columns, completion report path).
+
+---
+
+## Legend
+
+| Column | Meaning |
+|--------|---------|
+| Baseline | `origin/main` remote SHA at task start (re-queried, not assumed) |
+| Final SHA | remote `origin/main` SHA after the task's push (tip of the task era) |
+| Engineering | `ENGINEERING PASS` / `FAIL` / `NOT APPLICABLE` |
+| Demo | `DEMO PRODUCT PASS` / `FAIL` / `NOT APPLICABLE` |
+| Connected | `CONNECTED PASS` / `BLOCKED` / `FAIL` / `NOT APPLICABLE` |
+| Live | `LIVE E2E PASS` / `BLOCKED` / `FAIL` / `NOT APPLICABLE` |
+| Owner Acc. | `OWNER ACCEPTANCE PASS` / `PENDING` / `FAIL` / `NOT APPLICABLE` |
+
+---
+
+## Task table
+
+| Task | Scope | Baseline | Final SHA | Engineering | Demo | Connected | Live | Owner Acc. | Completion Report |
+|------|-------|----------|-----------|-------------|------|-----------|------|------------|-------------------|
+| H1-01 | Operator Workspace shell + Project read surface (read-only) | `4b5ca9c7eaba3c9571b3dfb1d50d3119a75a9aa9` (R2-00) | `73938197daa783ab245ff4957578945ffed9e63d` | ENGINEERING PASS | DEMO PRODUCT PASS | CONNECTED — UNKNOWN / not recorded | LIVE E2E — UNKNOWN / not recorded | OWNER ACCEPTANCE PENDING | `project-control/BUSOS-R2-H1-01.md` |
+| H1-02 | Reviews surface integration (Human Review) | `73938197daa783ab245ff4957578945ffed9e63d` | `508dbfc38f0a17fe533dd8d286e54be5d940b1e9` | ENGINEERING PASS | DEMO PRODUCT PASS | CONNECTED — UNKNOWN / not recorded | LIVE E2E — UNKNOWN / not recorded | OWNER ACCEPTANCE PENDING | `project-control/BUSOS-R2-H1-02.md` |
+| H1-03 | Runs detail / Trace surface (read-only) | `508dbfc38f0a17fe533dd8d286e54be5d940b1e9` | `91e614360d08c65c3fca4739f66b4ebaca3f549e` | ENGINEERING PASS | DEMO PRODUCT PASS | CONNECTED — UNKNOWN / not recorded | LIVE E2E — UNKNOWN / not recorded | OWNER ACCEPTANCE PENDING | `project-control/BUSOS-R2-H1-03.md` |
+| H1-04 | First real AI action vertical slice (Generate Visual Reference) | `91e614360d08c65c3fca4739f66b4ebaca3f549e` | `f78e750` (impl `af04cc9`; doc-accuracy follow-up `f78e750`) | ENGINEERING PASS | DEMO PRODUCT PASS | CONNECTED BLOCKED (no creds) | LIVE E2E BLOCKED — BL-018 | OWNER ACCEPTANCE PENDING | `BUSOS-R2-H1-04.md` |
+| H1-05 | Real Usage Closure (Operator Workspace end-to-end loop) | `e9e4129c04b9c673fc67acc78af832cabd6a1f0e` | `a40d241` (impl `69470f9`; report SHA-fill `a40d241`) | ENGINEERING PASS | DEMO PRODUCT PASS | CONNECTED BLOCKED (honest boundary) | LIVE E2E BLOCKED — BL-018 | OWNER ACCEPTANCE PENDING | `BUSOS-R2-H1-05.md` |
+| H1-X01 | Temporary Live Feasibility Probe (CloudBase-free) — NOT a normal-live closure | `2ce3ae75` | `e9e4129c04b9c673fc67acc78af832cabd6a1f0e` | ENGINEERING PASS | NOT APPLICABLE | NOT APPLICABLE | TEMPORARY LIVE FEASIBILITY (BL-018 stays OPEN) | OWNER ACCEPTANCE PENDING | `BUSOS-R2-H1-X01.md` |
+| H2-01 | Canonical Memory Foundation | `a40d2416058c0541732ab316df1d977b2df1f1c7` | `9f64dd77abeccd3e54c56fce1221faf3518b4b21` (impl `c513130`, report `9f64dd7`) | ENGINEERING PASS | DEMO PRODUCT PASS (read-only Memory surface) | CONNECTED — UNKNOWN / not recorded | LIVE E2E — UNKNOWN / not recorded | OWNER ACCEPTANCE PENDING | `BUSOS-R2-H2-01.md` |
+| H2-02 | Governed Memory Context Consumption | `9f64dd77abeccd3e54c56fce1221faf3518b4b21` | `532234554eb0a7c8daf0422cd12f0c41be768a9c` | ENGINEERING PASS | DEMO PRODUCT PASS (context visibility) | CONNECTED BLOCKED (no creds) | LIVE E2E BLOCKED — BL-018 | OWNER ACCEPTANCE PENDING | `project-control/BUSOS-R2-H2-02.md` |
+| GOV-01 | Verification, Preview & Audit Protocol (governance only) | `532234554eb0a7c8daf0422cd12f0c41be768a9c` | _set on push — see `BUSOS-R2-GOV-01.md`_ | ENGINEERING PASS (control files only) | NOT APPLICABLE | NOT APPLICABLE | NOT APPLICABLE | OWNER ACCEPTANCE PENDING | `project-control/BUSOS-R2-GOV-01.md` |
+
+> **Note on H1-04 / H1-05 Final SHA:** the implementation commit is recorded first; a small follow-up commit corrected the SHA line inside the completion report. The "Final SHA" above is the task-era tip. The report's own `Pushed:` line may cite the implementation commit — both are listed for traceability.
+>
+> **Note on Connectedness/Live for H1-01/02/03/H2-01:** these reports do not record an explicit CONNECTED/LIVE verdict line. They are marked `UNKNOWN / not recorded` rather than guessed. The H1-04/H1-05/H2-02 slices that introduced the CONNECTED boundary are explicitly `BLOCKED` under BL-018.
+
+---
+
+## Open blockers (carried)
+
+- **BL-018 = OPEN / NON-ENGINEERING LIVE DEPENDENCY** — CloudBase quota + `LUMEN_*` / `FEISHU_*` credentials. Directly blocks H1-04/H1-05/H2-02 LIVE gates. Not an engineering defect.
+- All other historical blockers (BL-015, BL-016, BL-017, BL-019) are CLOSED / deferred-and-non-blocking per `02-CURRENT-STATE.md`.
+
+---
+
+## Next task readiness (not authorized)
+
+- **BUSOS-R2-X01 — Stable Operator Workspace DEMO Preview** — recorded as the recommended next ops/product task. GOV-01 did NOT create any external deployment. Acceptance requirement to record when X01 is authorized: Preview must show `Mode` + `Build SHA`. See protocol §10/§11.
+- **H2-03** — NOT STARTED / NOT AUTHORIZED.
+- **Evaluation Center, Golden Set, Memory durability, embeddings/vector, H3, H4** — explicitly out of scope, not auto-started.
+
+---
+
+## How to extend this index
+
+On every future task completion, append/update the row and then:
+
+```bash
+git add project-control/R2-AUDIT-INDEX.md
+# (commit as part of the task's changeset)
+git ls-remote origin refs/heads/main   # record Final SHA
+```
+
+Keep the protocol (§16) as the contract for column semantics.
