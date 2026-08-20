@@ -59,7 +59,8 @@ Unexpected files: NONE (pre-existing untracked/generated drift — vitest timest
 
 ### CI
 - LOCAL VERIFY: **PASS** — `npm run verify` at repo root completed end-to-end (typecheck → test → build → smoke). Tests: **418 passed / 7 skipped** across 12 workspaces; all app smokes green including `PREVIEW_SMOKE_OK`. (Environment repair note: `@types/node` was missing from `packages/{contracts,memory,workspace-run}/node_modules` — a pre-existing local install gap, NOT part of the X01 changeset — and was copied from `packages/business-repository`; no repo file changed.)
-- REMOTE CI: NOT VERIFIED IN CURRENT ENVIRONMENT (GitHub Actions cannot be queried from this sandbox) — the push will trigger `npm run verify` on GitHub; status must be checked there.
+- REMOTE CI: **FAIL — PRE-EXISTING, NOT CAUSED BY X01.** GitHub Actions (queryable via `gh run list/view`) fails on the SAME error for the X01 runs AND all prior runs (H2-02 `32340815690`, GOV-01, KB-SNAPSHOT, X01 closure `32346534080`): `packages/creative-production/tests/live-e2e.test.ts(93,35): error TS2307: Cannot find module 'undici'`. This is a pre-existing repo-wide typecheck gap in `@busos/creative-production` (test imports `undici`, not declared/installed), outside X01's authorized scope. X01's own files typecheck/build/smoke clean. Recorded as a deferred finding for a small owner-authorized follow-up; no test was weakened to pass.
+- Repair run for the closure tip (`32346618096`) triggered on push — expected to hit the same pre-existing failure; status not waited on beyond confirmation of the root cause above.
 
 ### PRODUCT
 - Stable Preview URL: NONE YET — deployment-ready; blocked on Owner-side Vercel auth (EXTERNAL AUTH REQUIRED). No URL was faked.
@@ -93,6 +94,7 @@ Unexpected files: NONE (pre-existing untracked/generated drift — vitest timest
 
 ### DEFERRED FINDINGS
 - Public deployment not executed: Vercel CLI (56.1.0) present but NOT authenticated (no token, no `~/.vercel`, no `VERCEL_TOKEN`). Per task §6 HARD STOP on new-credential external mutation; deployment-ready config + one-command instruction shipped instead.
+- **Remote CI red (pre-existing):** `packages/creative-production/tests/live-e2e.test.ts:93` imports `undici` which is not declared/installed → `TS2307` on typecheck. Fails identically on every recent push (H2-02, GOV-01, KB-SNAPSHOT, X01). Outside X01 scope; recommend a small owner-authorized follow-up (declare `undici` in `@busos/creative-production` devDeps or stub the import).
 - UI papercuts (if any) discovered during this task: none beyond existing backlog items (BL-021/BL-022/BL-023) — no UI redesign performed.
 
 ### OWNER ACCEPTANCE
