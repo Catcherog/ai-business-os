@@ -328,7 +328,11 @@ function readFileAsBase64(file: File): Promise<string> {
 }
 
 /** Render the H1-04 action form inside a project-detail section. */
-function gvrPanel(projectId: string, onSuccess?: () => Promise<void> | void): HTMLElement {
+function gvrPanel(
+  projectId: string,
+  customerId?: string | null,
+  onSuccess?: () => Promise<void> | void,
+): HTMLElement {
   const promptEl = h('textarea', {
     class: 'gvr-prompt', rows: '3',
     placeholder: '描述你想要的视觉调整，例如：把背景换成蓝色调',
@@ -338,6 +342,23 @@ function gvrPanel(projectId: string, onSuccess?: () => Promise<void> | void): HT
   });
   const genBtn = h('button', { class: 'btn-primary', type: 'button' }, ['Generate Visual Reference']);
   const statusEl = h('div', { class: 'gvr-status' });
+  // H2-02 — light, read-only visibility of the governed memory context that will
+  // be consumed by the action. No memory management console / editor / search.
+  const memCtxEl = h('div', { class: 'gvr-memctx' });
+  if (customerId) {
+    void (async () => {
+      try {
+        const items = await getMemoryService().listForContext(projectId, customerId);
+        memCtxEl.replaceChildren(
+          h('p', { class: 'muted' }, [`Context: ${items.length} governed memories will be used`]),
+        );
+      } catch {
+        memCtxEl.replaceChildren(h('p', { class: 'muted' }, ['Context: memory unavailable']));
+      }
+    })();
+  } else {
+    memCtxEl.replaceChildren(h('p', { class: 'muted' }, ['Context: no customer linked']));
+  }
 
   genBtn.addEventListener('click', () => {
     void (async () => {
@@ -391,6 +412,7 @@ function gvrPanel(projectId: string, onSuccess?: () => Promise<void> | void): HT
     h('label', { class: 'gvr-label' }, ['Source image (PNG / JPEG / WEBP, ≤ 5MB)']),
     fileEl,
     h('div', { class: 'gvr-actions' }, [genBtn]),
+    memCtxEl,
     statusEl,
   ]);
 }
@@ -417,6 +439,13 @@ function renderGvrResult(
   if (result.status === 'SUCCEEDED' && result.output) {
     rows.push(h('div', {}, [`assetId: ${esc(result.output.assetId)}`]));
     rows.push(h('div', {}, [`assetUri: ${esc(result.output.assetUri)}`]));
+    // H2-02 — light visibility of the governed memory context actually consumed.
+    const gm = result.output.governedMemory;
+    if (gm) {
+      rows.push(h('div', { class: 'muted' }, [
+        `Memory context: ${gm.count} record${gm.count === 1 ? '' : 's'}` + (gm.truncated ? ' (truncated)' : ''),
+      ]));
+    }
     const runLink = h('button', { class: 'btn-back', type: 'button' }, ['查看 Run →']);
     runLink.addEventListener('click', () => navigate('run-detail', result.processId));
     rows.push(h('div', { class: 'gvr-actions' }, [runLink]));
@@ -627,7 +656,7 @@ async function viewProjectDetail(projectId: string): Promise<HTMLElement> {
       assetsSection.replaceChildren(h('h2', {}, [`Assets (${fresh.assets.length})`]), projectAssetsTable(fresh.assets));
       await populateRelatedRuns(runsSection, projectId);
     };
-    grid.append(gvrPanel(ws.project.project_id, reloadDynamic));
+    grid.append(gvrPanel(ws.project.project_id, ws.customer?.customer_id, reloadDynamic));
 
     wrap.append(grid);
     // Populate the related-runs section after the static parts are mounted.

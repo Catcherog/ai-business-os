@@ -21,7 +21,8 @@
     "@busos/golden-path": "file:../golden-path",
     "@busos/project-lifecycle": "file:../project-lifecycle",
     "@busos/lumen-adapter": "file:../lumen-adapter",
-    "@busos/creative-production": "file:../creative-production"
+    "@busos/creative-production": "file:../creative-production",
+    "@busos/memory": "file:../memory"
   },
   "devDependencies": {
     "@types/node": "22.10.2",

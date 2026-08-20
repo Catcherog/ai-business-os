@@ -1365,3 +1365,128 @@ embeddings/vector/semantic retrieval, no autonomous LLM extraction. BL-018 stays
 (untouched). STOP rule honored: H2-02 / Evaluation Center / H3 / H4 / BL-018 remediation NOT started.
 
 **Status: PASS — CLOSED (commit + push + remote verification).**
+
+## R2-H2-02 Gate — Governed Memory Context Consumption (BUSOS-R2-H2-02)
+
+**VERDICT: `COMPLETE` — all gates A–J PASS.**
+Second H2 task: a minimal but *real* **Memory → Context Assembly → AI execution** link. A governed,
+provenance-carrying **ACTIVE** Project/Customer Memory is consumable as *controlled business context* by an
+existing real AI Business Action (**Generate Visual Reference**) — WITHOUT a chatbot, vector DB, embedding
+platform, or second state machine. Reuses `@busos/memory` (H2-01), `@busos/orchestrator`
+(`runCreativeProjectAction`, H1-04), `@busos/creative-production`, `@busos/workspace-read`, and
+`apps/operator-workspace`. Baseline `origin/main` = `9f64dd77abeccd3e54c56fce1221faf3518b4b21` confirmed
+equal via `git ls-remote` before any change. BL-018 untouched and stays **OPEN** (no live dependency in
+H2-02). Evidence report: `BUSOS-R2-H2-02.md`.
+
+### H2-02-A — Authority / scope boundary (context authority + separation)
+
+`MemoryContext` / `MemoryContextAssembler` are a bounded-context abstraction (NOT a "Context Platform" /
+"Memory Platform" / RAG / knowledge-graph). The assembler reads **ONLY ACTIVE** memory via
+`MemoryService.listForContext`, and the user action input (`prompt`) is kept **strictly separate** from the
+governed memory context (a `MemoryContextSummary` of stable refs only). Lumen receives `prompt` **untouched**.
+Covered by `packages/creative-production/tests/governed-context.test.ts` (prompt never receives `mem_x` /
+`PREFERENCE` / `OUTCOME`) and the orchestrator consumer test.
+
+**Status: PASS.**
+
+### H2-02-B — Deterministic context assembly
+
+`assembleMemoryContext` sorts via a fully-specified stable key
+(`subject_type → memory_type → updated_at → memory_id`) so identical (project, customer, ACTIVE memories)
+always yields an identical ordering + representation. Verified in `memory-context.test.ts` by assembling two
+services seeded in *opposite* insertion order and asserting byte-identical `JSON.stringify(records)`; CUSTOMER
+records precede PROJECT records.
+
+**Status: PASS.**
+
+### H2-02-C — Scope isolation (no cross-leak)
+
+Context is scoped to `project_id` + its `customer_id`; a CUSTOMER memory is project-agnostic (shown in every
+one of that customer's projects). `listForContext` returns only the project's PROJECT memories + the
+customer's CUSTOMER memories; `cust_b` / `proj_b` memories never leak. Omitting `customerId` excludes
+customer-wide memories (project-only). Verified by `memory-context.test.ts` (asserts `subject_id` set is
+exactly `{cust_a, proj_a}`, `cust_b`/`proj_b` absent; project-only case returns 1 record).
+
+**Status: PASS.**
+
+### H2-02-D — Lifecycle (non-active excluded)
+
+Superseded memory is hidden and its ACTIVE replacement is present; invalidated memory is excluded entirely
+(`count: 0`). Verified by `memory-context.test.ts` (supersede → `ids` contain replacement, not original;
+invalidate → `records` empty, `count 0`).
+
+**Status: PASS.**
+
+### H2-02-E — Provenance fail-closed (assembler + consumer boundary)
+
+`validateProvenance` re-checks every assembled record (non-canonical `source_ref` / empty `evidence_refs` /
+non-canonical evidence → `ContractValidationError('memory.context.provenance')`). If `deps.memory` +
+`input.customerId` are wired but assembly is untrusted, the action **fails closed** (FAILED, zero Task/Asset)
+rather than silently proceeding. Verified by `memory-context.test.ts` (fake repo with non-canonical
+`source_ref` → rejects) and `creative-action-memory.test.ts` (bad provenance → `FAILED`, no Task written).
+
+**Status: PASS.**
+
+### H2-02-F — Bounded context
+
+`DEFAULT_MEMORY_CONTEXT_LIMITS` = `maxRecords:20`, `maxContentLength:500`, `maxTotalContentLength:4000`.
+Assembly clamps records + per-record content and marks `truncated` when exceeded; obvious credential material
+in content is redacted (`password=…` → `password=[REDACTED]`). The content-free `MemoryContextSummary` is the
+only thing that crosses into trace / result / UI. Verified by `memory-context.test.ts` (maxRecords truncation,
+per-record clamp + `…`, `redactSecretContent`, summary stays content-free).
+
+**Status: PASS.**
+
+### H2-02-G — Real consumer integration (Generate Visual Reference consumes the context)
+
+`runCreativeProjectAction` assembles the context when `deps.memory` + `input.customerId` are present and hands
+the `MemoryContextSummary` to `executeCreativeProduction` as a **separate** input
+(`governedMemoryContext`). On `CREATIVE_SUCCESS`, `output.governedMemory` echoes the summary. End-to-end in the
+browser bundle (`smoke-action.mjs`): a seeded CUSTOMER PREFERENCE is consumed (`output.governedMemory.count ≥ 1`,
+`memory_context_used` in trace) with a real Task/Asset written and the run recorded. Verified by
+`creative-action-memory.test.ts` + `SMOKE_ACTION_OK`.
+
+**Status: PASS.**
+
+### H2-02-H — Trace safety (allowlisted refs; never content / secret / prompt)
+
+`trace.ts` allowlist gains `memory_context_used` / `memory_count` / `memory_refs` / `memory_types` /
+`memory_truncated` (pipe-joined strings — arrays/objects are dropped by the existing sanitizer, so child refs
+can never expand into leaked content). The trace carries **only** stable references; the prompt, memory
+content, the injected `password=doNotLeak`, and the `lumen-stub://` asset uri are **never** present. Verified
+by `creative-action-memory.test.ts` (forbidden set absent; allowlisted keys present) and `smoke-action.mjs`
+(forbidden token scan on the trace).
+
+**Status: PASS.**
+
+### H2-02-I — Idempotency / regression (existing GVR idempotency intact)
+
+The H1-04 idempotency guarantee is preserved under H2-02: a duplicate `idempotencyKey` replays the recorded
+outcome (`deduplicated:true`) with **zero** new Task/Asset, and the governed context is identical across the
+replay. Verified by `creative-action-memory.test.ts` (replay → `deduplicated`, `governedMemory.refs` equal,
+no second Task) and `smoke-action.mjs` (replay → 1 task / 1 asset).
+
+**Status: PASS.**
+
+### H2-02-J — Regression, security boundary, and no test weakening
+
+Suites: contracts **120**, memory **29** (+11 new `memory-context`), creative-production **21 passed + 1
+skipped** (+2 new `governed-context`), orchestrator **49 passed + 1 skipped** (+5 new
+`creative-action-memory`), workspace-read **5**, workspace-review **7**, workspace-run **15**. All app smokes
+green: `SMOKE_OK`, `SMOKE_ACTION_OK`, `SMOKE_SERVER_OK` (honest `BLOCKED`), `MEMORY_SMOKE_OK`,
+`REVIEW_SMOKE_OK`, `RUN_SMOKE_OK`, `H1_05_CLOSURE_OK`. Bundle scan still clean of `FEISHU_*` /
+`LUMEN_AUTH_PASSWORD` / `LUMEN_BASE_URL` / `open-apis` / `app_token`; §4 status semantics untouched. **No
+existing test was weakened, skipped, or relaxed.** The `@busos/memory` allowlist extension is minimal (+5 keys)
+and covered by a secret-leak regression assertion.
+
+**Status: PASS.**
+
+### H2-02 — Verdict
+
+**`COMPLETE`** — all gates A–J PASS; the governed memory context is assembled deterministically, bounded,
+provenance-fail-closed, and consumed by the real Generate Visual Reference vertical slice as a *separate,
+auditable* business input — never concatenated into the prompt, never leaking content/secret into the trace.
+No chatbot, vector DB, embedding platform, or second state machine was built. BL-018 stays **OPEN**
+(untouched). STOP rule honored: H2-03 / Evaluation Center / H3 / H4 / BL-018 remediation NOT started.
+
+**Status: PASS — CLOSED (commit + push + remote verification).**

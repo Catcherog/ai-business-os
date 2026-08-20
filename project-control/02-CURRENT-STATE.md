@@ -12,8 +12,8 @@ CURRENT PHASE:
 R2 — H2 Governed Intelligence (H1 Operator Workspace MVP closed)
 
 CURRENT TASK:
-BUSOS-R2-H2-01 — Canonical Memory Foundation
-[COMPLETE — gates H2-01-A..J all PASS]
+BUSOS-R2-H2-02 — Governed Memory Context Consumption
+[COMPLETE — gates H2-02-A..J all PASS]
 
 CURRENT ENGINEERING STATUS:
 H1-01 COMPLETE — Operator Workspace shell (Overview / Projects / Reviews / Runs)
@@ -119,6 +119,31 @@ headlessly by `smoke-memory.mjs` → `MEMORY_SMOKE_OK`. Suites: contracts **120*
 **7**, workspace-run **15**, orchestrator **44/1 skipped**; all app smokes green; no
 existing test weakened. Gates H2-01-A..H2-01-J all PASS. See `BUSOS-R2-H2-01.md`.
 
+H2-02 COMPLETE — **Governed Memory Context Consumption**, the second H2 task and the
+first real **Memory → Context Assembly → AI execution** link. A new
+`packages/memory/src/memory-context.ts` adds `assembleMemoryContext` /
+`toMemoryContextSummary` / `redactSecretContent`: it reads **ACTIVE-only** memory scoped
+to `(project_id, customer_id)`, sorts deterministically, clamps to bounded
+`maxRecords`/`maxContentLength`/`maxTotalContentLength`, redacts obvious credential
+material, and — on non-canonical provenance — **fails closed** (`ContractValidationError`).
+The single consumer is the existing **Generate Visual Reference** vertical slice:
+`runCreativeProjectAction` assembles the context (when `deps.memory` + `input.customerId`
+are wired) and hands a **content-free** `MemoryContextSummary` to `executeCreativeProduction`
+as a SEPARATE input — the user `prompt` is never concatenated with governed memory and
+Lumen receives it untouched. The summary is echoed on `BusinessProcessOutput.governedMemory`
+and carried into the trace only via 5 allowlisted stable-ref keys (`memory_context_used` /
+`count` / `refs` / `types` / `truncated`); no content / secret / prompt / asset-uri ever
+enters the trace. The Operator Workspace GVR panel shows light context visibility
+("Context: N governed memories will be used" / "Memory context: N record(s)") — no
+console, editor, search, dashboard, or new nav. End-to-end in the browser bundle
+(`smoke-action.mjs`): a seeded CUSTOMER PREFERENCE is consumed (`output.governedMemory.count ≥ 1`,
+`memory_context_used` in trace) with a real Task/Asset written and the run recorded; the
+CONNECTED boundary still returns honest `BLOCKED` without credentials. Suites: contracts
+**120**, memory **29** (+11), creative-production **21 passed / 1 skipped** (+2),
+orchestrator **49 passed / 1 skipped** (+5), workspace-read **5**, workspace-review **7**,
+workspace-run **15**; all seven app smokes green; no existing test weakened. Gates
+H2-02-A..H2-02-J all PASS. See `BUSOS-R2-H2-02.md`.
+
 EXISTING CAPABILITIES (short list):
 - Candidate / Governance (Service Agent → `LeadCandidateV1`, deterministic governance)
 - Human Review (`@busos/human-review`: approve / edit+approve / reject)
@@ -142,15 +167,15 @@ ACTIVE BLOCKERS:
 
 NEXT AUTHORIZED WORK:
 **None — awaiting explicit owner authorization.** H1 is closed (final verdict B,
-`H1 ENGINEERING COMPLETE / MVP LIVE CLOSURE BLOCKED — BL-018`) and H2-01 (Canonical
-Memory Foundation) is COMPLETE and pushed with gates A–J PASS. Per the STOP rule, do NOT
-start **H2-02**, the **Evaluation Center**, memory scoring/decay, embeddings / vector /
-semantic retrieval, LLM-based extraction, H3 / H4, or BL-018 remediation — none of these
-can be auto-started. Two independent future steps remain, each needing its own
-authorization: (a) the next H2 increment on top of the memory foundation; (b) an
-owner-authorized live closure run supplying `LUMEN_BASE_URL` + `LUMEN_AUTH_PASSWORD` +
-`FEISHU_*` + `FEISHU_ASSET_TABLE_ID` + CloudBase quota, then re-running
-`runConnectedGenerateVisualReference` once (the only thing that moves the LIVE gate).
+`H1 ENGINEERING COMPLETE / MVP LIVE CLOSURE BLOCKED — BL-018`); H2-01 (Canonical Memory
+Foundation) and H2-02 (Governed Memory Context Consumption) are COMPLETE and pushed with
+gates A–J PASS. Per the STOP rule, do NOT auto-start the **Evaluation Center**, memory
+scoring/decay, embeddings / vector / semantic retrieval, LLM-based extraction, H2-03,
+H3 / H4, or BL-018 remediation — none of these can be auto-started. Recommended next
+authorized increment (owner choice): **A. Golden Set + minimal Evaluation**, **B. Memory
+durability**, **C. stronger deterministic extraction**, or **D. BL-018 LIVE closure** (owner
+supplies `LUMEN_BASE_URL` + `LUMEN_AUTH_PASSWORD` + `FEISHU_*` + `FEISHU_ASSET_TABLE_ID` +
+CloudBase quota, then one live re-run of `runConnectedGenerateVisualReference`).
 
 IMPORTANT DEFERRED ITEMS:
 - BL-018 — live full-process E2E (P6-C); OPEN / NON-ENGINEERING LIVE DEPENDENCY.
@@ -158,9 +183,10 @@ IMPORTANT DEFERRED ITEMS:
 - BL-016 — CLOSED (P5 owner override).
 - BL-017 — Feishu Lead DateTime write; DEFERRED / NON-BLOCKING maintenance item.
 - BL-019 — CLOSED (BUSOS-P6-03 golden-path simulator regression repaired).
-- H2 (beyond H2-01) / H3 / H4 horizons — deferred per `R2-LONG-TERM-ROADMAP.md`;
-  cannot be auto-started. H2-01 (Canonical Memory Foundation) is the only H2 task
-  authorized and completed so far; H2-02 and the Evaluation Center are NOT started.
+- H2 (beyond H2-02) / H3 / H4 horizons — deferred per `R2-LONG-TERM-ROADMAP.md`;
+  cannot be auto-started. H2-01 (Canonical Memory Foundation) and H2-02 (Governed Memory
+  Context Consumption) are the only H2 tasks authorized and completed so far; the Evaluation
+  Center and H2-03+ are NOT started.
 - Memory durability — H2-01 ships `InMemoryMemoryRepository` only; a durable backend
   behind the `MemoryRepository` port is deferred (non-blocking, by design).
 

@@ -25,6 +25,8 @@ import { randomUUID } from 'node:crypto';
 import type { BusinessRepository } from '@busos/business-repository';
 import type { LumenPort } from '@busos/lumen-adapter';
 import { executeCreativeProduction } from '@busos/creative-production';
+import type { MemoryService, MemoryContext, MemoryContextSummary } from '@busos/memory';
+import { assembleMemoryContext, toMemoryContextSummary } from '@busos/memory';
 import type { ProcessRegistry, ProcessExecutionRecord } from './process-registry.js';
 import type { ProcessRunOptions } from './types.js';
 import type {
@@ -41,13 +43,19 @@ const STAGE: BusinessProcessStage = 'CREATIVE_PRODUCTION';
 export interface CreativeProjectActionInput {
   /** Existing Project id (never created by this action). */
   projectId: string;
-  /** Editing instruction sent to Lumen. */
+  /** Editing instruction sent to Lumen. Kept SEPARATE from governed memory context. */
   prompt: string;
   /** Exactly one source image, base64. */
   sourceImageBase64: string;
   sourceImageMimeType: string;
   /** Optional human-readable title for the creative task. */
   title?: string;
+  /**
+   * H2-02 — the customer this project belongs to. Supplied by the caller so the
+   * governed memory context can be scoped to (project, customer). When absent, no
+   * governed memory context is assembled (graceful — `memory_context_used:false`).
+   */
+  customerId?: string;
 }
 
 /** Dependencies for the narrow action — a subset of `OrchestratorDeps`. */
@@ -55,6 +63,13 @@ export interface CreativeProjectActionDeps {
   businessRepository: BusinessRepository;
   lumen: LumenPort;
   processRegistry?: ProcessRegistry;
+  /**
+   * H2-02 — the canonical governed Memory service. When present (together with
+   * `input.customerId`), the action assembles the governed memory context and
+   * hands it to the creative slice as a SEPARATE, auditable business-context
+   * input (never concatenated into the user prompt).
+   */
+  memory?: MemoryService;
 }
 
 /**
@@ -65,6 +80,31 @@ export interface CreativeProjectActionDeps {
  * double-click cannot create a second Task/Asset. A key supplied without a
  * registry fails closed (the guarantee is honoured, not silently dropped).
  */
+/**
+ * Build the allowlisted trace metadata for the governed memory context. The trace
+ * carries ONLY stable references (count, pipe-joined memory ids, types,
+ * truncation flag) — never content, prompt, credential, or raw third-party
+ * payload. When no memory was in scope, it records `memory_context_used:false`.
+ */
+function memoryTraceMeta(ctx: MemoryContext | null): Record<string, unknown> {
+  if (!ctx || ctx.count === 0) {
+    return {
+      memory_context_used: false,
+      memory_count: 0,
+      memory_refs: '',
+      memory_types: '',
+      memory_truncated: false,
+    };
+  }
+  return {
+    memory_context_used: true,
+    memory_count: ctx.count,
+    memory_refs: ctx.records.map((r) => r.memory_id).join('|'),
+    memory_types: [...new Set(ctx.records.map((r) => r.memory_type))].join('|'),
+    memory_truncated: ctx.truncated,
+  };
+}
+
 export async function runCreativeProjectAction(
   input: CreativeProjectActionInput,
   deps: CreativeProjectActionDeps,
@@ -174,10 +214,40 @@ export async function runCreativeProjectAction(
     }
   }
 
+  // ---- Governed Memory Context (H2-02) -------------------------------------
+  // Assemble the bounded, deterministic, auditable context scoped to this
+  // (project, customer). Fail-closed: if memory was explicitly wired (both the
+  // service and the customer id are present) but assembly cannot be trusted, the
+  // action must not silently proceed with unverified governance — it fails closed.
+  let memoryContext: MemoryContext | null = null;
+  let governedSummary: MemoryContextSummary | null = null;
+  if (deps.memory && input.customerId) {
+    try {
+      memoryContext = await assembleMemoryContext(
+        deps.memory,
+        { projectId: input.projectId, customerId: input.customerId },
+        { now: () => startedAtIso },
+      );
+      governedSummary = toMemoryContextSummary(memoryContext);
+    } catch (e) {
+      const error = classifyFailure(STAGE, `MEMORY_CONTEXT_FAILED:${errorMessage(e)}`);
+      const handle = trace.start(STAGE, {
+        projectId: input.projectId,
+        idempotency: key ?? 'none',
+        memory_context_used: false,
+      });
+      trace.settle(handle, 'FAILED', { error, metadata: { projectId: input.projectId } });
+      const r = finish({ status: 'FAILED', currentStage: STAGE, error });
+      await persist('FAILED', STAGE);
+      return r;
+    }
+  }
+
   // ---- Execute the bounded CREATIVE_PRODUCTION slice ----------------------
   const handle = trace.start(STAGE, {
     projectId: input.projectId,
     idempotency: key ?? 'none',
+    ...memoryTraceMeta(memoryContext),
   });
 
   let creative;
@@ -189,6 +259,9 @@ export async function runCreativeProjectAction(
         source_image_base64: input.sourceImageBase64,
         source_image_mime_type: input.sourceImageMimeType,
         title: input.title,
+        // H2-02 — governed memory context as a SEPARATE, auditable business input.
+        // It is NEVER concatenated into `prompt` (the user action input).
+        governedMemoryContext: governedSummary ?? undefined,
       },
       {
         businessRepository: deps.businessRepository,
@@ -224,6 +297,8 @@ export async function runCreativeProjectAction(
         taskId,
         assetId,
         assetUri,
+        // H2-02 — minimal, trace/UI-safe summary of the governed memory consumed.
+        ...(governedSummary ? { governedMemory: governedSummary } : {}),
       },
     });
     await persist('SUCCEEDED', undefined);

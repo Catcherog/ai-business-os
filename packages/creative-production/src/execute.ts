@@ -89,6 +89,9 @@ export async function executeCreativeProduction(
     projectId: input.project_id,
     writes,
     compensation,
+    // H2-02 — echo the supplied governed context summary for observability. It is
+    // never merged into the Lumen `prompt` (the user action input).
+    governedContext: input.governedMemoryContext,
   };
 
   // 1) getProject

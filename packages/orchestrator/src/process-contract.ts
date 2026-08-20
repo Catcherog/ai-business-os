@@ -8,6 +8,8 @@
  * payloads, never secrets.
  */
 
+import type { MemoryContextSummary } from '@busos/memory';
+
 /**
  * Terminal + in-flight process states.
  *
@@ -142,6 +144,13 @@ export interface BusinessProcessOutput {
   taskId?: string;
   assetId?: string;
   assetUri?: string;
+  /**
+   * H2-02 — the minimal, trace/UI-safe summary of the governed memory context
+   * that was consumed by this action. Carries NO content / prompt / secret — only
+   * stable references (count, types, memory_ids, truncation flag). `undefined`
+   * when no governed memory was in scope (memory service or customer not wired).
+   */
+  governedMemory?: MemoryContextSummary;
 }
 
 /**

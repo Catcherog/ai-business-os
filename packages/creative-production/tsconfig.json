@@ -15,7 +15,8 @@
     "paths": {
       "@busos/contracts": ["../contracts/src/index.ts"],
       "@busos/business-repository": ["../business-repository/src/index.ts"],
-      "@busos/lumen-adapter": ["../lumen-adapter/src/index.ts"]
+      "@busos/lumen-adapter": ["../lumen-adapter/src/index.ts"],
+      "@busos/memory": ["../memory/src/index.ts"]
     }
   },
   "include": ["src", "tests", "scripts"]

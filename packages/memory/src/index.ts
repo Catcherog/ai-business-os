@@ -25,5 +25,20 @@ export { InMemoryMemoryRepository } from './memory-repository.js';
 export type { MemoryRepository } from './memory-repository.js';
 export { deriveMemoryId, isCanonicalRef, fnv1a64 } from './id.js';
 
+export {
+  assembleMemoryContext,
+  toMemoryContextSummary,
+  redactSecretContent,
+  DEFAULT_MEMORY_CONTEXT_LIMITS,
+} from './memory-context.js';
+export type {
+  MemoryContext,
+  MemoryContextRecord,
+  MemoryContextLimits,
+  MemoryContextOptions,
+  MemoryContextSummary,
+  ContextScope,
+} from './memory-context.js';
+
 export { seedCanonicalMemory } from './seed.js';
 export type { SeedMemoryOptions } from './seed.js';

@@ -17,7 +17,8 @@
   "dependencies": {
     "@busos/contracts": "file:../contracts",
     "@busos/business-repository": "file:../business-repository",
-    "@busos/lumen-adapter": "file:../lumen-adapter"
+    "@busos/lumen-adapter": "file:../lumen-adapter",
+    "@busos/memory": "file:../memory"
   },
   "devDependencies": {
     "@types/node": "22.10.2",

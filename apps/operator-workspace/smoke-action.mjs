@@ -37,16 +37,33 @@ await waitInit();
 const repo = ws.getActionRepo();
 const registry = ws.getActionRegistry();
 
-// 1) an EXISTING project (H1-04 acts on an existing Project, never recreates one)
+// 1) a H2-02 governed memory for the demo customer, anchored with full provenance
+const memSvc = ws.getMemoryService();
+const customerId = 'cust_smoke';
+await memSvc.recordMemory({
+  subject_type: 'CUSTOMER',
+  subject_id: customerId,
+  memory_type: 'PREFERENCE',
+  content: 'smoke 偏好：暖色调、保留自然质感',
+  source_type: 'HUMAN_REVIEW',
+  source_ref: 'case_smoke',
+  evidence_refs: [
+    { kind: 'REVIEW_CASE', ref: 'case_smoke' },
+    { kind: 'CUSTOMER', ref: customerId },
+  ],
+  confidence: 1,
+});
+
+// 2) an EXISTING project (H1-04 acts on an existing Project, never recreates one)
 const { project } = await repo.createProject({
-  customer_id: 'cust_smoke',
+  customer_id: customerId,
   lead_id: 'lead_smoke',
   project_type: 'portrait_shoot',
   title: 'H1-04 Smoke Project',
 });
 const projectId = project.project_id;
 
-// 2) run the real browser action (DEMO mode = Fake adapters, same code path as UI)
+// 3) run the real browser action (DEMO mode = Fake adapters, same code path as UI)
 const key = `smoke-gvr-${projectId}`;
 const res = await ws.runGenerateVisualReference(
   {
@@ -54,6 +71,7 @@ const res = await ws.runGenerateVisualReference(
     prompt: 'make a blue background for the hero shot',
     sourceImageBase64: 'aGVsbG8td29ybGQtZmFrZS1wbmc=',
     sourceImageMimeType: 'image/png',
+    customerId,
   },
   key,
 );
@@ -65,6 +83,15 @@ if (!res.result.output?.assetId) fail('output.assetId missing');
 if (!/^lumen-stub:\/\//.test(res.result.output?.assetUri ?? '')) fail('output.assetUri missing/invalid');
 if (res.result.completedStages?.length !== 1 || res.result.completedStages[0] !== 'CREATIVE_PRODUCTION') {
   fail(`completedStages should be [CREATIVE_PRODUCTION], got ${JSON.stringify(res.result.completedStages)}`);
+}
+
+// 3b) H2-02 — the governed memory context was actually consumed by the action
+const gm = res.result.output?.governedMemory;
+if (!gm || gm.count < 1) fail(`governed memory context not consumed (output.governedMemory missing/empty): ${JSON.stringify(gm)}`);
+const traceJson = JSON.stringify(res.result.trace);
+if (!traceJson.includes('memory_context_used')) fail('trace missing memory_context_used flag');
+for (const forbidden of ['password', 'secret', 'api_key', 'Bearer', 'lumen-stub://']) {
+  if (traceJson.includes(forbidden)) fail(`forbidden token in trace: ${forbidden}`);
 }
 
 // 4) real Task + Asset written and visible on the project

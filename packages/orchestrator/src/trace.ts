@@ -45,6 +45,12 @@ export const ALLOWED_TRACE_METADATA_KEYS: ReadonlySet<string> = new Set([
   'taskWrites',
   'assetWrites',
   'attempt',
+  // H2-02 — governed memory context (stable refs only; never content/prompt/secret)
+  'memory_context_used',
+  'memory_count',
+  'memory_refs',
+  'memory_types',
+  'memory_truncated',
 ]);
 
 const MAX_METADATA_VALUE_LENGTH = 200;

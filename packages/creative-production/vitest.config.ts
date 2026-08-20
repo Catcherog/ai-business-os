@@ -18,6 +18,9 @@ export default defineConfig({
       '@busos/lumen-adapter': fileURLToPath(
         new URL('../lumen-adapter/src/index.ts', import.meta.url),
       ),
+      '@busos/memory': fileURLToPath(
+        new URL('../memory/src/index.ts', import.meta.url),
+      ),
     },
   },
   test: {

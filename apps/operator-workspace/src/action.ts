@@ -11,7 +11,7 @@
  */
 import { runCreativeProjectAction, type BusinessProcessResult } from '@busos/orchestrator';
 import { createFakeLumenAdapter } from '@busos/lumen-adapter';
-import { getActionRepo, getActionRegistry } from './api.js';
+import { getActionRepo, getActionRegistry, getMemoryService } from './api.js';
 
 export type GenerateVisualReferenceMode = 'DEMO';
 
@@ -21,6 +21,12 @@ export interface GenerateVisualReferenceInput {
   sourceImageBase64: string;
   sourceImageMimeType: string;
   title?: string;
+  /**
+   * H2-02 — the customer this project belongs to. When supplied, the governed
+   * memory context is assembled and consumed by the action as a SEPARATE,
+   * auditable business input (never concatenated into `prompt`).
+   */
+  customerId?: string;
 }
 
 export interface GenerateVisualReferenceResult {
@@ -44,7 +50,13 @@ export async function runGenerateVisualReference(
   const registry = getActionRegistry();
   const result = await runCreativeProjectAction(
     input,
-    { businessRepository: repo, lumen: createFakeLumenAdapter() },
+    {
+      businessRepository: repo,
+      lumen: createFakeLumenAdapter(),
+      // H2-02 — wire the canonical governed Memory service; the action assembles
+      // the context only when `input.customerId` is also present.
+      memory: getMemoryService(),
+    },
     { idempotencyKey, registry },
   );
   return { result, mode: 'DEMO' };

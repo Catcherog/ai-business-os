@@ -10,6 +10,7 @@ import type {
 // application layer depends on them only through the repository port.
 import type { TaskCreateInput, AssetCreateInput } from '@busos/business-repository';
 import type { LumenPort } from '@busos/lumen-adapter';
+import type { MemoryContextSummary } from '@busos/memory';
 
 /**
  * Repository surface the creative-production orchestration depends on.
@@ -49,6 +50,12 @@ export interface CreativeProductionInput {
   source_image_mime_type: string;
   /** Optional human-readable title for the creative task. */
   title?: string;
+  /**
+   * H2-02 — the governed memory context summary handed down by the orchestrator.
+   * Carried ONLY as auditable metadata; it is NEVER concatenated into `prompt`
+   * (the user action input). Lumen receives `prompt` untouched.
+   */
+  governedMemoryContext?: MemoryContextSummary;
 }
 
 /** Pre-flight rejection reasons (fail closed, zero writes). */
@@ -87,6 +94,11 @@ export interface CreativeProductionResult {
   assetCommit?: CommitResultV1;
   /** Exact-record-id cleanup performed during partial failure (P5-E). */
   compensation: CreativeProductionCompensation;
+  /**
+   * H2-02 — the governed memory context summary that was supplied to this run,
+   * echoed back for observability (UI / trace). Never the raw memory content.
+   */
+  governedContext?: MemoryContextSummary;
 }
 
 export interface CreativeProductionDeps {

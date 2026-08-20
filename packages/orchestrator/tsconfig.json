@@ -19,7 +19,8 @@
       "@busos/golden-path": ["../golden-path/src/index.ts"],
       "@busos/project-lifecycle": ["../project-lifecycle/src/index.ts"],
       "@busos/lumen-adapter": ["../lumen-adapter/src/index.ts"],
-      "@busos/creative-production": ["../creative-production/src/index.ts"]
+      "@busos/creative-production": ["../creative-production/src/index.ts"],
+      "@busos/memory": ["../memory/src/index.ts"]
     }
   },
   "include": ["src", "tests"]
