@@ -3,7 +3,7 @@
 **Status:** CONTROL / GOVERNANCE COMPLETE — PUSHED / REMOTE VERIFIED (no product-code change)
 **Date:** 2026-08-20
 **Baseline:** `origin/main` = `532234554eb0a7c8daf0422cd12f0c41be768a9c` (re-verified via `git ls-remote`)
-**Final remote SHA:** _filled after push — see §Authority below_
+**Final remote SHA (implementation commit):** `4e94a2f6290324b539e3b5d2383328919f26812e` (re-verified via `git ls-remote origin refs/heads/main` after push; a report-correction follow-up commit records this SHA — live tip = that follow-up)
 
 This task is **control / governance only**. It does not add H2-03, Evaluation Center,
 Golden Set, Memory durability, embeddings/vector, H3, H4, or any product capability. It
@@ -26,7 +26,7 @@ OWNER ACCEPTANCE — PENDING (Owner review of the protocol required to ratify)
 
 ### AUTHORITY
 - Baseline remote SHA: `532234554eb0a7c8daf0422cd12f0c41be768a9c` (verified equal to Owner-confirmed baseline)
-- Final remote SHA: `<git ls-remote after push>`
+- Final remote SHA: `4e94a2f6290324b539e3b5d2383328919f26812e` (implementation commit, re-verified via `git ls-remote` after push)
 - Method: `git fetch origin && git ls-remote origin refs/heads/main` (not local memory / not hand-written SHA)
 
 ### CHANGESET
