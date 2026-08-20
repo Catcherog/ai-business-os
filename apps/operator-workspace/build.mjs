@@ -9,11 +9,42 @@
 // id generator (util.ts) uses randomBytes; in the demo only the fake adapter is
 // used, so a hex-capable randomBytes is sufficient.
 import * as esbuild from 'esbuild';
+import { execSync } from 'node:child_process';
+import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, '..', '..');
+
+// ---- Build identity (BUSOS-R2-X01) -----------------------------------------
+// The preview must answer "which Git commit am I looking at?" without shipping
+// any secret. Source order: Vercel build env (deployment metadata) → real local
+// Git HEAD → safe fallback. Never a hard-coded SHA.
+function computeBuildSha() {
+  const fromEnv = (process.env.VERCEL_GIT_COMMIT_SHA ?? '').trim();
+  if (fromEnv) return fromEnv.slice(0, 7);
+  try {
+    const git = execSync('git rev-parse --short HEAD', {
+      cwd: __dirname,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+    if (git) return git.slice(0, 7);
+  } catch {
+    // fall through to the safe fallback below
+  }
+  return 'unknown';
+}
+const BUILD_SHA = computeBuildSha();
+const RELEASE = 'BUSOS-R2-X01';
+const BUILD_MODE = 'DEMO';
+const buildDefine = {
+  'process.env.NODE_ENV': '"production"',
+  __BUILD_SHA__: JSON.stringify(BUILD_SHA),
+  __RELEASE__: JSON.stringify(RELEASE),
+  __BUILD_MODE__: JSON.stringify(BUILD_MODE),
+};
 
 const alias = {
   '@busos/contracts': resolve(repoRoot, 'packages/contracts/src/index.ts'),
@@ -40,13 +71,24 @@ await esbuild.build({
   target: 'es2020',
   outfile: resolve(__dirname, 'dist/bundle.js'),
   alias,
-  define: { 'process.env.NODE_ENV': '"production"' },
+  define: buildDefine,
   charset: 'utf8',
   banner: { js: 'globalThis.process = globalThis.process || { env: {} };' },
   logLevel: 'info',
 });
 
-console.log('operator-workspace build complete -> dist/bundle.js');
+// ---- X01: self-contained static deploy root ---------------------------------
+// Vercel serves `dist/` directly. Emit dist/index.html (asset refs rewritten to
+// the bundled siblings) + dist/styles.css so the directory is a complete static
+// site with no absolute / localhost / node_modules dependency.
+const htmlSource = readFileSync(resolve(__dirname, 'index.html'), 'utf8');
+const htmlDeploy = htmlSource
+  .replace('href="./src/styles.css"', 'href="./styles.css"')
+  .replace('src="./dist/bundle.js"', 'src="./bundle.js"');
+writeFileSync(resolve(__dirname, 'dist/index.html'), htmlDeploy, 'utf8');
+copyFileSync(resolve(__dirname, 'src/styles.css'), resolve(__dirname, 'dist/styles.css'));
+
+console.log(`operator-workspace build complete -> dist/bundle.js (${BUILD_MODE} · build ${BUILD_SHA} · ${RELEASE})`);
 
 // ---- Server-only CONNECTED boundary (node platform, real crypto) ----
 // The browser bundle must NEVER include server/ — it lives only here, with the

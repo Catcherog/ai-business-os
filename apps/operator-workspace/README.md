@@ -41,7 +41,39 @@ npm run build     # node build.mjs
 `build.mjs` (esbuild) emits:
 
 - `dist/bundle.js` — the browser SPA (DEMO mode; contains **no** secrets)
+- `dist/index.html` + `dist/styles.css` — self-contained static deploy root (asset
+  refs rewritten to the bundled siblings; BUSOS-R2-X01)
 - `server/dist/*.js` — the node CONNECTED boundary + HTTP server
+
+Every build bakes a **build identity** (BUSOS-R2-X01): `Build SHA` (from
+`VERCEL_GIT_COMMIT_SHA` when building on Vercel, else `git rev-parse --short
+HEAD`, else a safe `unknown` fallback) and the `DEMO` mode badge. The sidebar
+footer renders `DEMO · Build <sha> · BUSOS-R2-X01`. No environment variable
+value or secret is ever included in the bundle.
+
+## Public preview / deployment (BUSOS-R2-X01)
+
+A root `vercel.json` makes the workspace deployable as a static site:
+
+```json
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "apps/operator-workspace/dist",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
+```
+
+The SPA is fully in-memory (no URL routing), so any path falls back to
+`index.html` (no 404 on direct load / refresh). One-command deploy (after
+`vercel login` / `vercel link`):
+
+```bash
+vercel --prod
+```
+
+This deploys a **DEMO** preview: browser-internal `FakeFeishuAdapter` +
+`FakeLumenAdapter` + in-memory registry. The CONNECTED server boundary and any
+real credential stay out of the static site.
 
 ## Run
 
@@ -102,6 +134,9 @@ Smoke suites (headless, DOM-shimmed):
   recorded in the shared registry + idempotency replay + no secret leak.
 - `smoke-server.mjs` — drives the CONNECTED boundary probe; asserts `BLOCKED` with no
   credentials.
+- `smoke-preview.mjs` (X01) — asserts the built static preview carries a real build
+  SHA (X01-A/B), no secret in the bundle (X01-C), and that `dist/` is a complete
+  self-contained static site (X01-D).
 
 ## Packages touched
 

@@ -114,16 +114,38 @@ git ls-remote origin refs/heads/main
 
 and record `FINAL REMOTE SHA`.
 
-**Completion report MUST distinguish:**
+**Completion report MUST distinguish (four-part SHA model, clarified by BUSOS-R2-X01):**
 
 ```
-BASELINE SHA:          <remote SHA at task start>
-IMPLEMENTATION COMMIT: <sha>
-DOCUMENTATION / COMPLETION COMMIT: <sha or "same as implementation">
-FINAL REMOTE SHA:      <sha after push>
+BASELINE SHA:                  <remote origin/main SHA at task start>
+IMPLEMENTATION SHA:            <commit containing the product / engineering changes>
+CLOSURE / REPORT SHA:          <commit containing the completion report + index update>
+REMOTE TIP VERIFIED EXTERNALLY: <git ls-remote origin refs/heads/main after push>
 ```
 
 If implementation + report are the same commit, say so explicitly. Forbidden: saying `pushed successfully` without a SHA.
+
+### Closure-SHA self-reference rule (X01)
+
+A completion report **cannot and must not** try to record its own commit SHA inside
+its own file. Doing so creates an infinite self-reference:
+
+```
+report → commit A → write SHA A into report → commit B → SHA changed → …
+```
+
+Therefore:
+
+- The **CLOSURE / REPORT SHA is established ONLY externally** — `git ls-remote
+  origin refs/heads/main` after push — and is reported in the task handoff / the
+  next authority snapshot. The closure commit is **not required to contain its own
+  SHA** anywhere in its own file contents.
+- The Audit Packet may record `IMPLEMENTATION SHA` (known at write time) and write
+  `CLOSURE SHA: externally verified after push; see task handoff / next authority snapshot.`
+- **Never** create a recursive documentation commit purely to "fill in the final SHA".
+- GOV-01 used `IMPLEMENTATION SHA` + a documentation follow-up. **X01 clarifies and
+  freezes the non-self-referential closure-SHA rule going forward.** Historical SHAs
+  are preserved as recorded.
 
 ---
 
@@ -485,7 +507,7 @@ and run the project's secret-leak / browser-bundle smoke. If a credential ever e
 
 ## 24. Handoff protocol
 
-`07-HANDOFF.md` is updated to require: every new Execution / Planning window reads `R2-VERIFICATION-AND-AUDIT-PROTOCOL.md`; when product acceptance is in scope, also read `R2-ACCEPTANCE-CHECKLIST.md`. Task-end handoff MUST include: baseline SHA, final SHA, completion report, CI state, Preview URL, Owner Acceptance state.
+`07-HANDOFF.md` is updated to require: every new Execution / Planning window reads `R2-VERIFICATION-AND-AUDIT-PROTOCOL.md`; when product acceptance is in scope, also read `R2-ACCEPTANCE-CHECKLIST.md`. Task-end handoff MUST include: baseline SHA, final SHA (closure tip verified externally via `git ls-remote` — never the closure commit's own self-recorded SHA), completion report, CI state, Preview URL, Owner Acceptance state.
 
 ---
 
