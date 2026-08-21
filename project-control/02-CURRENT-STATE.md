@@ -17,7 +17,7 @@ BUSOS-R2-X01-CLOSE — Stable Preview + CI Green Closure
 PUBLIC DEMO VERIFIED — PUSHED / REMOTE VERIFIED — OWNER ACCEPTANCE PENDING]
 - Stable Operator Workspace DEMO Preview: **AVAILABLE**
 - URL: **https://ai-business-os-demo-ochre.vercel.app** (project `catcher1/ai-business-os-demo`,
-  production alias; maps to deployment `dpl_89YegButvDQLcSWheCZe5GV9aM5n`)
+  production alias; maps to current production deployment `dpl_7VezF3X82JjnwhvobqM2RUkJ1kkp`)
 - Deployed Build: **c7a25d8** (deployed implementation SHA — final `vercel.json`
   SPA-fallback routing + `.gitignore` `.vercel`; Vercel GitHub integration auto-deploy
   from the committed state; bundle contains `c7a25d8`, no stale `aba746a`)

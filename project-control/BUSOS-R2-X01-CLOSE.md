@@ -63,9 +63,9 @@ OWNER ACCEPTANCE PENDING
 
 - Auth: `vercel whoami` -> `catcherog` (team `catcher1`). No new credential required.
 - PROJECT: `ai-business-os-demo` (project `catcher1/ai-business-os-demo`; `.vercel/` local only, gitignored).
-- DEPLOYMENT: Vercel GitHub integration auto-deployed from the **committed** `c7a25d8` (production, created 2026-08-21T13:24:23+08:00). No dirty-worktree upload: the live deployment corresponds exactly to the repository tree at `c7a25d8`.
-- DEPLOYMENT URL: `https://ai-business-os-demo-dp57gof9f-catcher1.vercel.app` (deployment id `dpl_89YegButvDQLcSWheCZe5GV9aM5n`, target=production, Ready).
-- STABLE PRODUCTION URL: **`https://ai-business-os-demo-ochre.vercel.app`** — project production alias; `vercel inspect` resolves it to the same deployment `dpl_89YegButvDQLcSWheCZe5GV9aM5n`; public HTTP 200 without authentication.
+- DEPLOYMENT: Vercel GitHub integration auto-deployed from the **committed** `c7a25d8` (production, created 2026-08-21T13:24:23+08:00), then an **explicit redeploy** `vercel --prod --build-env VERCEL_GIT_COMMIT_SHA=c7a25d8` (created 2026-08-21T13:30:01+08:00) made the live production deployment unambiguously correspond to `c7a25d8`. No dirty-worktree ambiguity: the live bundle is built from the `c7a25d8` tree with the injected SHA `c7a25d8`.
+- DEPLOYMENT URL: `https://ai-business-os-demo-nuob72fhr-catcher1.vercel.app` (deployment id `dpl_7VezF3X82JjnwhvobqM2RUkJ1kkp`, target=production, Ready; current production deployment). Prior GitHub-auto-deploy of the same commit: `ai-business-os-demo-dp57gof9f-catcher1.vercel.app` (`dpl_89YegButvDQLcSWheCZe5GV9aM5n`).
+- STABLE PRODUCTION URL: **`https://ai-business-os-demo-ochre.vercel.app`** — project production alias; `vercel inspect` resolves it to the current production deployment `dpl_7VezF3X82JjnwhvobqM2RUkJ1kkp`; public HTTP 200 without authentication.
 - Observed (recorded, not guessed): the raw deployment URL and the `ai-business-os-demo-catcher1.vercel.app` / `ai-business-os-demo-git-main-catcher1.vercel.app` aliases answer `302 -> vercel.com/sso-api` (Vercel per-host SSO protection), while the `-ochre` alias serves 200 publicly. The bare `ai-business-os-demo.vercel.app` name belongs to an unrelated third party (307 to an external site) — **never documented as a BUSOS URL**.
 - MODE: DEMO (FakeFeishuAdapter + FakeLumenAdapter + InMemoryProcessRegistry; sidebar `IN-MEMORY · DEMO · Build c7a25d8 · BUSOS-R2-X01`).
 - BUILD SHA SHOWN: `c7a25d8` — the deployed implementation commit short SHA (not the CI-repair `aba746a`).
@@ -117,7 +117,7 @@ UNCHANGED - OPEN / NON-ENGINEERING LIVE DEPENDENCY. Public preview is DEMO only;
 | X01-CLOSE-D Vercel auth confirmed | PASS (`catcherog`) |
 | X01-CLOSE-E deployed implementation commit pushed + remote verified | PASS (`c7a25d8`) |
 | X01-CLOSE-F CI PASS on deployed implementation SHA | PASS (run 32450422601) |
-| X01-CLOSE-G stable public URL exists + maps to deployed SHA | PASS (`ai-business-os-demo-ochre.vercel.app` -> dpl_89YegButvDQLcSWheCZe5GV9aM5n) |
+| X01-CLOSE-G stable public URL exists + maps to deployed SHA | PASS (`ai-business-os-demo-ochre.vercel.app` -> dpl_7VezF3X82JjnwhvobqM2RUkJ1kkp) |
 | X01-CLOSE-H public HTTP + SPA fallback + static assets | PASS (all 200) |
 | X01-CLOSE-I public DEMO shows correct Build SHA/mode | PASS (`c7a25d8` / DEMO) |
 | X01-CLOSE-J public product journey works | PASS (21/21 deployed-bundle checks) |
