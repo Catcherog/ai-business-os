@@ -17,26 +17,21 @@
 
 ## 0. How to open the product (acceptance prerequisite)
 
-**Stable public preview (BUSOS-R2-X01 — preferred entry):**
+**PRIMARY OWNER ENTRY — stable public preview (BUSOS-R2-X01-CLOSE):**
 
 ```text
-URL: <stable preview URL> — pending Owner-side Vercel deployment (see below)
-Build SHA: shown in the sidebar footer as "Build <sha> · BUSOS-R2-X01" (DEMO badge)
+URL: https://ai-business-os-demo-ochre.vercel.app
+Expected Mode: DEMO
+Expected Build: c7a25d8
 ```
 
-Once the Owner (or a Vercel-authenticated session) runs the one-command deploy,
-the preview is reachable without any local install:
-
-```bash
-cd <repo>
-vercel login            # Owner-provided Vercel account
-vercel link             # first-time link, or skip if already linked
-vercel --prod           # stable production URL: <project>.vercel.app
-```
+Open the URL in a browser. The sidebar footer must show **IN-MEMORY · DEMO ·
+Build c7a25d8 · BUSOS-R2-X01**. No local install, no login needed.
 
 The static site is served from `apps/operator-workspace/dist` (self-contained:
-`index.html` + `bundle.js` + `styles.css`), the sidebar shows **IN-MEMORY · DEMO ·
-Build <sha> · BUSOS-R2-X01**, and every path falls back to `index.html` (no 404).
+`index.html` + `bundle.js` + `styles.css`), and every path falls back to the app
+(no 404). The deployment corresponds exactly to repository commit `c7a25d8`
+(deployed implementation SHA; Vercel GitHub integration auto-deploy).
 
 **Local browser DEMO (fallback path):**
 
@@ -50,16 +45,11 @@ node build.mjs                 # builds dist/bundle.js + dist/index.html + dist/
 - Uses `FakeFeishuAdapter` + `FakeLumenAdapter` + shared in-memory `InMemoryProcessRegistry`. No Feishu/Lumen credential reaches the browser.
 - The UI footer shows `DEMO` badge + `Build SHA` + `BUSOS-R2-X01`. Treat all data as seeded demo data.
 
-**Known limitation:** the stable public URL is **deployment-ready but not yet live**
-— it is blocked only on Owner-side Vercel authentication (BLOCKED — EXTERNAL AUTH
-REQUIRED, tracked in `BUSOS-R2-X01.md`). Until deployed, manual acceptance uses the
-local DEMO build above.
-
 ---
 
 ## 1. Product journey checklist
 
-| # | Step | Status (as of GOV-01) | Evidence |
+| # | Step | Status (as of X01-CLOSE) | Evidence |
 |---|------|------------------------|----------|
 | 1 | Open Operator Workspace | DEMO VERIFIED | `smoke.mjs` → `SMOKE_OK` (bundle loads) |
 | 2 | Overview (real KPIs + activity) | DEMO VERIFIED | `H1_05_CLOSURE_OK` (projects=2, pendingReviews=3, runs=4 from live read models) |
@@ -89,8 +79,8 @@ local DEMO build above.
 Copy this block into your acceptance decision. WorkBuddy cannot fill `OWNER VERIFIED`.
 
 ```
-TASK / RELEASE:        <e.g. H2-02 demo build>
-PREVIEW / BUILD SHA:   <fill when X01 ships; today: local DEMO>
+TASK / RELEASE:        <e.g. BUSOS-R2-X01-CLOSE public DEMO>
+PREVIEW / BUILD SHA:   https://ai-business-os-demo-ochre.vercel.app · Build c7a25d8
 DATE:                  <YYYY-MM-DD>
 STEPS OWNER-VERIFIED:  <list #s, or "all 17">
 STEPS DEFERRED:        <list #s>

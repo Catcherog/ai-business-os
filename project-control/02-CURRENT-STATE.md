@@ -12,20 +12,23 @@ CURRENT PHASE:
 R2 — H2 Governed Intelligence (H1 Operator Workspace MVP closed)
 
 CURRENT TASK:
-BUSOS-R2-X01 — Stable Operator Workspace DEMO Preview + Closure-SHA protocol fix
-[ENGINEERING COMPLETE — DEPLOYMENT READY — PUBLIC PREVIEW BLOCKED (external auth)]
-- Build identity: every build bakes `Build SHA` (VERCEL_GIT_COMMIT_SHA → `git
-  rev-parse --short HEAD` → safe fallback) + `Release BUSOS-R2-X01` + `DEMO` badge.
-- Deployment-ready: root `vercel.json` (buildCommand / outputDirectory
-  `apps/operator-workspace/dist` / SPA fallback rewrite) + self-contained static
-  root (`dist/index.html` + `dist/styles.css` + `dist/bundle.js`).
-- Governance fix: non-self-referential Closure-SHA rule added to
-  `R2-VERIFICATION-AND-AUDIT-PROTOCOL.md` §4 (BASELINE / IMPLEMENTATION / CLOSURE /
-  REMOTE TIP verified externally).
-- PUBLIC PREVIEW BLOCKED — EXTERNAL AUTH REQUIRED: Vercel CLI present but not
-  authenticated in the execution environment; one-command deploy documented
-  (`vercel --prod` after `vercel login`). No URL was faked.
-- See `BUSOS-R2-X01.md` (Audit Packet) + `R2-ACCEPTANCE-CHECKLIST.md` (Owner journey).
+BUSOS-R2-X01-CLOSE — Stable Preview + CI Green Closure
+[ENGINEERING COMPLETE — REMOTE CI PASS — STABLE PUBLIC DEMO AVAILABLE —
+PUBLIC DEMO VERIFIED — PUSHED / REMOTE VERIFIED — OWNER ACCEPTANCE PENDING]
+- Stable Operator Workspace DEMO Preview: **AVAILABLE**
+- URL: **https://ai-business-os-demo-ochre.vercel.app** (project `catcher1/ai-business-os-demo`,
+  production alias; maps to deployment `dpl_89YegButvDQLcSWheCZe5GV9aM5n`)
+- Deployed Build: **c7a25d8** (deployed implementation SHA — final `vercel.json`
+  SPA-fallback routing + `.gitignore` `.vercel`; Vercel GitHub integration auto-deploy
+  from the committed state; bundle contains `c7a25d8`, no stale `aba746a`)
+- GitHub CI: **PASS** (run `32447350665` for CI-repair `aba746a`; run `32450422601`
+  for deployable `c7a25d8` — first green `main` CI since H2-02)
+- Public Demo: **VERIFIED** (HTTP all-200 incl. deep-path SPA fallback; bundle identity;
+  deployed-bundle product journey 21/21 PASS; secret scan PASS)
+- Owner Acceptance: **PENDING** (manual pass at the stable URL, per checklist §0)
+- BL-018: **OPEN** (unchanged — NON-ENGINEERING LIVE DEPENDENCY; DEMO-only preview)
+- H2-03: **NOT STARTED / NOT AUTHORIZED**
+- See `BUSOS-R2-X01-CLOSE.md` (Audit Packet) + `R2-ACCEPTANCE-CHECKLIST.md` (Owner journey).
 
 PRIOR TASK (closed):
 BUSOS-R2-GOV-01 — Verification, Preview & Audit Protocol
@@ -185,10 +188,10 @@ NEXT AUTHORIZED WORK:
 **None beyond X01 — awaiting explicit owner authorization.** H1 is closed (final verdict B,
 `H1 ENGINEERING COMPLETE / MVP LIVE CLOSURE BLOCKED — BL-018`); H2-01 (Canonical Memory
 Foundation) and H2-02 (Governed Memory Context Consumption) are COMPLETE and pushed with
-gates A–J PASS. GOV-01 (governance protocol) is COMPLETE and pushed. X01 (this task) is
-ENGINEERING COMPLETE with a **deployment-ready** public DEMO preview; the actual stable
-public URL requires Owner-side Vercel authentication (`vercel login` / `vercel --prod`) —
-see `BUSOS-R2-X01.md` for the one-command deploy instruction. Per the STOP rule and
+gates A–J PASS. GOV-01 (governance protocol) is COMPLETE and pushed. X01-CLOSE (this task)
+is COMPLETE: CI green, stable public DEMO preview LIVE at
+`https://ai-business-os-demo-ochre.vercel.app` (Build `c7a25d8`, DEMO), public demo
+verified 21/21 — the only remaining step is Owner manual acceptance. Per the STOP rule and
 `R2-VERIFICATION-AND-AUDIT-PROTOCOL.md`, do NOT auto-start the **Evaluation Center**, memory
 scoring/decay, embeddings / vector / semantic retrieval, LLM-based extraction, **H2-03**, H3 /
 H4, or BL-018 remediation — none of these can be auto-started. Owner choices for the next
@@ -202,8 +205,9 @@ H2-03: **NOT STARTED / NOT AUTHORIZED.**
 
 IMPORTANT DEFERRED ITEMS:
 - BL-018 — live full-process E2E (P6-C); OPEN / NON-ENGINEERING LIVE DEPENDENCY.
-- PUBLIC PREVIEW — deployment-ready (X01) but not yet live at a stable public URL;
-  blocked only on Owner-side Vercel authentication (no new product work required).
+- PUBLIC PREVIEW — LIVE at `https://ai-business-os-demo-ochre.vercel.app`
+  (X01-CLOSE, Build `c7a25d8`, DEMO). Owner manual acceptance still PENDING
+  (no new product work required).
 - BL-015 — P1-02 extraction gap ("新中式" alone); DEFERRED / NON-BLOCKING.
 - BL-016 — CLOSED (P5 owner override).
 - BL-017 — Feishu Lead DateTime write; DEFERRED / NON-BLOCKING maintenance item.

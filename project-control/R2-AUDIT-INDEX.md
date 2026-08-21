@@ -36,6 +36,7 @@
 | GOV-01 | Verification, Preview & Audit Protocol (governance only) | `532234554eb0a7c8daf0422cd12f0c41be768a9c` | `44c8c06bc6e8adac86838e760011c8caaae4ed84` (impl `4e94a2f`; record-final-SHA follow-up `44c8c06`) | ENGINEERING PASS (control files only) | NOT APPLICABLE | NOT APPLICABLE | NOT APPLICABLE | OWNER ACCEPTANCE PENDING | `project-control/BUSOS-R2-GOV-01.md` |
 | KB-SNAPSHOT | Feishu KB audit + snapshot for H2-03 (read-only / audit only, no code) | `44c8c06bc6e8adac86838e760011c8caaae4ed84` | `827ec73b4c824b393d6e196d996a659bd1346331` (snapshot; + index-row follow-up commit) | NOT APPLICABLE (audit/snapshot only) | NOT APPLICABLE | NOT APPLICABLE | NOT APPLICABLE | OWNER ACCEPTANCE PENDING | `project-control/BUSOS-KB-SNAPSHOT-v0.1.md` |
 | X01 | Stable Operator Workspace DEMO Preview + Closure-SHA protocol fix (ops/deploy, governance fix) | `44c8c06bc6e8adac86838e760011c8caaae4ed84` | impl `5c5d91bb904b2ad02bc504b6fbd58328ff5437d5`; closure = remote tip verified externally after push (see handoff) | ENGINEERING PASS | DEMO PRODUCT PASS (local build + static deploy readiness) | NOT APPLICABLE (DEMO preview only; CONNECTED server unchanged in repo) | LIVE E2E BLOCKED — BL-018 (unchanged) | OWNER ACCEPTANCE PENDING | `project-control/BUSOS-R2-X01.md` |
+| X01-CLOSE | Stable Preview + CI Green Closure: undici CI repair + reproducible public preview routing (deploy) | `e78eb0f05ed28a538f542e513eddd9b84cc08f52` | impl `aba746a` (CI repair); deployed impl `c7a25d8`; closure = remote tip verified externally after push (see handoff) | ENGINEERING PASS | DEMO PRODUCT PASS (stable public preview verified 21/21 deployed-bundle) | NOT APPLICABLE (DEMO preview only) | LIVE E2E BLOCKED — BL-018 (unchanged) | OWNER ACCEPTANCE PENDING | `project-control/BUSOS-R2-X01-CLOSE.md` |
 
 > **Note on H1-04 / H1-05 Final SHA:** the implementation commit is recorded first; a small follow-up commit corrected the SHA line inside the completion report. The "Final SHA" above is the task-era tip. The report's own `Pushed:` line may cite the implementation commit — both are listed for traceability.
 >
@@ -54,7 +55,7 @@
 
 ## Next task readiness (not authorized)
 
-- **BUSOS-R2-X01 — Stable Operator Workspace DEMO Preview** — AUTHORIZED and completed as the current task (row above). Deploy readiness shipped (build identity + `vercel.json` + self-contained `dist/`); public deployment requires Owner-side Vercel auth (`vercel login` / token) — see `BUSOS-R2-X01.md` and the acceptance checklist.
+- **BUSOS-R2-X01-CLOSE — Stable Preview + CI Green Closure** — AUTHORIZED and COMPLETE (rows above). Public preview is **live** at `https://ai-business-os-demo-ochre.vercel.app` (stable alias of project `catcher1/ai-business-os-demo`, Build `c7a25d8`, DEMO mode), CI PASS on both the CI-repair (`aba746a`) and the deployed implementation (`c7a25d8`) commits. Remaining: Owner manual acceptance only.
 - **H2-03** — NOT STARTED / NOT AUTHORIZED. (BUSOS-KB-SNAPSHOT v0.1 is a READ/AUDIT-only precursor, not H2-03 implementation.)
 - **Evaluation Center, Golden Set, Memory durability, embeddings/vector, H3, H4** — explicitly out of scope, not auto-started.
 
