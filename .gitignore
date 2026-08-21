@@ -19,3 +19,5 @@ _trash_hr_nm/
 # vitest/vite cache dirs (local, relative to each package)
 .vitest-tmp/
 
+# Vercel local project metadata (never commit)
+.vercel

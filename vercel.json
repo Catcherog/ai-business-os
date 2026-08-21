@@ -4,6 +4,6 @@
   "outputDirectory": "apps/operator-workspace/dist",
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/((?!index\\.html$|bundle\\.js$|styles\\.css$).*)", "destination": "/" }
   ]
 }
