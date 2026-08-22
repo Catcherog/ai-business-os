@@ -98,15 +98,35 @@ export interface MemoryContextSummary {
 
 /**
  * Defense-in-depth: obvious credential material (`password=...`, `api_key:...`,
- * `Bearer ...`) is never carried into a context. The keyword must be immediately
- * followed by `[:=]<value>` to avoid redacting ordinary business language.
+ * `Bearer <token>`) is never carried into a context.
+ *
+ * Two patterns:
+ *   1. `KEYWORD[:=]VALUE` — covers `password=`, `api_key:`, `token:`, `secret:`,
+ *      `credential:`, `sk-` / `pk-` / `rk-` … The keyword itself is the
+ *      credential label and `[:=]` is the delimiter.
+ *   2. `bearer` / `authorization` SPACE-delimited token syntax (standard HTTP
+ *      Bearer auth, e.g. `Bearer xyz789`, `Authorization: Bearer xyz789`). Here
+ *      the token is separated by whitespace, not `[:=]`. The captured token MUST
+ *      contain at least one non-letter character (digit / symbol) so ordinary
+ *      natural-language use of the word "bearer" (e.g. "the bearer of this
+ *      letter") is NEVER mistaken for a credential and silently deleted.
+ *
+ * Ordinary business language containing no credential keyword is untouched.
  */
-const SECRET_KEYWORD_RE =
-  /(sk|pk|rk|bearer|api[_-]?key|apikey|password|passwd|secret|token|authorization|credential)/i;
-const SECRET_VALUE_RE = new RegExp(`(${SECRET_KEYWORD_RE.source})\\s*[:=]\\s*\\S+`, 'gi');
+const SECRET_LABEL_RE =
+  /(sk|pk|rk|api[_-]?key|apikey|password|passwd|secret|token|credential)/i;
+const SECRET_LABEL_VALUE_RE = new RegExp(`(${SECRET_LABEL_RE.source})\\s*[:=]\\s*\\S+`, 'gi');
+
+// Bearer / Authorization space-delimited token syntax. The lookahead requires
+// the token to contain at least one non-letter char, which is what keeps
+// natural-language "bearer" (followed by ordinary words) from being redacted.
+const BEARER_TOKEN_RE =
+  /\b(bearer|authorization)\b\s*(?:[:=]\s*)?(?:bearer\s+)?(?=[\p{L}\p{N}_.\-~+=]*[^\p{L}\s])[\p{L}\p{N}_.\-~+=]+/giu;
 
 export function redactSecretContent(content: string): string {
-  return content.replace(SECRET_VALUE_RE, '$1=[REDACTED]');
+  return content
+    .replace(SECRET_LABEL_VALUE_RE, '$1=[REDACTED]')
+    .replace(BEARER_TOKEN_RE, '$1=[REDACTED]');
 }
 
 /**

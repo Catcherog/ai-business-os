@@ -219,4 +219,36 @@ describe('H2-02 — secret redaction (defense in depth)', () => {
     expect(summary.refs[0]).toMatch(/^mem_/);
     expect(JSON.stringify(summary)).not.toContain('新中式');
   });
+
+  it('MEM-17 CORR-01: redacts standard Bearer whitespace syntax (and password)', () => {
+    const out = redactSecretContent(
+      '客户要求晚间沟通，服务密码 password=abc123，授权 Bearer xyz789。',
+    );
+    expect(out).toContain('password=[REDACTED]');
+    expect(out).toContain('Bearer=[REDACTED]');
+    expect(out).not.toContain('abc123');
+    expect(out).not.toContain('xyz789');
+  });
+
+  it.each([
+    'Bearer xyz789',
+    'bearer xyz789',
+    'Bearer:xyz789',
+    'Bearer=xyz789',
+    'Authorization: Bearer xyz789',
+  ])('MEM-17 CORR-01: redacts bearer token variant — %s', (input) => {
+    expect(redactSecretContent(input)).not.toContain('xyz789');
+  });
+
+  it('MEM-17 CORR-01: does NOT redact natural-language use of the word "bearer"', () => {
+    const sentences = [
+      'the bearer of this letter must present valid identification',
+      '持票人 bearer 需出示有效证件方可入场',
+      'please ask the bearer to confirm the appointment',
+      'the bearer must sign before the document is released',
+    ];
+    for (const s of sentences) {
+      expect(redactSecretContent(s)).toBe(s);
+    }
+  });
 });
