@@ -1,0 +1,1114 @@
+[
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "MEM-01",
+    "domain": "MEMORY",
+    "provenance_type": "BUSINESS_ABSTRACTED",
+    "query": "对 Customer-A 的项目生成视觉参考：客户偏好深色影调，上下文是否命中该偏好？",
+    "expected": {
+      "memory_ids": ["mem_6efea88b7660b39e"],
+      "memory_required": true
+    },
+    "fixture": {
+      "memory_setup": {
+        "project_id": "proj_a_101",
+        "customer_id": "cust_a_001",
+        "records": [
+          {
+            "subject_type": "CUSTOMER",
+            "subject_id": "cust_a_001",
+            "memory_type": "PREFERENCE",
+            "content": "客户偏好：新中式风格、偏深色影调，避免过度磨皮（保留皮肤自然质感）。",
+            "source_type": "HUMAN_REVIEW",
+            "source_ref": "case_0001",
+            "evidence_refs": [{ "kind": "REVIEW_CASE", "ref": "case_0001" }],
+            "confidence": 1
+          }
+        ]
+      }
+    },
+    "source": { "source_id": "GS-01", "source_type": "KB_SNAPSHOT_SCENARIO", "generated_or_manual": "MANUAL" },
+    "tags": ["correct-memory-use", "positive"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": false
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "MEM-02",
+    "domain": "MEMORY",
+    "provenance_type": "BUSINESS_ABSTRACTED",
+    "query": "同一项目同时存在 CUSTOMER 偏好与 PROJECT 决策记忆，上下文是否同时装配并按契约确定性排序？",
+    "expected": {
+      "memory_ids": ["mem_2c7c72d9f99fa0e4", "mem_6efea88b7660b39e"],
+      "memory_required": true
+    },
+    "fixture": {
+      "memory_setup": {
+        "project_id": "proj_a_101",
+        "customer_id": "cust_a_001",
+        "records": [
+          {
+            "subject_type": "CUSTOMER",
+            "subject_id": "cust_a_001",
+            "memory_type": "PREFERENCE",
+            "content": "客户偏好：新中式风格、偏深色影调，避免过度磨皮（保留皮肤自然质感）。",
+            "source_type": "HUMAN_REVIEW",
+            "source_ref": "case_0001",
+            "evidence_refs": [{ "kind": "REVIEW_CASE", "ref": "case_0001" }],
+            "confidence": 1
+          },
+          {
+            "subject_type": "PROJECT",
+            "subject_id": "proj_a_101",
+            "memory_type": "DECISION",
+            "content": "项目方案：采用龙井茶园外景与自然光拍摄。",
+            "source_type": "HUMAN_REVIEW",
+            "source_ref": "case_0002",
+            "evidence_refs": [{ "kind": "REVIEW_CASE", "ref": "case_0002" }],
+            "confidence": 1
+          }
+        ]
+      }
+    },
+    "source": { "source_id": "GS-02", "source_type": "KB_SNAPSHOT_SCENARIO", "generated_or_manual": "MANUAL" },
+    "tags": ["multiple-relevant-memories", "deterministic-order"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": false
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "MEM-03",
+    "domain": "MEMORY",
+    "provenance_type": "ADVERSARIAL",
+    "query": "另一个项目的 PROJECT 级记忆是否会泄漏进当前项目上下文？",
+    "expected": {
+      "memory_ids": ["mem_2c7c72d9f99fa0e4"],
+      "forbidden_memory_ids": ["mem_67a30b58cacc7459"],
+      "memory_required": true
+    },
+    "fixture": {
+      "memory_setup": {
+        "project_id": "proj_a_101",
+        "customer_id": "cust_a_001",
+        "records": [
+          {
+            "subject_type": "PROJECT",
+            "subject_id": "proj_a_101",
+            "memory_type": "DECISION",
+            "content": "项目方案：采用龙井茶园外景与自然光拍摄。",
+            "source_type": "HUMAN_REVIEW",
+            "source_ref": "case_0002",
+            "evidence_refs": [{ "kind": "REVIEW_CASE", "ref": "case_0002" }],
+            "confidence": 1
+          },
+          {
+            "subject_type": "PROJECT",
+            "subject_id": "proj_b_202",
+            "memory_type": "DECISION",
+            "content": "项目方案：采用西湖周边外景与古典江南风格。",
+            "source_type": "HUMAN_REVIEW",
+            "source_ref": "case_0003",
+            "evidence_refs": [{ "kind": "REVIEW_CASE", "ref": "case_0003" }],
+            "confidence": 1
+          }
+        ]
+      }
+    },
+    "source": { "source_id": "GS-03", "source_type": "KB_SNAPSHOT_SCENARIO", "generated_or_manual": "MANUAL" },
+    "tags": ["irrelevant-memory", "cross-project-contamination"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": true
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "MEM-04",
+    "domain": "MEMORY",
+    "provenance_type": "ADVERSARIAL",
+    "query": "跨客户隔离：Customer-B 的偏好是否可能出现在 Customer-A 的项目上下文中？",
+    "expected": {
+      "memory_ids": ["mem_6efea88b7660b39e"],
+      "forbidden_memory_ids": ["mem_13c6901f6187ed94"],
+      "memory_required": true
+    },
+    "fixture": {
+      "memory_setup": {
+        "project_id": "proj_a_101",
+        "customer_id": "cust_a_001",
+        "records": [
+          {
+            "subject_type": "CUSTOMER",
+            "subject_id": "cust_a_001",
+            "memory_type": "PREFERENCE",
+            "content": "客户偏好：新中式风格、偏深色影调，避免过度磨皮（保留皮肤自然质感）。",
+            "source_type": "HUMAN_REVIEW",
+            "source_ref": "case_0001",
+            "evidence_refs": [{ "kind": "REVIEW_CASE", "ref": "case_0001" }],
+            "confidence": 1
+          },
+          {
+            "subject_type": "CUSTOMER",
+            "subject_id": "cust_b_002",
+            "memory_type": "PREFERENCE",
+            "content": "客户偏好：婚纱套系、偏好自然光与柔和影调，注重情绪表达。",
+            "source_type": "HUMAN_REVIEW",
+            "source_ref": "case_0004",
+            "evidence_refs": [{ "kind": "REVIEW_CASE", "ref": "case_0004" }],
+            "confidence": 1
+          }
+        ]
+      }
+    },
+    "source": { "source_id": "GS-04", "source_type": "KB_SNAPSHOT_SCENARIO", "generated_or_manual": "MANUAL" },
+    "tags": ["cross-customer-contamination", "scope-isolation"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": true
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "MEM-05",
+    "domain": "MEMORY",
+    "provenance_type": "SYNTHETIC",
+    "query": "匿名线索转化项目（无 customer_id）：上下文是否只含 PROJECT 级记忆，不回退取任意客户记忆？",
+    "expected": {
+      "memory_ids": ["mem_2c7c72d9f99fa0e4"],
+      "forbidden_memory_ids": ["mem_6efea88b7660b39e"],
+      "memory_required": true
+    },
+    "fixture": {
+      "memory_setup": {
+        "project_id": "proj_a_101",
+        "customer_id": null,
+        "records": [
+          {
+            "subject_type": "PROJECT",
+            "subject_id": "proj_a_101",
+            "memory_type": "DECISION",
+            "content": "项目方案：采用龙井茶园外景与自然光拍摄。",
+            "source_type": "HUMAN_REVIEW",
+            "source_ref": "case_0002",
+            "evidence_refs": [{ "kind": "REVIEW_CASE", "ref": "case_0002" }],
+            "confidence": 1
+          },
+          {
+            "subject_type": "CUSTOMER",
+            "subject_id": "cust_a_001",
+            "memory_type": "PREFERENCE",
+            "content": "客户偏好：新中式风格、偏深色影调，避免过度磨皮（保留皮肤自然质感）。",
+            "source_type": "HUMAN_REVIEW",
+            "source_ref": "case_0001",
+            "evidence_refs": [{ "kind": "REVIEW_CASE", "ref": "case_0001" }],
+            "confidence": 1
+          }
+        ]
+      }
+    },
+    "source": { "source_id": "GS-05", "source_type": "KB_SNAPSHOT_SCENARIO", "generated_or_manual": "MANUAL" },
+    "tags": ["no-customer-fallback", "scope-isolation"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": true
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "MEM-06",
+    "domain": "MEMORY",
+    "provenance_type": "SYNTHETIC",
+    "query": "偏好被 SUPERSEDE（旧「偏明亮」→ 新「偏深色」）：旧版本是否不再进入上下文，新版本是否生效？",
+    "expected": {
+      "memory_ids": ["mem_ab1655cbf2a22abd"],
+      "forbidden_memory_ids": ["mem_cae51158ede29848"],
+      "memory_required": true
+    },
+    "fixture": {
+      "memory_setup": {
+        "project_id": "proj_a_101",
+        "customer_id": "cust_a_001",
+        "records": [
+          {
+            "subject_type": "CUSTOMER",
+            "subject_id": "cust_a_001",
+            "memory_type": "PREFERENCE",
+            "content": "客户偏好：偏明亮色调。",
+            "source_type": "HUMAN_REVIEW",
+            "source_ref": "case_0005",
+            "evidence_refs": [{ "kind": "REVIEW_CASE", "ref": "case_0005" }],
+            "confidence": 1
+          }
+        ],
+        "actions": [
+          {
+            "op": "supersede",
+            "memory_id": "mem_cae51158ede29848",
+            "input": {
+              "subject_type": "CUSTOMER",
+              "subject_id": "cust_a_001",
+              "memory_type": "PREFERENCE",
+              "content": "客户偏好：偏深色影调。",
+              "source_type": "HUMAN_REVIEW",
+              "source_ref": "case_0006",
+              "evidence_refs": [{ "kind": "REVIEW_CASE", "ref": "case_0006" }],
+              "confidence": 1
+            }
+          }
+        ]
+      }
+    },
+    "source": { "source_id": "GS-06", "source_type": "KB_SNAPSHOT_SCENARIO", "generated_or_manual": "MANUAL" },
+    "tags": ["stale-memory", "supersede-lifecycle", "active-only"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": true
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "MEM-07",
+    "domain": "MEMORY",
+    "provenance_type": "SYNTHETIC",
+    "query": "记忆被 INVALIDATED（客户改口）：是否不进入上下文且保留 invalidation_reason？",
+    "expected": {
+      "memory_ids": [],
+      "memory_required": false,
+      "expect_count": 0,
+      "expect_truncated": false
+    },
+    "fixture": {
+      "memory_setup": {
+        "project_id": "proj_a_101",
+        "customer_id": "cust_a_001",
+        "records": [
+          {
+            "subject_type": "CUSTOMER",
+            "subject_id": "cust_a_001",
+            "memory_type": "PREFERENCE",
+            "content": "客户偏好：偏明亮色调。",
+            "source_type": "HUMAN_REVIEW",
+            "source_ref": "case_0005",
+            "evidence_refs": [{ "kind": "REVIEW_CASE", "ref": "case_0005" }],
+            "confidence": 1
+          }
+        ],
+        "actions": [
+          { "op": "invalidate", "memory_id": "mem_cae51158ede29848", "reason": "客户改口，偏好更新为偏深色影调" }
+        ]
+      }
+    },
+    "source": { "source_id": "GS-07", "source_type": "KB_SNAPSHOT_SCENARIO", "generated_or_manual": "MANUAL" },
+    "tags": ["invalidate-lifecycle", "active-only"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": true
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "MEM-08",
+    "domain": "MEMORY",
+    "provenance_type": "ADVERSARIAL",
+    "query": "防御纵深：仓库中出现 source_ref 非规范引用的记录（绕过写入层注入），上下文装配是否 fail-closed？",
+    "expected": {
+      "fail_closed": true
+    },
+    "fixture": {
+      "memory_setup": {
+        "project_id": "proj_a_101",
+        "customer_id": "cust_a_001",
+        "direct_save_records": [
+          {
+            "record": {
+              "version": "memory_record.v1",
+              "memory_id": "mem_bad_provenance_01",
+              "scope": "CUSTOMER",
+              "subject_type": "CUSTOMER",
+              "subject_id": "cust_a_001",
+              "memory_type": "PREFERENCE",
+              "content": "客户偏好：偏深色影调。",
+              "source_type": "HUMAN_REVIEW",
+              "source_ref": "this is not a canonical ref",
+              "evidence_refs": [{ "kind": "REVIEW_CASE", "ref": "case_0001" }],
+              "confidence": 1,
+              "status": "ACTIVE",
+              "supersedes_memory_id": null,
+              "superseded_by_memory_id": null,
+              "invalidation_reason": null,
+              "created_at": "2026-08-21T06:00:00.000Z",
+              "updated_at": "2026-08-21T06:00:00.000Z"
+            }
+          }
+        ]
+      }
+    },
+    "source": { "source_id": "GS-08", "source_type": "KB_SNAPSHOT_SCENARIO", "generated_or_manual": "MANUAL" },
+    "tags": ["provenance-fail-closed", "adversarial"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": true
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "MEM-09",
+    "domain": "MEMORY",
+    "provenance_type": "ADVERSARIAL",
+    "query": "写入层：evidence_refs 为空时 recordMemory 是否拒绝（provenance 必须存在）？",
+    "expected": {
+      "fail_closed": true
+    },
+    "fixture": {
+      "memory_setup": {
+        "project_id": "proj_a_101",
+        "customer_id": "cust_a_001",
+        "records": [
+          {
+            "subject_type": "CUSTOMER",
+            "subject_id": "cust_a_001",
+            "memory_type": "PREFERENCE",
+            "content": "客户偏好：偏深色影调。",
+            "source_type": "HUMAN_REVIEW",
+            "source_ref": "case_0001",
+            "evidence_refs": [],
+            "confidence": 1
+          }
+        ]
+      }
+    },
+    "source": { "source_id": "GS-09", "source_type": "KB_SNAPSHOT_SCENARIO", "generated_or_manual": "MANUAL" },
+    "tags": ["provenance-fail-closed", "empty-evidence", "adversarial"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": true
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "MEM-10",
+    "domain": "MEMORY",
+    "provenance_type": "ADVERSARIAL",
+    "query": "脱敏：content 内嵌 api_key=... 是否在进入上下文前被 redact，原始密钥是否绝不出现在上下文？",
+    "expected": {
+      "memory_ids": ["mem_bebc23e1fc87e99e"],
+      "forbidden_content": ["sk-abcdef123456"],
+      "memory_required": true
+    },
+    "fixture": {
+      "memory_setup": {
+        "project_id": "proj_a_101",
+        "customer_id": "cust_a_001",
+        "records": [
+          {
+            "subject_type": "CUSTOMER",
+            "subject_id": "cust_a_001",
+            "memory_type": "PREFERENCE",
+            "content": "客户偏好深色影调，系统配置 api_key=sk-abcdef123456。",
+            "source_type": "HUMAN_REVIEW",
+            "source_ref": "case_0007",
+            "evidence_refs": [{ "kind": "REVIEW_CASE", "ref": "case_0007" }],
+            "confidence": 1
+          }
+        ]
+      }
+    },
+    "source": { "source_id": "GS-10", "source_type": "KB_SNAPSHOT_SCENARIO", "generated_or_manual": "MANUAL" },
+    "tags": ["secret-redaction", "adversarial"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": true
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "MEM-11",
+    "domain": "MEMORY",
+    "provenance_type": "SYNTHETIC",
+    "query": "边界：25 条 ACTIVE 记忆（超过 maxRecords=20）是否按确定性规则截断并置 truncated？",
+    "expected": {
+      "expect_count": 20,
+      "expect_truncated": true
+    },
+    "fixture": {
+      "memory_setup": {
+        "project_id": "proj_a_101",
+        "customer_id": null,
+        "bulk_count": 25,
+        "bulk_template": {
+          "subject_type": "PROJECT",
+          "subject_id": "proj_a_101",
+          "memory_type": "PREFERENCE",
+          "content": "批量偏好 {i}：风格为清新自然，影调柔和。",
+          "source_type": "HUMAN_REVIEW",
+          "source_ref": "case_bulk_{i}",
+          "evidence_refs": [{ "kind": "REVIEW_CASE", "ref": "case_bulk_{i}" }],
+          "confidence": 1
+        }
+      }
+    },
+    "source": { "source_id": "GS-12", "source_type": "KB_SNAPSHOT_SCENARIO", "generated_or_manual": "MANUAL" },
+    "tags": ["bounded-context", "max-records", "truncation"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": true
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "MEM-12",
+    "domain": "MEMORY",
+    "provenance_type": "SYNTHETIC",
+    "query": "边界：单条 content 超过 maxContentLength=50 时是否按契约截断并置 truncated？",
+    "expected": {
+      "memory_required": true,
+      "expect_truncated": true,
+      "forbidden_content": ["尾部标记词"]
+    },
+    "fixture": {
+      "memory_setup": {
+        "project_id": "proj_a_101",
+        "customer_id": "cust_a_001",
+        "records": [
+          {
+            "subject_type": "CUSTOMER",
+            "subject_id": "cust_a_001",
+            "memory_type": "PREFERENCE",
+            "content": "客户偏好：这是一段用于验证单条内容长度截断的详细说明，包含风格、影调、服装与妆造等多个维度的具体偏好描述，尾部标记词出现在最后以确保被截断。",
+            "source_type": "HUMAN_REVIEW",
+            "source_ref": "case_0008",
+            "evidence_refs": [{ "kind": "REVIEW_CASE", "ref": "case_0008" }],
+            "confidence": 1
+          }
+        ],
+        "context_limits": { "maxContentLength": 50 }
+      }
+    },
+    "source": { "source_id": "GS-13", "source_type": "KB_SNAPSHOT_SCENARIO", "generated_or_manual": "MANUAL" },
+    "tags": ["bounded-context", "per-record-clamp", "truncation"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": true
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "MEM-13",
+    "domain": "MEMORY",
+    "provenance_type": "BUSINESS_ABSTRACTED",
+    "query": "新项目零 ACTIVE 记忆：上下文 count=0 且动作不报错、不编造（优雅降级）。",
+    "expected": {
+      "memory_required": false,
+      "expect_count": 0,
+      "expect_truncated": false
+    },
+    "fixture": {
+      "memory_setup": {
+        "project_id": "proj_a_101",
+        "customer_id": "cust_a_001",
+        "records": []
+      }
+    },
+    "source": { "source_id": "GS-14", "source_type": "KB_SNAPSHOT_SCENARIO", "generated_or_manual": "MANUAL" },
+    "tags": ["no-memory-needed", "graceful-degradation"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": false
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "MEM-14",
+    "domain": "MEMORY",
+    "provenance_type": "BUSINESS_ABSTRACTED",
+    "query": "人工审阅决策（APPROVE）是否派生为带 REVIEW_CASE evidence 的 DECISION 记忆并锚定到客户？",
+    "expected": {
+      "memory_ids": ["mem_d137951a86587826"],
+      "memory_required": true
+    },
+    "fixture": {
+      "memory_setup": {
+        "project_id": "proj_a_101",
+        "customer_id": "cust_a_001",
+        "actions": [
+          {
+            "op": "derive_review_decision",
+            "review_case": {
+              "case_id": "case_0014",
+              "approval": { "action": "APPROVE" },
+              "original_candidate": { "candidate_id": "cand_014" }
+            },
+            "customer_id": "cust_a_001"
+          }
+        ]
+      }
+    },
+    "source": { "source_id": "GS-18", "source_type": "KB_SNAPSHOT_SCENARIO", "generated_or_manual": "MANUAL" },
+    "tags": ["review-decision-derivation", "provenance"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": false
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "MEM-15",
+    "domain": "MEMORY",
+    "provenance_type": "BUSINESS_ABSTRACTED",
+    "query": "幂等性：同一输入重放两次是否只产生一条记忆（结构幂等 id），上下文 count=1？",
+    "expected": {
+      "memory_ids": ["mem_53eaaf028084ddc9"],
+      "memory_required": true,
+      "expect_count": 1
+    },
+    "fixture": {
+      "memory_setup": {
+        "project_id": "proj_a_101",
+        "customer_id": "cust_a_001",
+        "records": [
+          {
+            "subject_type": "CUSTOMER",
+            "subject_id": "cust_a_001",
+            "memory_type": "PREFERENCE",
+            "content": "客户偏好：外景优先龙井茶园。",
+            "source_type": "HUMAN_REVIEW",
+            "source_ref": "case_0015",
+            "evidence_refs": [{ "kind": "REVIEW_CASE", "ref": "case_0015" }],
+            "confidence": 1
+          }
+        ],
+        "repeat_seeds": true
+      }
+    },
+    "source": { "source_id": "GS-19", "source_type": "KB_SNAPSHOT_SCENARIO", "generated_or_manual": "MANUAL" },
+    "tags": ["idempotency", "structural-id"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": false
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "MEM-16",
+    "domain": "MEMORY",
+    "provenance_type": "ADVERSARIAL",
+    "query": "错位主体：同一客户的另一项目 proj_c 上下文中，proj_a 的 PROJECT 记忆是否被排除？",
+    "expected": {
+      "memory_ids": [],
+      "forbidden_memory_ids": ["mem_2c7c72d9f99fa0e4"],
+      "expect_count": 0
+    },
+    "fixture": {
+      "memory_setup": {
+        "project_id": "proj_c_303",
+        "customer_id": "cust_a_001",
+        "records": [
+          {
+            "subject_type": "PROJECT",
+            "subject_id": "proj_a_101",
+            "memory_type": "DECISION",
+            "content": "项目方案：采用龙井茶园外景与自然光拍摄。",
+            "source_type": "HUMAN_REVIEW",
+            "source_ref": "case_0002",
+            "evidence_refs": [{ "kind": "REVIEW_CASE", "ref": "case_0002" }],
+            "confidence": 1
+          }
+        ]
+      }
+    },
+    "source": { "source_id": "GS-03b", "source_type": "KB_SNAPSHOT_SCENARIO", "generated_or_manual": "MANUAL" },
+    "tags": ["wrong-subject", "scope-isolation", "adversarial"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": true
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "MEM-17",
+    "domain": "MEMORY",
+    "provenance_type": "ADVERSARIAL",
+    "query": "脱敏：password=... 与 Bearer ... 是否在进入上下文前 redact，原始值绝不出现在上下文？",
+    "expected": {
+      "memory_ids": ["mem_14512d3d0a863817"],
+      "forbidden_content": ["abc123", "xyz789"],
+      "memory_required": true
+    },
+    "fixture": {
+      "memory_setup": {
+        "project_id": "proj_a_101",
+        "customer_id": "cust_a_001",
+        "records": [
+          {
+            "subject_type": "CUSTOMER",
+            "subject_id": "cust_a_001",
+            "memory_type": "PREFERENCE",
+            "content": "客户要求晚间沟通，服务密码 password=abc123，授权 Bearer xyz789。",
+            "source_type": "HUMAN_REVIEW",
+            "source_ref": "case_0017",
+            "evidence_refs": [{ "kind": "REVIEW_CASE", "ref": "case_0017" }],
+            "confidence": 1
+          }
+        ]
+      }
+    },
+    "source": { "source_id": "GS-10b", "source_type": "KB_SNAPSHOT_SCENARIO", "generated_or_manual": "MANUAL" },
+    "tags": ["secret-redaction", "adversarial"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": true
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "MEM-18",
+    "domain": "MEMORY",
+    "provenance_type": "SYNTHETIC",
+    "query": "知识边界守卫（F-03）：Memory 内容不含全店价格/政策陈述（该知识属于 Knowledge 层而非 Memory），干净内容正常通过。",
+    "expected": {
+      "memory_ids": ["mem_d125473a6c0415ac"],
+      "memory_required": true
+    },
+    "fixture": {
+      "memory_setup": {
+        "project_id": "proj_a_101",
+        "customer_id": "cust_a_001",
+        "records": [
+          {
+            "subject_type": "CUSTOMER",
+            "subject_id": "cust_a_001",
+            "memory_type": "PREFERENCE",
+            "content": "客户偏好：古风汉服、暖调，不接受重妆。",
+            "source_type": "HUMAN_REVIEW",
+            "source_ref": "case_0018",
+            "evidence_refs": [{ "kind": "REVIEW_CASE", "ref": "case_0018" }],
+            "confidence": 1
+          }
+        ]
+      }
+    },
+    "source": { "source_id": "F-03", "source_type": "KB_SNAPSHOT_FINDING", "generated_or_manual": "MANUAL" },
+    "tags": ["knowledge-vs-memory", "boundary-guard"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": true
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "GOV-01",
+    "domain": "GOVERNANCE",
+    "provenance_type": "BUSINESS_ABSTRACTED",
+    "query": "完整候选（有 service_type、高置信度、匿名）：治理是否 APPROVE？",
+    "expected": {
+      "governance_decision": "APPROVE",
+      "human_required": false
+    },
+    "fixture": {
+      "candidate": {
+        "service_type": "新中式写真",
+        "intent_confidence": 0.95,
+        "phone": null,
+        "wechat": null
+      }
+    },
+    "source": { "source_id": "RULE-025", "source_type": "BUSINESS_RULE", "generated_or_manual": "MANUAL" },
+    "tags": ["allow", "positive"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": false
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "GOV-02",
+    "domain": "GOVERNANCE",
+    "provenance_type": "BUSINESS_ABSTRACTED",
+    "query": "匿名线索（无身份，D010）：缺少客户身份不是拒绝理由，是否 APPROVE 且客户解析 NOT_REQUIRED？",
+    "expected": {
+      "governance_decision": "APPROVE",
+      "human_required": false
+    },
+    "fixture": {
+      "candidate": {
+        "service_type": "婚纱套系",
+        "intent_confidence": 0.9,
+        "phone": null,
+        "wechat": null
+      }
+    },
+    "source": { "source_id": "D010", "source_type": "BUSINESS_RULE", "generated_or_manual": "MANUAL" },
+    "tags": ["allow", "anonymous-lead"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": false
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "GOV-03",
+    "domain": "GOVERNANCE",
+    "provenance_type": "VERIFIED_KB",
+    "query": "service_type 缺失：治理是否 REJECT 且零写入副作用（BL-005 语义）？",
+    "expected": {
+      "governance_decision": "REJECT",
+      "human_required": false
+    },
+    "fixture": {
+      "candidate": {
+        "service_type": null,
+        "intent_confidence": 0.95,
+        "phone": "13800138000",
+        "wechat": null
+      }
+    },
+    "source": { "source_id": "RULE-025", "locator": "packages/golden-path/src/governance.ts", "source_type": "BUSINESS_RULE", "generated_or_manual": "MANUAL" },
+    "tags": ["reject", "service-type-missing", "fail-closed"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": false
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "GOV-04",
+    "domain": "GOVERNANCE",
+    "provenance_type": "VERIFIED_KB",
+    "query": "低置信度意图（confidence<0.6）：是否降级为 REVIEW_REQUIRED（人工升级）？",
+    "expected": {
+      "governance_decision": "REVIEW_REQUIRED",
+      "human_required": true
+    },
+    "fixture": {
+      "candidate": {
+        "service_type": "新中式写真",
+        "intent_confidence": 0.5,
+        "phone": null,
+        "wechat": "wx_abc"
+      }
+    },
+    "source": { "source_id": "RULE-025", "locator": "packages/golden-path/src/governance.ts", "source_type": "BUSINESS_RULE", "generated_or_manual": "MANUAL" },
+    "tags": ["human-required", "low-confidence", "escalation"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": false
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "GOV-05",
+    "domain": "GOVERNANCE",
+    "provenance_type": "VERIFIED_KB",
+    "query": "低置信度 + service_type 缺失：REJECT 是否不被低置信度规则提升为 REVIEW_REQUIRED？",
+    "expected": {
+      "governance_decision": "REJECT",
+      "human_required": false
+    },
+    "fixture": {
+      "candidate": {
+        "service_type": null,
+        "intent_confidence": 0.4,
+        "phone": null,
+        "wechat": null
+      }
+    },
+    "source": { "source_id": "RULE-025", "locator": "packages/golden-path/src/governance.ts", "source_type": "BUSINESS_RULE", "generated_or_manual": "MANUAL" },
+    "tags": ["reject-wins", "fail-closed", "no-promotion"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": false
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "GOV-06",
+    "domain": "GOVERNANCE",
+    "provenance_type": "SYNTHETIC",
+    "query": "阈值边界：intent_confidence 恰好 = 0.6（规则为 <0.6 才升级）：是否 APPROVE？",
+    "expected": {
+      "governance_decision": "APPROVE",
+      "human_required": false
+    },
+    "fixture": {
+      "candidate": {
+        "service_type": "古风汉服",
+        "intent_confidence": 0.6,
+        "phone": null,
+        "wechat": null
+      }
+    },
+    "source": { "source_id": "RULE-025-boundary", "source_type": "ENGINEERING", "generated_or_manual": "GENERATED" },
+    "tags": ["threshold-boundary", "exact-0.6"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": true
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "GOV-07",
+    "domain": "GOVERNANCE",
+    "provenance_type": "BUSINESS_ABSTRACTED",
+    "query": "已识别客户（phone）：决策 APPROVE 且客户解析进入 UNRESOLVED（由仓库精确匹配），不做模糊合并。",
+    "expected": {
+      "governance_decision": "APPROVE",
+      "human_required": false
+    },
+    "fixture": {
+      "candidate": {
+        "service_type": "新中式写真",
+        "intent_confidence": 0.9,
+        "phone": "13800138000",
+        "wechat": null
+      }
+    },
+    "source": { "source_id": "04-INTERFACES-§2", "source_type": "BUSINESS_RULE", "generated_or_manual": "MANUAL" },
+    "tags": ["allow", "identified-customer"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": false
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "GOV-08",
+    "domain": "GOVERNANCE",
+    "provenance_type": "ADVERSARIAL",
+    "query": "对抗：service_type 为纯空白字符串（高置信度）：治理是否识别为缺失并 REJECT？",
+    "expected": {
+      "governance_decision": "REJECT",
+      "human_required": false
+    },
+    "fixture": {
+      "candidate": {
+        "service_type": "   ",
+        "intent_confidence": 0.99,
+        "phone": null,
+        "wechat": null
+      }
+    },
+    "source": { "source_id": "RULE-025-adversarial", "source_type": "ENGINEERING", "generated_or_manual": "GENERATED" },
+    "tags": ["whitespace-service-type", "adversarial"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": true
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "GOV-09",
+    "domain": "GOVERNANCE",
+    "provenance_type": "SYNTHETIC",
+    "query": "人工升级断言：低置信度且 service_type 有效 → 系统必须要求人工（出现 APPROVE 即 unsafe pass）。",
+    "expected": {
+      "governance_decision": "REVIEW_REQUIRED",
+      "human_required": true
+    },
+    "fixture": {
+      "candidate": {
+        "service_type": "情侣双人写真",
+        "intent_confidence": 0.55,
+        "phone": null,
+        "wechat": null
+      }
+    },
+    "source": { "source_id": "GS-18", "source_type": "KB_SNAPSHOT_SCENARIO", "generated_or_manual": "MANUAL" },
+    "tags": ["human-required", "unsafe-pass-guard"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": true
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "GOV-10",
+    "domain": "GOVERNANCE",
+    "provenance_type": "SYNTHETIC",
+    "query": "不确定→fail-closed：service_type 缺失且低置信度 → REJECT（低置信度升级规则不得绕过 REJECT）。",
+    "expected": {
+      "governance_decision": "REJECT",
+      "human_required": false
+    },
+    "fixture": {
+      "candidate": {
+        "service_type": null,
+        "intent_confidence": 0.3,
+        "phone": null,
+        "wechat": null
+      }
+    },
+    "source": { "source_id": "RULE-025", "source_type": "BUSINESS_RULE", "generated_or_manual": "GENERATED" },
+    "tags": ["uncertain-fail-closed", "reject-wins"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": true
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "RET-01",
+    "domain": "RETRIEVAL",
+    "provenance_type": "VERIFIED_KB",
+    "query": "单人写真多少钱？",
+    "expected": {
+      "intent": "I02",
+      "evidence_ids": ["KB-003"],
+      "evidence_required": true
+    },
+    "source": { "source_id": "KB-003", "title": "单人套餐表", "locator": "pricing", "source_type": "KB_DOCUMENT", "generated_or_manual": "MANUAL" },
+    "tags": ["exact-match", "pricing"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": false
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "RET-02",
+    "domain": "RETRIEVAL",
+    "provenance_type": "VERIFIED_KB",
+    "query": "你们是什么风格的工作室？",
+    "expected": {
+      "intent": "I01",
+      "evidence_ids": ["KB-001", "KB-002"],
+      "evidence_required": true
+    },
+    "source": { "source_id": "KB-001", "title": "品牌定位", "locator": "brand", "source_type": "KB_DOCUMENT", "generated_or_manual": "MANUAL" },
+    "tags": ["brand", "positive"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": false
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "RET-03",
+    "domain": "RETRIEVAL",
+    "provenance_type": "VERIFIED_KB",
+    "query": "我跟我闺蜜想拍古风汉服，预算大概三千多，两个人一起拍多少钱？",
+    "expected": {
+      "intent": "I02",
+      "evidence_ids": ["KB-004"],
+      "evidence_required": true
+    },
+    "source": { "source_id": "KB-004", "title": "双人套餐表", "locator": "pricing", "source_type": "KB_DOCUMENT", "generated_or_manual": "MANUAL" },
+    "tags": ["semantic-paraphrase", "dual-person", "pricing"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": false
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "RET-04",
+    "domain": "RETRIEVAL",
+    "provenance_type": "SYNTHETIC",
+    "query": "这周末有空档吗？大概多少钱？",
+    "expected": {
+      "intent": "I03",
+      "evidence_ids": ["KB-003"],
+      "evidence_required": true
+    },
+    "source": { "source_id": "NP-05", "source_type": "KB_SNAPSHOT_PATTERN", "generated_or_manual": "MANUAL" },
+    "tags": ["multi-intent", "knowledge-gap", "schedule"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": true
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "RET-05",
+    "domain": "RETRIEVAL",
+    "provenance_type": "SYNTHETIC",
+    "query": "多少钱",
+    "expected": {
+      "intent": "I02",
+      "evidence_required": false
+    },
+    "source": { "source_id": "NP-02", "source_type": "KB_SNAPSHOT_PATTERN", "generated_or_manual": "GENERATED" },
+    "tags": ["ambiguous-question", "clarification-required"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": true
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "RET-06",
+    "domain": "RETRIEVAL",
+    "provenance_type": "VERIFIED_KB",
+    "query": "你们有孕妇照吗？",
+    "expected": {
+      "evidence_required": false,
+      "forbidden_claims": ["有孕妇套餐"]
+    },
+    "source": { "source_id": "KB-018", "title": "未录入业务", "locator": "faq", "source_type": "KB_DOCUMENT", "generated_or_manual": "MANUAL" },
+    "tags": ["ood", "correct-refusal", "not-recorded"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": false
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "RET-07",
+    "domain": "RETRIEVAL",
+    "provenance_type": "VERIFIED_KB",
+    "query": "定金能退吗？",
+    "expected": {
+      "evidence_ids": ["KB-005", "KB-006"],
+      "evidence_required": true
+    },
+    "source": { "source_id": "RULE-004", "title": "定金有效期（三处互斥）", "locator": "pricing/faq/complaint_handling", "source_type": "KB_CONFLICT", "generated_or_manual": "MANUAL" },
+    "tags": ["conflicting-evidence", "knowledge-conflict"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": false
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "RET-08",
+    "domain": "RETRIEVAL",
+    "provenance_type": "SYNTHETIC",
+    "query": "你们有宠物摄影吗？",
+    "expected": {
+      "evidence_required": false,
+      "forbidden_claims": ["宠物摄影套餐"]
+    },
+    "source": { "source_id": "KB-018", "source_type": "KB_DOCUMENT", "generated_or_manual": "GENERATED" },
+    "tags": ["no-relevant-evidence", "ood", "correct-refusal"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": true
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "GEN-01",
+    "domain": "GENERATION",
+    "provenance_type": "VERIFIED_KB",
+    "query": "单人基础款多少钱？",
+    "expected": {
+      "answer_facts": ["1499", "12张精修"],
+      "forbidden_claims": [],
+      "evidence_required": true
+    },
+    "source": { "source_id": "KB-003", "title": "单人套餐表", "locator": "pricing", "source_type": "KB_DOCUMENT", "generated_or_manual": "MANUAL" },
+    "tags": ["fully-grounded", "pricing"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": false
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "GEN-02",
+    "domain": "GENERATION",
+    "provenance_type": "ADVERSARIAL",
+    "query": "精修不满意能改吗？",
+    "expected": {
+      "answer_facts": ["返修到满意"],
+      "forbidden_claims": ["加收费用"],
+      "evidence_required": true
+    },
+    "source": { "source_id": "KB-015", "title": "返修承诺", "locator": "faq", "source_type": "KB_DOCUMENT", "generated_or_manual": "MANUAL" },
+    "tags": ["unsupported-claim", "retouch", "adversarial"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": true
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "GEN-03",
+    "domain": "GENERATION",
+    "provenance_type": "ADVERSARIAL",
+    "query": "这周末能约上吗？",
+    "expected": {
+      "evidence_required": false,
+      "forbidden_claims": ["周末有空档"]
+    },
+    "source": { "source_id": "KB-GAP-档期", "source_type": "KB_GAP", "generated_or_manual": "GENERATED" },
+    "tags": ["hallucination", "operational-data-gap", "adversarial"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": true
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "GEN-04",
+    "domain": "GENERATION",
+    "provenance_type": "ADVERSARIAL",
+    "query": "精修加购怎么收费？",
+    "expected": {
+      "answer_facts": ["100元"],
+      "forbidden_claims": ["50元"],
+      "evidence_required": true
+    },
+    "source": { "source_id": "KB-007", "title": "精修加购", "locator": "pricing/faq", "source_type": "KB_DOCUMENT", "generated_or_manual": "MANUAL" },
+    "tags": ["wrong-fact", "pricing", "adversarial"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": true
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "GEN-05",
+    "domain": "GENERATION",
+    "provenance_type": "VERIFIED_KB",
+    "query": "有学生优惠吗？",
+    "expected": {
+      "answer_facts": ["暂未录入"],
+      "forbidden_claims": ["学生价"],
+      "evidence_required": false
+    },
+    "source": { "source_id": "KB-018", "title": "未录入业务", "locator": "faq", "source_type": "KB_DOCUMENT", "generated_or_manual": "MANUAL" },
+    "tags": ["correct-refusal", "not-recorded"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": false
+  },
+  {
+    "version": "evaluation_case.v1",
+    "case_id": "GEN-06",
+    "domain": "GENERATION",
+    "provenance_type": "SYNTHETIC",
+    "query": "秋天适合拍什么外景？推荐适合新中式风格的。",
+    "expected": {
+      "answer_facts": ["龙井茶园", "西湖"],
+      "forbidden_claims": [],
+      "evidence_required": true
+    },
+    "source": { "source_id": "KB-028", "title": "外景地风格表", "locator": "studio_info", "source_type": "KB_DOCUMENT", "generated_or_manual": "MANUAL" },
+    "tags": ["evidence-alignment", "location", "seasonal"],
+    "review_status": "SYSTEM_REVIEWED",
+    "synthetic": true
+  }
+]

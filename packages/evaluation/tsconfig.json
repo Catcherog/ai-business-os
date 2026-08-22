@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@busos/contracts": ["../contracts/src/index.ts"],
+      "@busos/memory": ["../memory/src/index.ts"],
+      "@busos/golden-path": ["../golden-path/src/index.ts"]
+    }
+  },
+  "include": ["src", "tests", "scripts"]
+}

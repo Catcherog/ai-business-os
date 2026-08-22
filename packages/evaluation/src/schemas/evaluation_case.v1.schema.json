@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "evaluation_case.v1",
+  "title": "EvaluationCaseV1",
+  "description": "Canonical Golden Set case contract (BUSOS-R2-H2-03). Language-neutral mirror of packages/evaluation/src/case-schema.ts. Ground Truth is defined HERE, never derived from the system under test.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "case_id",
+    "domain",
+    "provenance_type",
+    "query",
+    "review_status",
+    "synthetic"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "evaluation_case.v1"
+    },
+    "case_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "domain": {
+      "type": "string",
+      "enum": ["RETRIEVAL", "GENERATION", "MEMORY", "GOVERNANCE", "END_TO_END"]
+    },
+    "provenance_type": {
+      "type": "string",
+      "enum": ["VERIFIED_KB", "BUSINESS_ABSTRACTED", "SYNTHETIC", "ADVERSARIAL"]
+    },
+    "query": {
+      "type": "string",
+      "minLength": 1
+    },
+    "conversation_context": {
+      "description": "Optional multi-turn / conversation context (open)."
+    },
+    "expected": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "intent": {
+          "type": ["string", "null"]
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "evidence_required": {
+          "type": "boolean"
+        },
+        "answer_facts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "forbidden_claims": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "memory_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "forbidden_memory_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "memory_required": {
+          "type": "boolean"
+        },
+        "expect_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expect_truncated": {
+          "type": "boolean"
+        },
+        "forbidden_content": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "governance_decision": {
+          "type": "string"
+        },
+        "human_required": {
+          "type": "boolean"
+        },
+        "fail_closed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "fixture": {
+      "description": "Deterministic, non-secret setup data interpreted by the domain evaluator.",
+      "type": "object"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": ["string", "null"]
+        },
+        "locator": {
+          "type": ["string", "null"]
+        },
+        "hash": {
+          "type": ["string", "null"]
+        },
+        "source_type": {
+          "type": ["string", "null"]
+        },
+        "generated_or_manual": {
+          "type": "string",
+          "enum": ["GENERATED", "MANUAL"]
+        }
+      },
+      "required": ["source_id"]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "review_status": {
+      "type": "string",
+      "enum": ["DRAFT", "REVIEWED", "APPROVED", "SYSTEM_REVIEWED"]
+    },
+    "synthetic": {
+      "type": "boolean"
+    }
+  }
+}
