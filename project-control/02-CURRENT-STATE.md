@@ -13,7 +13,7 @@ R2 — Unified AI Business OS Productization Rebaseline
 
 CURRENT TASK:
 BUSOS-R2-ENGINEERING-BATCH-1 — Owner-authorized implementation batch
-[ALL SEVEN ENGINEERING TASKS PASS / SERIALLY INTEGRATED; FINAL MAIN CLOSURE PENDING]
+[ALL SEVEN ENGINEERING TASKS PASS / SERIALLY INTEGRATED; FINAL MAIN CLOSURE VERIFIED]
 - Authority baseline: `origin/main@b3a059d84d0b612387d465077799af6e1fe2fa94`.
 - Orchestration branch: `codex/busos-r2-engineering-batch-1`.
 - UX-01 branch `codex/busos-r2-ux-01`: implementation `cb32548`, report
@@ -36,8 +36,9 @@ BUSOS-R2-ENGINEERING-BATCH-1 — Owner-authorized implementation batch
   authorization.
 - Active scope is complete: UX-01 → Workspace API-01 → three isolated lanes →
   follow-on SCS/UI and Business Data/UI tasks → one serialized authoritative
-  integration. Only final coordinator push and external `origin/main` SHA
-  verification remain. No production or cross-repository work is included.
+  integration. The coordinator push and external `origin/main` SHA verification
+  completed at the engineering boundary. No production or cross-repository work
+  is included.
 - `R2-LONG-TERM-ROADMAP.md` remains historical for post-H1 sequencing.
 
 PRIOR TASK (closed):
@@ -250,17 +251,18 @@ baseline SHA, file ownership, Audit Packet and verification; lane workers did
 not merge. The sole coordinator performed the serial integration.
 
 AUTHORITATIVE INTEGRATION TASK:
-**BUSOS-R2-ENGINEERING-BATCH-1 coordinator in finalization.** At most one
+**BUSOS-R2-ENGINEERING-BATCH-1 coordinator closed at the engineering boundary.** At most one
 authoritative Integration Coordinator / merge task was active at a time. UX-01,
 Workspace API-01, all three initial lanes, and both authorized follow-on UI tasks
-are integrated at coordinator `89728c6`; final main push and post-push SHA
-verification remain controlled by this coordinator.
+are integrated at coordinator `89728c6`; the authorized non-force main push and
+post-push SHA verification completed successfully. The final closure SHA is
+recorded in the coordinator handoff rather than self-embedded in this state file.
 
 NEXT AUTHORIZED IMPLEMENTATION WORK:
 **NONE within this Goal.** All seven authorized Engineering Batch 1 tasks are
-complete and integrated; finalization is limited to coordinator push and remote
-SHA verification. Do not start SCS production connection, Lumen repair, BL-018
-LIVE closure, Unified Production Closure, H3 or H4.
+complete, integrated, pushed, and remotely verified. Do not start SCS production
+connection, Lumen repair, BL-018 LIVE closure, Unified Production Closure, H3 or
+H4.
 
 IMPORTANT DEFERRED ITEMS:
 - BL-018 — OPEN; live full-process E2E remains blocked pending a separate Lumen
