@@ -1,4 +1,4 @@
-import { initWorkspace, getService } from './api.js';
+import { initWorkspace, getDataSource } from './api.js';
 import { renderApp } from './ui.js';
 import { buildSha, release } from './build-info.js';
 
@@ -15,9 +15,9 @@ function renderBuildMeta(): void {
   if (meta) meta.textContent = `Build ${buildSha} · ${release}`;
 }
 
-initWorkspace()
+initWorkspace(buildSha)
   .then(() => {
-    renderApp(getService());
+    renderApp(getDataSource());
     renderBuildMeta();
   })
   .catch((err: unknown) => {

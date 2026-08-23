@@ -4,7 +4,7 @@ import type {
   Task,
   Asset,
 } from '@busos/contracts';
-import type { WorkspaceReadService, ProjectWorkspace } from '@busos/workspace-read';
+import type { ProjectWorkspace } from '@busos/workspace-read';
 import type {
   ReviewCase,
   ReviewState,
@@ -19,21 +19,24 @@ import type {
 } from '@busos/workspace-run';
 import type { BusinessProcessResult } from '@busos/orchestrator';
 import type { MemoryRecordV1 } from '@busos/contracts';
-import { getService, getReviewService, getRunService, getMemoryService } from './api.js';
+import { getDataSource, getMemoryService } from './api.js';
 import { runGenerateVisualReference } from './action.js';
 import { buildOverview, type OverviewModel } from './overview-model.js';
-import { buildSha } from './build-info.js';
 import {
   NAVIGATION,
   createRouter,
   isNavigationActive,
   type Route,
 } from './router.js';
-import { demoRuntimeIdentity, renderRuntimeIdentity } from './runtime-identity.js';
+import { renderRuntimeIdentity } from './runtime-identity.js';
+import {
+  unwrapWorkspaceEnvelope,
+  type WorkspaceDataSource,
+} from './workspace-data-source.js';
 
 type View = Route['name'];
 
-let svc: WorkspaceReadService;
+let svc: WorkspaceDataSource;
 let activeRoute: Route = { name: 'overview' };
 let active: View = activeRoute.name;
 let selectedProjectId: string | null = null;
@@ -41,6 +44,12 @@ let selectedReviewId: string | null = null;
 let selectedRunId: string | null = null;
 let appReady = false;
 const router = createRouter();
+
+async function readWorkspace<T>(
+  request: Promise<import('./workspace-data-source.js').WorkspaceEnvelope<T>>,
+): Promise<T> {
+  return unwrapWorkspaceEnvelope(await request);
+}
 
 /* ----------------------------- tiny DOM helper ---------------------------- */
 function h<K extends keyof HTMLElementTagNameMap>(
@@ -203,7 +212,13 @@ async function viewOverview(): Promise<HTMLElement> {
   body.append(loading('正在加载概览…'));
 
   try {
-    const m = await buildOverview(getService(), getReviewService(), getRunService());
+    const m = await buildOverview(
+      {
+        listProjects: async () => (await readWorkspace(svc.listProjects())).map((workspace) => workspace.project),
+      },
+      { listReviews: () => readWorkspace(svc.listReviews()) },
+      { listRuns: () => readWorkspace(svc.listRuns()) },
+    );
     body.replaceChildren();
 
     if (m.projects.length === 0 && m.runs.length === 0 && m.reviews.length === 0) {
@@ -268,7 +283,8 @@ async function viewProjects(): Promise<HTMLElement> {
   list.append(loading('正在加载项目…'));
 
   try {
-    const projects = await svc.listProjects();
+    const workspaces = await readWorkspace(svc.listProjects());
+    const projects = workspaces.map((workspace) => workspace.project);
     list.replaceChildren();
     if (projects.length === 0) {
       list.append(empty('暂无项目。'));
@@ -497,7 +513,7 @@ function projectAssetsTable(assets: Asset[]): HTMLElement {
 async function populateRelatedRuns(host: HTMLElement, projectId: string): Promise<void> {
   host.replaceChildren(h('h2', {}, ['Related Runs（本项目关联运行）']), loading('正在加载关联运行…'));
   try {
-    const runs = await getRunService().listRunsByProject(projectId);
+    const runs = (await readWorkspace(svc.listRuns())).filter((run) => run.projectId === projectId);
     if (!runs.length) {
       host.replaceChildren(
         h('h2', {}, ['Related Runs（本项目关联运行）']),
@@ -573,7 +589,7 @@ async function viewProjectDetail(projectId: string): Promise<HTMLElement> {
   wrap.append(loading('正在加载项目详情…'));
 
   try {
-    const ws = await svc.getProjectWorkspace(projectId);
+    const ws = await readWorkspace(svc.getProject(projectId));
     wrap.replaceChildren(back);
     if (!ws) {
       wrap.append(empty('未找到该项目。'));
@@ -644,7 +660,7 @@ async function viewProjectDetail(projectId: string): Promise<HTMLElement> {
     // successful action, reloadDynamic refreshes Tasks / Assets / Related Runs
     // in place (state-consistency, Case 1).
     const reloadDynamic = async (): Promise<void> => {
-      const fresh = await svc.getProjectWorkspace(projectId);
+      const fresh = await readWorkspace(svc.getProject(projectId));
       if (!fresh) return;
       tasksSection.replaceChildren(h('h2', {}, [`Tasks (${fresh.tasks.length})`]), projectTasksTable(fresh.tasks));
       assetsSection.replaceChildren(h('h2', {}, [`Assets (${fresh.assets.length})`]), projectAssetsTable(fresh.assets));
@@ -678,7 +694,7 @@ async function viewReviews(): Promise<HTMLElement> {
   list.append(loading('正在加载审阅队列…'));
 
   try {
-    const reviews = getReviewService().listReviews();
+    const reviews = await readWorkspace(svc.listReviews());
     list.replaceChildren();
     if (reviews.length === 0) {
       list.append(empty('暂无待审阅线索。'));
@@ -727,7 +743,7 @@ async function viewReviewDetail(caseId: string): Promise<HTMLElement> {
   wrap.append(loading('正在加载审阅详情…'));
 
   try {
-    const rc = getReviewService().getReview(caseId);
+    const rc = await readWorkspace(svc.getReview(caseId));
     wrap.replaceChildren(back);
     if (!rc) {
       wrap.append(empty('未找到该审阅。'));
@@ -942,7 +958,11 @@ function renderActions(rc: ReviewCase): HTMLElement {
     disableAll(true);
     status.textContent = '正在提交…';
     try {
-      await getReviewService().approve(rc.case_id, noteInput.value.trim() || null);
+      await readWorkspace(svc.decideReview({
+        caseId: rc.case_id,
+        action: 'APPROVE',
+        note: noteInput.value.trim() || null,
+      }));
     } catch (e) {
       status.textContent = `错误：${(e as Error).message}`;
     }
@@ -958,7 +978,12 @@ function renderActions(rc: ReviewCase): HTMLElement {
       'requirement.notes': notesInput.value.trim() || null,
     };
     try {
-      await getReviewService().editAndApprove(rc.case_id, patch, noteInput.value.trim() || null);
+      await readWorkspace(svc.decideReview({
+        caseId: rc.case_id,
+        action: 'EDIT_APPROVE',
+        patch,
+        note: noteInput.value.trim() || null,
+      }));
     } catch (e) {
       status.textContent = `错误：${(e as Error).message}`;
     }
@@ -969,7 +994,11 @@ function renderActions(rc: ReviewCase): HTMLElement {
     disableAll(true);
     status.textContent = '正在提交…';
     try {
-      await getReviewService().reject(rc.case_id, noteInput.value.trim() || null);
+      await readWorkspace(svc.decideReview({
+        caseId: rc.case_id,
+        action: 'REJECT',
+        note: noteInput.value.trim() || null,
+      }));
     } catch (e) {
       status.textContent = `错误：${(e as Error).message}`;
     }
@@ -993,7 +1022,7 @@ async function viewRuns(): Promise<HTMLElement> {
   list.append(loading('正在加载运行记录…'));
 
   try {
-    const runs = await getRunService().listRuns();
+    const runs = await readWorkspace(svc.listRuns());
     list.replaceChildren();
     if (runs.length === 0) {
       list.append(empty('暂无运行记录。'));
@@ -1042,7 +1071,7 @@ async function viewRunDetail(processId: string): Promise<HTMLElement> {
   wrap.append(loading('正在加载运行详情…'));
 
   try {
-    const detail = await getRunService().getRun(processId);
+    const detail = await readWorkspace(svc.getRun(processId));
     wrap.replaceChildren(backRow);
     if (!detail) {
       wrap.append(empty('未找到该运行记录。'));
@@ -1316,11 +1345,19 @@ export function navigate(view: View, id?: string): void {
 }
 
 /* --------------------------------- shell --------------------------------- */
-export function renderApp(service: WorkspaceReadService): void {
-  svc = service;
+export function renderApp(dataSource: WorkspaceDataSource): void {
+  svc = dataSource;
   appReady = true;
   const runtimeHost = document.getElementById('runtime-identity');
-  if (runtimeHost) renderRuntimeIdentity(runtimeHost, demoRuntimeIdentity(buildSha));
+  if (runtimeHost) {
+    void svc.runtime.then((envelope) => {
+      renderRuntimeIdentity(runtimeHost, envelope.data ?? {
+        mode: envelope.mode,
+        buildSha: envelope.buildSha,
+        connectionSummary: envelope.error?.message ?? `Workspace ${envelope.status.toLowerCase()}`,
+      });
+    });
+  }
   const navHost = document.getElementById('nav');
   if (navHost) navHost.replaceWith(renderNav());
   syncRoute(router.current());

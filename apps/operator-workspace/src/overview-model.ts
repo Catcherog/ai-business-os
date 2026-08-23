@@ -13,9 +13,17 @@
 import type { Project } from '@busos/contracts';
 import type { ReviewCase } from '@busos/workspace-review';
 import type { RunSummary } from '@busos/workspace-run';
-import type { WorkspaceReadService } from '@busos/workspace-read';
-import type { WorkspaceReviewService } from '@busos/workspace-review';
-import type { WorkspaceRunService } from '@busos/workspace-run';
+export interface OverviewReadSurface {
+  listProjects(): Promise<Project[]>;
+}
+
+export interface OverviewReviewSurface {
+  listReviews(): Promise<ReviewCase[]>;
+}
+
+export interface OverviewRunSurface {
+  listRuns(): Promise<RunSummary[]>;
+}
 
 export interface ActivityItem {
   kind: 'project' | 'review' | 'run';
@@ -94,9 +102,9 @@ function buildActivity(
  * REAL (the in-memory demo workspace) — never faked metrics.
  */
 export async function buildOverview(
-  read: WorkspaceReadService,
-  review: WorkspaceReviewService,
-  run: WorkspaceRunService,
+  read: OverviewReadSurface,
+  review: OverviewReviewSurface,
+  run: OverviewRunSurface,
 ): Promise<OverviewModel> {
   const [projects, reviews, runs] = await Promise.all([
     read.listProjects(),

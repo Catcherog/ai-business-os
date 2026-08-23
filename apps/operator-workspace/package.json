@@ -7,10 +7,11 @@
   "scripts": {
     "build": "node build.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run tests-workspace-ui",
+    "test": "vitest run tests-workspace-ui tests-workspace-api",
     "smoke": "node smoke.mjs && node smoke-action.mjs && node smoke-server.mjs && node smoke-memory.mjs && node smoke-preview.mjs",
     "smoke:run": "node smoke-run.mjs",
     "smoke:review": "node smoke-review.mjs",
+    "smoke:closure": "node smoke-closure.mjs",
     "verify": "npm run typecheck && npm run build && npm run smoke"
   },
   "dependencies": {

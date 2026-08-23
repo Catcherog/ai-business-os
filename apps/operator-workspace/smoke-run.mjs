@@ -130,7 +130,7 @@ function assertNoForbidden(text, where) {
 
 try {
   await driver.initWorkspace();
-  driver.renderApp(driver.getService());
+  driver.renderApp(driver.getDataSource());
 
   // ---- Runs list ----------------------------------------------------------
   driver.navigate('runs');

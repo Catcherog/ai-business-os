@@ -5,6 +5,10 @@ import { WorkspaceReadService, seedFakeWorkspace } from '@busos/workspace-read';
 import { WorkspaceReviewService } from '@busos/workspace-review';
 import { WorkspaceRunService, buildDemoRuns } from '@busos/workspace-run';
 import { MemoryService, InMemoryMemoryRepository, seedCanonicalMemory } from '@busos/memory';
+import {
+  createDemoWorkspaceDataSource,
+  type WorkspaceDataSource,
+} from './workspace-data-source.js';
 
 /**
  * Frontend data source for the Operator Workspace demo (H1-01 read surface +
@@ -30,10 +34,11 @@ let repo: BusinessRepository | null = null;
 let runRegistry: InMemoryProcessRegistry | null = null;
 // H2-01 — canonical governed Memory foundation (read-only surface only).
 let memSvc: MemoryService | null = null;
+let dataSource: WorkspaceDataSource | null = null;
 
 /** Seed the in-memory demo datasets and build the read + review + run services. Idempotent. */
-export async function initWorkspace(): Promise<void> {
-  if (readSvc && reviewSvc && runSvc && memSvc) return;
+export async function initWorkspace(buildSha = 'unknown'): Promise<void> {
+  if (readSvc && reviewSvc && runSvc && memSvc && dataSource) return;
   // One shared in-memory repository backs both surfaces so a committed review
   // lead is visible through the canonical write path (no extra UI plumbing).
   repo = new BusinessRepository(createFakeFeishuAdapter());
@@ -57,6 +62,18 @@ export async function initWorkspace(): Promise<void> {
   runRegistry = new InMemoryProcessRegistry();
   for (const rec of buildDemoRuns()) await runRegistry.save(rec);
   runSvc = new WorkspaceRunService(runRegistry);
+  dataSource = createDemoWorkspaceDataSource({
+    read: readSvc,
+    review: reviewSvc,
+    run: runSvc,
+    buildSha,
+  });
+}
+
+/** The only browser-facing Project / Review / Run data boundary. */
+export function getDataSource(): WorkspaceDataSource {
+  if (!dataSource) throw new Error('Workspace not initialized — call initWorkspace() first.');
+  return dataSource;
 }
 
 export function getService(): WorkspaceReadService {

@@ -97,7 +97,7 @@ const fail = (m) => { console.error('MEMORY_SMOKE_FAIL:', m); failed = true; };
 
 try {
   await driver.initWorkspace();
-  driver.renderApp(driver.getService());
+  driver.renderApp(driver.getDataSource());
 
   // Projects list — open 林晚晴's project detail.
   driver.navigate('projects');

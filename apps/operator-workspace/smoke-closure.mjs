@@ -112,7 +112,7 @@ const FORBIDDEN = [
 
 try {
   await driver.initWorkspace();
-  driver.renderApp(driver.getService());
+  driver.renderApp(driver.getDataSource());
 
   // ---- Overview: real aggregation (Journey A) ----------------------------
   driver.navigate('overview');

@@ -96,17 +96,22 @@ function find(pred) { return ALL.find(pred); }
 const driver = await import('file://' + outfile);
 let failed = false;
 const fail = (m) => { console.error('REVIEW_SMOKE_FAIL:', m); failed = true; };
+const settle = async () => {
+  for (let i = 0; i < 6; i++) await Promise.resolve();
+};
 
 try {
   await driver.initWorkspace();
-  driver.renderApp(driver.getService());
+  driver.renderApp(driver.getDataSource());
 
   // Reviews list
   driver.navigate('reviews');
+  await settle();
   const row = find((e) => (e.className || '').includes('review-row') && textOf(e).includes('cand_rev_r1'));
   if (!row) { fail('Reviews list did not render a row for cand_rev_r1'); }
   else {
     await row.click(); // open review detail
+    await settle();
   }
 
   // Review detail — action panel present
@@ -114,6 +119,7 @@ try {
   if (!approveBtn) { fail('Review detail did not render an Approve button'); }
   else {
     await approveBtn.click(); // perform APPROVE
+    await settle();
   }
 
   // UI must now reflect the terminal COMMITTED outcome
