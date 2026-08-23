@@ -35,6 +35,13 @@ import time
 from typing import Any, Dict, List, Optional
 
 
+def _configure_utf8_stdout() -> None:
+    """Keep structured JSON Unicode-safe on Windows console defaults."""
+    reconfigure = getattr(sys.stdout, "reconfigure", None)
+    if reconfigure is not None:
+        reconfigure(encoding="utf-8", errors="strict")
+
+
 def _extract_structured(state: Dict[str, Any], latency_ms: int) -> Dict[str, Any]:
     """Map the agent's internal AgentState into the port's structured result.
 
@@ -186,6 +193,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"AGENT_RUN_FAILED: {type(e).__name__}: {e}", file=sys.stderr)
         return 1
 
+    _configure_utf8_stdout()
     json.dump(result, sys.stdout, ensure_ascii=False)
     sys.stdout.write("\n")
     return 0
