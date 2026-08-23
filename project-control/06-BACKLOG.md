@@ -276,6 +276,36 @@ No BUSOS engineering defect surfaced (differential is external CloudBase behavio
 production code touched; no closure, no weakened criteria, no fabricated downstream
 evidence. Retry only when auth completes without 504 (CloudBase write path recovered).
 
+## BL-018 — 2026-08-23 CLOUDBASE-WRITE-DIAG-01 Note (BUSOS-R2-BL-018-CLOUDBASE-WRITE-DIAG-01)
+
+Owner-authorized write-path diagnostic executed 2026-08-23 14:04–16:21 GMT+8
+(authority baseline `origin/main = 0d417af`, verified equal). CloudBase connector
+connected by owner; control plane + metrics + admin write probes performed against
+the CONFIRMED production env (`zeh-d7glqc07me2155c61`, verified = lumen-ink env via
+lumen task doc). Full report:
+`project-control/BUSOS-R2-BL-018-CLOUDBASE-WRITE-DIAG-01.md`.
+
+**Result: CASE C — LUMEN-DEFECT-SUSPECTED. CloudBase provider EXONERATED.**
+- Control plane: env NORMAL / DB RUNNING / prepaid 个人版 / Expire 2026-09-21 /
+  not isolated / no write restriction.
+- **DbWrite metric = ALL ZERO** 11:30→16:15 (writes never reach the DB), while
+  **DbRead > 0** in the same windows (11:55=17, 12:30=6, 12:35=13, 12:40=17,
+  14:05=11). Billing FLEXDB: ReadRequests=967, **WriteRequests=0** (write quota
+  untouched — the "write quota" reading is now fully superseded).
+- Admin write probes (connector) on **`prod_auth_throttle`** (the exact production
+  throttle collection): insert / readback / upsert-update / delete — **ALL SUCCESS**
+  @ 16:15–16:17; cleanup verified (Count back to 0).
+- Same-time correlation: connector writes OK @ 16:15–16:17 vs deployed
+  `POST /api/auth` still hanging @ 16:18:29 (curl 000 @ 30 s) and **504 @ 91.5 s**
+  @ 16:20:25 (= Vercel `maxDuration: 90`).
+- Open sub-question: SDK 3.18.3 write behavior vs env-level Server API Key vs
+  Vercel-region→TCB data-plane write endpoint latency (reads also slow at 3–5 s).
+  Exact-recordFailure-shape probe (same SDK + same key) still needs `CLOUDBASE_API_KEY`.
+
+**BL-018 remains OPEN.** No closure, no fix, no deploy, no weakened criteria.
+Recommended next step (owner decision): separate Lumen write-path repair task with
+the same-SDK Probe D as verification, then re-run Gate A→G.
+
 ## BL-020 H1 nav surfaces mislabelled LIVE (contradicted honest DEMO footer)
 - Type: **DEFERRED → FIXED IN H1-05 (non-blocking at closure)**
 - Found in task: BUSOS-R2-H1-05 (product usability review)
