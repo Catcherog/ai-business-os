@@ -26,8 +26,9 @@ authorized.
 
 - BL-015 — DEFERRED / NON-BLOCKING (P1-02 extraction gap). Unchanged.
 - BL-016 — **CLOSED** (P5 owner override). Must not be cited as an active blocker.
-- BL-018 — **OPEN / NON-ENGINEERING LIVE DEPENDENCY** (P6-C live E2E). Not an
-  R2 engineering blocker.
+- BL-018 — **OPEN / LUMEN ENGINEERING REPAIR + LIVE DEPENDENCY**. The latest
+  diagnostic (`8f9ad4a`) supersedes the quota-only classification: CloudBase
+  accepted writes; the deployed Lumen application/SDK path did not reach the DB.
 - BL-019 — **CLOSED** (BUSOS-P6-03 golden-path simulator regression repaired).
 
 ## BL-001 Full Evaluation Center
@@ -170,21 +171,23 @@ live-evidence dependency migrated to **BL-018** (BUSOS-P6-02 hygiene pass).
 - Why non-blocking: P5-X01 scope is the Lumen production-generation root cause (queue→worker, no on-demand execution). Lead-status writes are not on the P5 live closure path (the live E2E seeds `lead_id: 'lead_live_p5'` and never calls `updateLeadStatus`). The P5-04 Task-DONE fix is complete and unaffected.
 - Suggested revisit phase: When a flow first calls `updateLeadStatus` with a `Created At` payload, or as a proactive hardening pass on Feishu DateTime writes. Fix mirrors P5-04: send only the status field, remove the ISO `Created At` rewrite.
 
-## BL-018 P6-C live full-process E2E — NON-ENGINEERING LIVE DEPENDENCY
-- Type: **OPEN — NON-ENGINEERING LIVE DEPENDENCY** (re-scoped 2026-08-15 by BUSOS-P6-02)
+## BL-018 P6-C live full-process E2E — historical origin and current blocker
+- Type: **OPEN — LUMEN ENGINEERING REPAIR + LIVE DEPENDENCY** (classification
+  updated by the 2026-08-23 write-path diagnostic)
 - Found in task: BUSOS-P6-01 (origin), re-scoped in BUSOS-P6-02
 - Origin (preserved): BL-018 was opened 2026-08-15 to track the BUSOS-P6-01
   Orchestrator MVP (composition only) — a single `@busos/orchestrator` package
   composing golden-path → project-lifecycle → creative-production behind one
   `runBusinessProcess` entrypoint, no existing package modified, no new infra.
-  **That implementation work is COMPLETE** (P6-01 COMPLETE; P6-02 COMPLETE).
-  BL-018 now tracks ONLY the outstanding non-engineering live dependency.
-- Description: `P6-C live full-process E2E deferred pending:`
-  - **CloudBase quota availability** (CloudBase NoSQL read quota exhausted; third-party, non-code)
+  **That orchestrator implementation work is COMPLETE** (P6-01 COMPLETE; P6-02 COMPLETE).
+  The original external-only classification below is preserved as history and is
+  superseded by the later diagnostic notes.
+- Historical prerequisites recorded in 2026-08-15 (superseded where noted later):
+  - CloudBase availability (the quota interpretation was later ruled out)
   - **LUMEN live credentials** (`LUMEN_BASE_URL` + rotated `LUMEN_AUTH_PASSWORD`)
   - **FEISHU live credentials** (`FEISHU_*` + `FEISHU_ASSET_TABLE_ID`)
-- Nature: This is **not an engineering defect and not an engineering blocker**. No
-  code change is pending. It is an external-environment/credential availability item.
+- Current nature: a Lumen application/SDK write-path engineering repair is pending
+  in the separate `picture-edit` repository, followed by an owner-authorized LIVE rerun.
 - Why non-blocking for engineering: the orchestrator is fully verified by fake-adapter
   gates (P6-A/P6-B) and the P6-02 reliability gates (P6-D..P6-J). Deferred live
   evidence is NEVER substituted by a fake PASS.
@@ -305,6 +308,19 @@ lumen task doc). Full report:
 **BL-018 remains OPEN.** No closure, no fix, no deploy, no weakened criteria.
 Recommended next step (owner decision): separate Lumen write-path repair task with
 the same-SDK Probe D as verification, then re-run Gate A→G.
+
+## BL-018 — Unified OS Rebaseline Classification (2026-08-23)
+
+`BUSOS-R2-UNIFIED-OS-REBASELINE-01` adopts the latest evidence as the current
+classification: **OPEN / LUMEN ENGINEERING REPAIR + LIVE DEPENDENCY**. Earlier
+quota and “not an engineering defect” statements are historical and superseded.
+
+Required closure order:
+
+1. `LUMEN-WRITE-PATH-FIX-01` in `picture-edit`, separately authorized and audited.
+2. Match the repaired Lumen deployment to its exact commit.
+3. Run the BUSOS Connected/LIVE journey with real Feishu write/readback.
+4. Close BL-018 only if every existing live gate passes without weakened criteria.
 
 ## BL-020 H1 nav surfaces mislabelled LIVE (contradicted honest DEMO footer)
 - Type: **DEFERRED → FIXED IN H1-05 (non-blocking at closure)**

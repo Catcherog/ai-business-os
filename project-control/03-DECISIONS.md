@@ -86,3 +86,53 @@ Status: FROZEN
 ## D020 — Multimodal inputs converge to the same contracts
 Text/image/document inputs may differ at ingestion, but downstream business flow uses the same Candidate contract.
 Status: FROZEN
+
+---
+
+# Proposed Post-H1 Decisions
+
+These decisions were approved as a planning direction in conversation on 2026-08-23.
+They are **PROPOSED / PENDING OWNER REPOSITORY REVIEW** on branch
+`codex/busos-r2-unified-os-rebaseline`. They become FROZEN only after the owner
+approves the written artifact and authorizes integration into `main`.
+
+## D021 — Unified OS is the post-H1 product direction
+Post-H1 productization converges existing capabilities into one Unified AI Business OS.
+The H1 four-navigation limit remains historical to H1 and does not constrain post-H1 IA.
+Status: PROPOSED — PENDING MERGE
+
+## D022 — New navigation ships with working vertical slices
+The target IA is Overview, Customers, Projects, Service Agent, Reviews, Runs,
+Evaluation and Integrations. A navigation item is introduced only with a usable
+surface; empty placeholder pages are not a deliverable.
+Status: PROPOSED — PENDING MERGE
+
+## D023 — Runtime mode is explicit and fail-closed
+DEMO, CONNECTED and LIVE are separate evidence/runtime states. Missing Connected
+dependencies return BLOCKED and never silently fall back to fake data.
+Status: PROPOSED — PENDING MERGE
+
+## D024 — Service Agent remains candidate-only
+The Service Agent surface may generate `LeadCandidateV1`, but D015 remains binding:
+Governance and Human Review must precede any canonical Lead/Customer/Project write.
+Status: PROPOSED — PENDING MERGE
+
+## D025 — Feishu is the server-only business data plane
+Workspace domain services use `BusinessRepository`; only `FeishuAdapter` owns
+Feishu-specific details. Credentials and raw provider records never enter the browser.
+Status: PROPOSED — PENDING MERGE
+
+## D026 — Memory and Lumen stay contextual
+Memory remains embedded in Customer/Project context. Lumen remains a Project-bound
+Business Action. Neither becomes a top-level tool surface in this roadmap.
+Status: PROPOSED — PENDING MERGE
+
+## D027 — Production deployment is an independent gate
+Local-real integration, product UI, push, merge, SCS deployment, Lumen deployment
+and Unified LIVE closure are separately authorized and separately evidenced.
+Status: PROPOSED — PENDING MERGE
+
+## D028 — One active bounded task
+Only `02-CURRENT-STATE.md` plus an explicit owner instruction authorizes execution.
+Every task uses an isolated branch/worktree, exact staging, an Audit Packet and STOP.
+Status: PROPOSED — PENDING MERGE

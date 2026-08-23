@@ -1,12 +1,14 @@
 # AI Business OS — Master Plan
 
-## Top-Level Planning State (updated by BUSOS-R2-00, 2026-08-15; H2-03 status 2026-08-23)
+## Top-Level Planning State (Unified OS rebaseline branch, 2026-08-23)
 
 - **R1 / P0–P6 = COMPLETED TECHNICAL BASELINE.** The R1 sections below are
   preserved as history and remain authoritative for what was built.
-- **P6-C (live full-process E2E) = DEFERRED external live evidence** under
-  **BL-018 (OPEN / NON-ENGINEERING LIVE DEPENDENCY)**. Not an R2 engineering
-  blocker. BL-016 is CLOSED and must not be cited as an active blocker.
+- **P6-C (live full-process E2E) remains OPEN under BL-018.** The latest
+  owner-authorized diagnostic (`8f9ad4a`) supersedes the old quota-only reading:
+  CloudBase accepted admin writes, while the deployed Lumen application/SDK write
+  path did not reach the database and timed out. BL-018 now requires a separate
+  Lumen engineering repair plus a later owner-authorized LIVE rerun.
 - **R2 = productization of the R1 core**, beginning with **H1 — Operator
   Workspace MVP** (see `R2-LONG-TERM-ROADMAP.md`). R2 is an extension of R1, not
   a replacement or restart.
@@ -20,13 +22,18 @@
   COMPLETE; H2-02 (Governed Memory Context Consumption) COMPLETE; **H2-03
   (Evaluation Harness + Golden Set) COMPLETE / ENGINEERING PASS / REMOTE CI PASS**
   (impl `eea166f`, CORR-01 `a9b81a5`); **H2-03 ≠ Full Evaluation Center**.
+- **Service Agent integration is in authoritative main**, but the current product
+  evidence is a local-real Port/orchestrator/Run Detail integration—not a
+  conversation workspace or a proven production runtime deployment.
+- **Post-H1 product direction:** `BUSOS-R2-UNIFIED-OS-REBASELINE-01` defines the
+  Unified AI Business OS sequence: IA → Workspace API → Service Agent surface →
+  Connected Feishu data → Business Data UI → Evaluation Center → independent
+  SCS/Lumen production prerequisites → Unified Production Closure.
 - **H3 / H4 remain deferred horizons** and cannot be auto-started.
-- Current authorized planning task: **BUSOS-R2-H2-03-GOV-CLOSE — reconcile
-  evaluation closure control state** (control-document only). H2-03 engineering is
-  complete and pushed (impl `eea166f`, CORR-01 `a9b81a5`). Next authorized
-  implementation unit: **NONE — awaiting explicit owner authorization** (owner
-  choices: Golden Set extension / Evaluation Center UI, Memory durability,
-  stronger deterministic extraction, or BL-018 LIVE closure).
+- Current planning packet: **BUSOS-R2-UNIFIED-OS-REBASELINE-01** on branch
+  `codex/busos-r2-unified-os-rebaseline`, pending owner repository review.
+- Next authorized implementation unit: **NONE**. A roadmap row is not execution
+  authorization; each unit requires an explicit owner instruction.
 
 The R1 plan (P0–P6) below is retained verbatim as the completed baseline history.
 

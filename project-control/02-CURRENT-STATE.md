@@ -9,30 +9,23 @@ BUSOS-P5-X03-STATUS.md, BUSOS-P6-01-PLAN.md). Detailed evidence for P1–P6 is
 preserved in those completion reports and git history — not duplicated here.
 
 CURRENT PHASE:
-R2 — H2 Governed Intelligence (H1 Operator Workspace MVP closed)
+R2 — Unified AI Business OS Productization Rebaseline
 
 CURRENT TASK:
-BUSOS-R2-SCS-INTEGRATION-MERGE-01 — Service Agent Integration → Authoritative Main
-[ENGINEERING / MERGE COMPLETE — PUSHED / REMOTE VERIFIED —
-PRODUCTION DEPLOYMENT NOT PART OF THIS TASK]
-- 收敛：frozen Service Agent 集成提交 `617b983`（SCS-INTEGRATION-01）安全合并进
-  authoritative main（merge `450541c`, parents `0d417af` + `617b983`；分叉两侧文件集合
-  零重叠 → 零冲突 merge，无 ours/theirs 机械选择；main 侧 BL-018 / H2-03-GOV 控制文档
-  提交原样保留）。
-- 静态合同 Gate A–F 全部 PASS（Port 边界 / query·conversationId·customerId·conversation·topK
-  透传 / output.serviceAgent.answer / I00-I12·R0-R3·KB_PATH|HUMAN_PATH closed enums /
-  R2·R3·must_handoff→HUMAN_REQUIRED / evidence allowlist）。
-- BUSOS 全量 verify：typecheck ✓ · **535 passed / 8 skipped / 0 failed**（15 包）· build ✓ ·
-  smoke ✓（SMOKE_OK · X01 21 项 · PREVIEW_SMOKE_OK）。
-- SCS freeze 回归：冻结 worktree 实测 **687 passed**，FREEZE_SHA `ebb85686` 未变。
-- 真实本地 E2E ×2：canonical「我有点胖，适合拍写真吗？」→ I01/R0/SUCCEEDED（CA-001）；
-  R2「你好，我想咨询新中式写真的价格…」→ I02/R2/HUMAN_PATH/HUMAN_REQUIRED
-  （SERVICE_AGENT_HANDOFF），均非硬编码。
-- BL-018: **OPEN**（unchanged — NON-ENGINEERING LIVE DEPENDENCY）。
-- 生产部署 = 下一独立 Gate `BUSOS-R2-SCS-PROD-DEPLOY-01`，需 owner 另行授权；本任务
-  未触碰 CloudBase / Vercel / 生产代码。
-- 详见 `BUSOS-R2-SCS-INTEGRATION-MERGE-01.md` + `BUSOS-R2-SCS-INTEGRATION-01.md` +
-  `R2-AUDIT-INDEX.md`。
+BUSOS-R2-UNIFIED-OS-REBASELINE-01 — Unified AI Business OS Product Rebaseline
+[PLANNING PACKET READY FOR OWNER REPOSITORY REVIEW — IMPLEMENTATION NOT AUTHORIZED]
+- Authority baseline: `origin/main@8f9ad4a830cfb8217bed2227269c570cc1237fb8`.
+- Planning branch: `codex/busos-r2-unified-os-rebaseline`.
+- Scope: product design, task sequencing, control-state reconciliation and
+  acceptance/audit planning only; no product code, deployment, PR or merge.
+- Target sequence: IA → Workspace API → Service Agent Runtime/UI → Connected
+  Feishu → Business Data UI → Evaluation Center → independent SCS/Lumen
+  production prerequisites → Unified Production Closure.
+- Written plan: `BUSOS-R2-UNIFIED-OS-REBASELINE-01.md`.
+- `R2-LONG-TERM-ROADMAP.md` remains historical for H0/H1 but is superseded by the
+  rebaseline document for post-H1 product sequencing.
+- Next authorized implementation work: **NONE** pending owner review of the
+  written branch artifact.
 
 PRIOR TASK (closed):
 BUSOS-R2-SCS-INTEGRATION-01 — Service Agent → Business OS 真实集成
@@ -223,33 +216,25 @@ EXISTING CAPABILITIES (short list):
   lifecycle, deterministic rule-based extraction, read-only workspace surface)
 
 ACTIVE BLOCKERS:
-- none blocking R2 engineering
-- BL-018 = external live evidence dependency only (CloudBase quota + Lumen /
-  Feishu live credentials). Not an engineering defect; tracked separately from
-  R2 scope. **Directly blocks the H1-04 LIVE gate** (real Feishu Project + real
-  Lumen generation + real Asset write + readback VERIFIED + UI Run/Asset view).
-  The H1-04 engineering slice is complete and verified by the DEMO path + the
-  CONNECTED boundary probe; only the live execution is deferred.
+- **BL-018 OPEN — Lumen application/SDK write-path defect suspected.** The latest
+  diagnostic (`8f9ad4a`) rules out a CloudBase provider-wide write failure: admin
+  writes/readback succeeded, while deployed Lumen writes did not reach the DB and
+  timed out at the Vercel function boundary. Repair belongs to the separate
+  `picture-edit` task `LUMEN-WRITE-PATH-FIX-01`; Unified LIVE closure remains blocked.
+- Service Agent production runtime is not proven. The current bridge is local-real
+  (`spawnSync` + local Python/source/model assets); production requires the separate
+  runtime and deploy gates defined by the rebaseline.
 
 NEXT AUTHORIZED WORK:
-**NONE — awaiting explicit owner authorization.** SCS-INTEGRATION-01 / SCS-INTEGRATION-MERGE-01
-(frozen Service Agent integrated into authoritative main) are COMPLETE and pushed with gates
-PASS / full verify PASS. H2-01 / H2-02 / H2-03, GOV-01, and X01-CLOSE remain COMPLETE (see above).
-Per the STOP rule and `R2-VERIFICATION-AND-AUDIT-PROTOCOL.md`, do NOT auto-start **H2-04**, the
-**Evaluation Center** UI, memory scoring/decay, embeddings / vector / semantic retrieval, LLM-based
-extraction, **H3 / H4**, or BL-018 remediation — none of these can be auto-started. Owner choices
-for the next increment:
-- **`BUSOS-R2-SCS-PROD-DEPLOY-01`** — SCS 生产部署（CloudBase / Vercel）＝下一独立 Gate，
-  需 owner 显式授权（本 merge 任务未触碰生产）。
-- **Owner 公网验收**（ochre DEMO preview `https://ai-business-os-demo-ochre.vercel.app`；
-  或新部署后的验收，由后续 deploy 任务决定）。
-- **B. Golden Set extension / Evaluation Center UI** · **C. Memory durability** ·
-  **D. stronger deterministic extraction** · **E. BL-018 LIVE closure**
-  (owner supplies `LUMEN_BASE_URL` + `LUMEN_AUTH_PASSWORD` + `FEISHU_*` + `FEISHU_ASSET_TABLE_ID`
-  + CloudBase quota, then one live re-run of `runConnectedGenerateVisualReference`).
+**NONE — awaiting owner review of `BUSOS-R2-UNIFIED-OS-REBASELINE-01.md`.**
+The first proposed implementation task is `BUSOS-R2-UX-01`, but it is not
+authorized by this planning branch. Do not auto-start UX code, Workspace API,
+Service Agent UI/runtime, Feishu Connected work, Evaluation UI, SCS deployment,
+Lumen repair, BL-018 LIVE closure, H3 or H4.
 
 IMPORTANT DEFERRED ITEMS:
-- BL-018 — live full-process E2E (P6-C); OPEN / NON-ENGINEERING LIVE DEPENDENCY.
+- BL-018 — OPEN; live full-process E2E remains blocked pending a separate Lumen
+  application/SDK write-path repair and later owner-authorized rerun.
 - PUBLIC PREVIEW — LIVE at `https://ai-business-os-demo-ochre.vercel.app`
   (X01-CLOSE, Build `c7a25d8`, DEMO). Owner manual acceptance still PENDING
   (no new product work required).
@@ -274,8 +259,11 @@ the R2 planning state above. Historical objectives remain in the completion
 reports and git history.
 
 LATEST CONTROL DECISIONS:
-R1 decisions D001–D020 are FROZEN (see `03-DECISIONS.md`). R2 direction is set by
-`R2-LONG-TERM-ROADMAP.md`. No R1 frozen decision is re-opened by R2 planning.
+R1 decisions D001–D020 are FROZEN (see `03-DECISIONS.md`). Proposed post-H1
+decisions D021–D028 are recorded on the rebaseline branch and become frozen only
+if that branch is owner-approved and merged. `BUSOS-R2-UNIFIED-OS-REBASELINE-01.md`
+supersedes `R2-LONG-TERM-ROADMAP.md` only for post-H1 sequencing. No R1 frozen
+decision is re-opened.
 
 GOVERNANCE (BUSOS-R2-GOV-01, refined by BUSOS-R2-X01): all R2+ work is now bound by
 `R2-VERIFICATION-AND-AUDIT-PROTOCOL.md` — `origin/main` real remote SHA is the sole code

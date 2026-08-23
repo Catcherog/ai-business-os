@@ -3,6 +3,12 @@
 Created by: BUSOS-R2-00 — R1→R2 Planning Baseline (2026-08-15)
 Document type: **planning direction, not execution authorization**
 
+> **POST-H1 STATUS (2026-08-23): HISTORICAL / SUPERSEDED FOR CURRENT SEQUENCING.**
+> H0/H1 history and the original product principles remain valid. The H1 rule of
+> exactly four top-level surfaces applied to H1 only. Current post-H1 information
+> architecture, task order and gates are defined by
+> `BUSOS-R2-UNIFIED-OS-REBASELINE-01.md`. Neither document authorizes execution.
+
 ## 0. How to read this file
 
 - This file describes **horizons**, not active work.
@@ -62,9 +68,10 @@ These are treated as **existing platform assets**. R2 H1 must **reuse**, not reb
 - basic idempotency
 
 Outstanding **live full-process evidence** (P6-C) remains tracked separately by
-**BL-018 (OPEN / NON-ENGINEERING LIVE DEPENDENCY)**. It is an external live
-dependency (third-party quota + credentials) and is **not an R2 engineering
-blocker**.
+BL-018. This paragraph's original external/quota-only classification was
+superseded on 2026-08-23: CloudBase accepted admin writes, while the deployed
+Lumen application/SDK write path did not reach the DB. See `06-BACKLOG.md` and
+`BUSOS-R2-BL-018-CLOUDBASE-WRITE-DIAG-01.md`.
 
 ---
 

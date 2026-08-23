@@ -7,6 +7,7 @@
 | Status | Meaning |
 |--------|---------|
 | AVAILABLE | code path exists, not yet exercised |
+| PLANNED | approved product target; code path does not yet exist |
 | DEMO VERIFIED | WorkBuddy drove it in-browser with fake/in-memory backend |
 | LIVE VERIFIED | driven against real external system with readback evidence |
 | OWNER VERIFIED | **you** personally confirmed the experience |
@@ -70,7 +71,29 @@ node build.mjs                 # builds dist/bundle.js + dist/index.html + dist/
 | 17 | Reviews — Reject | DEMO VERIFIED | `workspace-review` 7/7 (zero writes) |
 
 > **All 17 steps are `DEMO VERIFIED` from engineering evidence. None is `OWNER VERIFIED` yet — that requires your manual pass.**
-> **CONNECTED / LIVE columns:** the Generate Visual Reference CONNECTED boundary returns honest `BLOCKED` without credentials (BL-018). No step is `LIVE VERIFIED` because BL-018 (live Feishu + Lumen + CloudBase) is OPEN.
+> **CONNECTED / LIVE columns:** the Generate Visual Reference CONNECTED boundary returns honest `BLOCKED` without credentials. No step is `LIVE VERIFIED`; BL-018 now requires a separate Lumen application/SDK write-path repair plus a later real Feishu/Lumen readback journey.
+
+---
+
+## 1A. Unified OS target journey — planned, not yet available
+
+These rows are acceptance targets from `BUSOS-R2-UNIFIED-OS-REBASELINE-01.md`.
+`PLANNED` is not engineering, product, Connected, LIVE or owner evidence.
+
+| # | Target step | Current status | Required future evidence |
+|---|---|---|---|
+| U1 | Open one Unified OS URL; verify Mode and Build SHA | PLANNED | Deployment metadata matched to commit + browser check |
+| U2 | Read a real Customer/Lead through the Connected data plane | PLANNED | Real server read with sanitized provenance |
+| U3 | Run a real Service Agent consultation | PLANNED | Production runtime call + Run/Trace |
+| U4 | Inspect intent, risk, route, evidence and handoff | PLANNED | Product UI + structured output/trace consistency |
+| U5 | Generate `LeadCandidateV1`; route through Governance and Review | PLANNED | Candidate/governance/review E2E; no direct fact write |
+| U6 | Commit approved fact to Feishu and verify critical-field readback | PLANNED | Real record IDs + readback PASS, secrets redacted |
+| U7 | Inspect Customer/Project/Task/Asset in the same OS | PLANNED | Connected canonical read models |
+| U8 | Run Project-bound Lumen action and inspect resulting Asset | PLANNED | Repaired Lumen LIVE call + Feishu Asset readback |
+| U9 | Inspect governed Memory and Evaluation evidence | PLANNED | Memory context refs + harness/report/UI parity |
+| U10 | Complete owner manual acceptance | PLANNED | Explicit owner verdict only |
+
+No implementing task may promote a row directly from PLANNED to OWNER VERIFIED.
 
 ---
 

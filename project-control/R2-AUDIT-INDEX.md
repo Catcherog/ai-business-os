@@ -12,7 +12,7 @@
 | Column | Meaning |
 |--------|---------|
 | Baseline | `origin/main` remote SHA at task start (re-queried, not assumed) |
-| Final SHA | remote `origin/main` SHA after the task's push (tip of the task era) |
+| Final SHA | externally verified remote branch or `origin/main` tip, according to the task's authorized integration scope |
 | Engineering | `ENGINEERING PASS` / `FAIL` / `NOT APPLICABLE` |
 | Demo | `DEMO PRODUCT PASS` / `FAIL` / `NOT APPLICABLE` |
 | Connected | `CONNECTED PASS` / `BLOCKED` / `FAIL` / `NOT APPLICABLE` |
@@ -40,6 +40,7 @@
 | H2-03 | Evaluation Harness + Golden Set (backend evaluation foundation) | `2b36585995d307c8aa257e2f5266adffade09d6f` | CORR-01 `a9b81a509250144b4edc0aab94e2f5ccd2b9e46b`; impl/closure `eea166f93f448bc4e049bb5e7a8c487314a305db` | ENGINEERING PASS | NOT APPLICABLE (backend evaluation harness, no product surface) | NOT APPLICABLE | NOT APPLICABLE | NOT APPLICABLE (backend evaluation harness; not inherited PENDING) | `project-control/BUSOS-R2-H2-03.md` |
 | SCS-INTEGRATION-01 | Service Agent → Business OS 真实集成（`@busos/service-agent-port` + orchestrator 窄入口 + Run Detail） | `eea166f93f448bc4e049bb5e7a8c487314a305db` | `617b983963fe47a5273721e6124899fad05340b9`（集成分支；经 MERGE-01 收敛进 main） | ENGINEERING PASS | DEMO PRODUCT PASS（Run Detail 展示 Service Agent 结果） | NOT APPLICABLE（本地真实 E2E；无 CONNECTED/LIVE 边界） | LIVE E2E NOT APPLICABLE — 本任务明确不部署生产（AC-12） | OWNER ACCEPTANCE PENDING | `project-control/BUSOS-R2-SCS-INTEGRATION-01.md` |
 | SCS-INTEGRATION-MERGE-01 | SCS 集成提交安全收敛进 authoritative main（merge + 全量验证 + push） | `0d417af064d302e3f1406c79cab1365fbda07b22` | merge `450541c351e73e164c47266e216e899df9756503`（parents 0d417af + 617b983）；closure tip 经 push 后 `git ls-remote` 外部核验 | ENGINEERING PASS | DEMO PRODUCT PASS（build/smoke 全绿，Run Detail 展示保留） | NOT APPLICABLE | LIVE E2E NOT APPLICABLE — 生产部署属下一独立 Gate `BUSOS-R2-SCS-PROD-DEPLOY-01` | OWNER ACCEPTANCE PENDING | `project-control/BUSOS-R2-SCS-INTEGRATION-MERGE-01.md` |
+| UNIFIED-OS-REBASELINE-01 | Unified AI Business OS product design, sequencing and control-state reconciliation (planning only) | `8f9ad4a830cfb8217bed2227269c570cc1237fb8` | planning branch tip verified externally after push; not merged to main | NOT APPLICABLE (control documents only; baseline tests recorded in packet) | NOT APPLICABLE | NOT APPLICABLE | NOT APPLICABLE | OWNER ACCEPTANCE PENDING (written repository artifact) | `project-control/BUSOS-R2-UNIFIED-OS-REBASELINE-01.md` |
 
 > **Note on H1-04 / H1-05 Final SHA:** the implementation commit is recorded first; a small follow-up commit corrected the SHA line inside the completion report. The "Final SHA" above is the task-era tip. The report's own `Pushed:` line may cite the implementation commit — both are listed for traceability.
 >
@@ -51,7 +52,10 @@
 
 ## Open blockers (carried)
 
-- **BL-018 = OPEN / NON-ENGINEERING LIVE DEPENDENCY** — CloudBase quota + `LUMEN_*` / `FEISHU_*` credentials. Directly blocks H1-04/H1-05/H2-02 LIVE gates. Not an engineering defect.
+- **BL-018 = OPEN / LUMEN ENGINEERING REPAIR + LIVE DEPENDENCY.** Latest
+  diagnostic `8f9ad4a` exonerates a provider-wide CloudBase write failure and
+  identifies the deployed Lumen application/SDK path as the fault layer. Repair
+  belongs to a separate `picture-edit` task before BUSOS LIVE closure.
 - All other historical blockers (BL-015, BL-016, BL-017, BL-019) are CLOSED / deferred-and-non-blocking per `02-CURRENT-STATE.md`.
 
 ---
@@ -61,7 +65,11 @@
 - **BUSOS-R2-X01-CLOSE — Stable Preview + CI Green Closure** — AUTHORIZED and COMPLETE (rows above). Public preview is **live** at `https://ai-business-os-demo-ochre.vercel.app` (stable alias of project `catcher1/ai-business-os-demo`, Build `c7a25d8`, DEMO mode), CI PASS on both the CI-repair (`aba746a`) and the deployed implementation (`c7a25d8`) commits. Remaining: Owner manual acceptance only.
 - **H2-03** — COMPLETE / ENGINEERING PASS (row above). Evaluation Harness + Golden Set, remote CI PASS (`32590688601`); CORR-01 (`a9b81a5`) repaired MEM-17 production redaction defect without weakening expectations. **H2-03 ≠ Full Evaluation Center.**
 - **SCS-INTEGRATION-01 / SCS-INTEGRATION-MERGE-01** — COMPLETE / ENGINEERING PASS (rows above). Frozen Service Agent integrated into authoritative BUSOS main (merge `450541c`, parents `0d417af` + `617b983`). SCS frozen tests 687 passed (FREEZE_SHA `ebb85686` unchanged); BUSOS full verify 535 passed / 8 skipped / 0 failed. **Production deployment is NOT part of this task** — next gate is `BUSOS-R2-SCS-PROD-DEPLOY-01` (requires explicit owner authorization).
-- **Evaluation Center UI, Golden Set extension, Memory durability, embeddings/vector, H3, H4** — explicitly out of scope, not auto-started.
+- **UNIFIED-OS-REBASELINE-01** — planning branch ready for owner repository review;
+  no implementation task is authorized by the roadmap row.
+- Proposed first implementation unit after written-plan approval: `BUSOS-R2-UX-01`.
+  Workspace API, Service Agent UI/runtime, Connected Feishu, Evaluation UI, SCS
+  deployment, Lumen repair, H3 and H4 remain not authorized.
 
 ---
 
