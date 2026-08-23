@@ -225,6 +225,27 @@ server-only **CONNECTED** boundary probe. Findings:
 BL-018 remains **OPEN / NON-ENGINEERING LIVE DEPENDENCY**. H1-05 STOPS after
 commit + push; H2/H3/H4 are not auto-started.
 
+## BL-018 — 2026-08-23 Re-Verification Note (BUSOS-R2-BL-018-LIVE-CLOSE)
+
+Owner-authorized LIVE re-verification executed 2026-08-23 (authority baseline
+`origin/main = 4e5f77f`, verified equal). Result: **STILL BLOCKED — BL-018 remains OPEN**;
+H1-X01 remains **TEMPORARY LIVE FEASIBILITY** (NOT upgraded to NORMAL LIVE). Full report:
+`project-control/BUSOS-R2-BL-018-LIVE-CLOSE.md`.
+
+Live evidence (2026-08-23 11:47–11:54 GMT+8, deployed `https://lumen-ink.vercel.app`):
+- `GET /api/health` → 200; `GET /api/projects` (no auth) → 401 fast (server healthy).
+- `POST /api/auth` → **hang** (curl `000` after 40 s ×3); Vercel logs show **504 Vercel
+  Runtime Timeout Error: Task timed out** @ 11:51:48 / 11:52:29 / 11:53:11.
+- Vercel log @ 11:51:42: `GET /api/health → 200 [TCB][WARN] Your current request
+  database.get…` — **CloudBase SDK read-quota warning**.
+
+Conclusion: **CloudBase NoSQL read quota is STILL exhausted as of 2026-08-23** (the
+~2026-08-21 expected reset did not materialize). The only missing evidence for closure —
+the deployed-Lumen leg (real Vercel+CloudBase generation) — is unreachable at its first
+step (Lumen auth reads NoSQL). No BUSOS engineering defect surfaced; no production code
+touched; closure criteria NOT weakened. Retry only after the quota condition changes
+(reset/upgrade).
+
 ## BL-020 H1 nav surfaces mislabelled LIVE (contradicted honest DEMO footer)
 - Type: **DEFERRED → FIXED IN H1-05 (non-blocking at closure)**
 - Found in task: BUSOS-R2-H1-05 (product usability review)
