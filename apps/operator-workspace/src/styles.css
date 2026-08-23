@@ -101,6 +101,17 @@ body {
   border-top: 1px solid var(--line);
   font-size: 12px;
 }
+.runtime-identity {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.runtime-build,
+.runtime-summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .muted { color: var(--muted); }
 
 .badge {
@@ -261,9 +272,12 @@ table.tbl tr:last-child td { border-bottom: none; }
 /* ---- Responsive ---- */
 @media (max-width: 720px) {
   .app { grid-template-columns: 1fr; }
-  .sidebar { position: static; height: auto; flex-direction: row; align-items: center; flex-wrap: wrap; }
-  .nav { flex-direction: row; flex-wrap: wrap; }
-  .sidebar-foot { display: none; }
+  .sidebar { position: static; height: auto; flex-direction: row; align-items: center; flex-wrap: wrap; padding: 12px; }
+  .brand { flex: 1 1 auto; padding: 4px 6px 10px; }
+  .nav { flex: 1 0 100%; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
+  .nav-item { width: auto; min-width: max-content; }
+  .sidebar-foot { flex: 1 1 auto; display: flex; flex-direction: row; align-items: center; flex-wrap: wrap; border-top: none; padding: 0 6px 4px; }
+  .runtime-identity { display: flex; flex-direction: row; align-items: center; flex-wrap: wrap; }
   .content { padding: 18px 16px; }
 }
 

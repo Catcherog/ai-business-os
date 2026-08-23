@@ -39,7 +39,12 @@ await esbuild.build({
     '@busos/service-agent-candidate': resolve(repoRoot, 'packages/service-agent-candidate/src/index.ts'),
     'node:crypto': resolve(__dirname, 'shims/node-crypto.mjs'),
   },
-  define: { 'process.env.NODE_ENV': '"production"' },
+  define: {
+    'process.env.NODE_ENV': '"production"',
+    __BUILD_SHA__: '"smoke"',
+    __RELEASE__: '"BUSOS-R2-X01"',
+    __BUILD_MODE__: '"DEMO"',
+  },
   banner: { js: 'globalThis.process = globalThis.process || { env: {} };' },
   logLevel: 'error',
 });

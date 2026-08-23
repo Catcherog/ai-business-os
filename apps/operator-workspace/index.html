@@ -16,8 +16,11 @@
         <nav class="nav" id="nav" aria-label="Primary"></nav>
         <div class="sidebar-foot">
           <span class="badge badge-readonly">IN-MEMORY</span>
-          <span class="badge badge-demo">DEMO</span>
-          <span class="muted" id="build-meta">Build —</span>
+          <div id="runtime-identity" class="runtime-identity" aria-label="Runtime identity">
+            <span class="badge badge-demo">DEMO</span>
+            <span class="muted runtime-build" id="build-meta">Build —</span>
+            <span class="muted runtime-summary">In-memory demo data</span>
+          </div>
         </div>
       </aside>
       <main class="content" id="content" aria-live="polite"></main>

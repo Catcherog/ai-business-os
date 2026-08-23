@@ -22,28 +22,25 @@ import type { MemoryRecordV1 } from '@busos/contracts';
 import { getService, getReviewService, getRunService, getMemoryService } from './api.js';
 import { runGenerateVisualReference } from './action.js';
 import { buildOverview, type OverviewModel } from './overview-model.js';
+import { buildSha } from './build-info.js';
+import {
+  NAVIGATION,
+  createRouter,
+  isNavigationActive,
+  type Route,
+} from './router.js';
+import { demoRuntimeIdentity, renderRuntimeIdentity } from './runtime-identity.js';
 
-type View =
-  | 'overview'
-  | 'projects'
-  | 'reviews'
-  | 'review-detail'
-  | 'runs'
-  | 'run-detail'
-  | 'project-detail';
-
-const NAV: { id: View; label: string; tag?: string }[] = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'projects', label: 'Projects', tag: 'DEMO' },
-  { id: 'reviews', label: 'Reviews', tag: 'DEMO' },
-  { id: 'runs', label: 'Runs', tag: 'DEMO' },
-];
+type View = Route['name'];
 
 let svc: WorkspaceReadService;
-let active: View = 'overview';
+let activeRoute: Route = { name: 'overview' };
+let active: View = activeRoute.name;
 let selectedProjectId: string | null = null;
 let selectedReviewId: string | null = null;
 let selectedRunId: string | null = null;
+let appReady = false;
+const router = createRouter();
 
 /* ----------------------------- tiny DOM helper ---------------------------- */
 function h<K extends keyof HTMLElementTagNameMap>(
@@ -133,17 +130,14 @@ function placeholder(title: string, body: string): HTMLElement {
 
 /* --------------------------------- nav ----------------------------------- */
 function renderNav(): HTMLElement {
-  // Highlight the parent nav entry while inside a detail view.
-  const navActive =
-    active === 'review-detail' || active === 'run-detail'
-      ? active.replace('-detail', '')
-      : active;
   const nav = h('nav', { class: 'nav', id: 'nav', 'aria-label': 'Primary' });
-  for (const item of NAV) {
+  for (const item of NAVIGATION) {
+    const isActive = isNavigationActive(activeRoute, item.id);
     const btn = h('button', {
-      class: `nav-item${navActive === item.id ? ' active' : ''}`,
+      class: `nav-item${isActive ? ' active' : ''}`,
       'data-view': item.id,
       type: 'button',
+      'aria-current': isActive ? 'page' : 'false',
     }, [h('span', {}, [item.label])]);
     if (item.tag) btn.append(h('span', { class: 'tag' }, [item.tag]));
     btn.addEventListener('click', () => navigate(item.id));
@@ -1273,6 +1267,33 @@ function kv(rows: [string, string][], opts: { statusValue?: string } = {}): HTML
 }
 
 /* ------------------------------- router ---------------------------------- */
+function routeForView(view: View, id?: string): Route {
+  switch (view) {
+    case 'overview': return { name: 'overview' };
+    case 'projects': return { name: 'projects' };
+    case 'project-detail': return id ? { name: 'project-detail', projectId: id } : { name: 'projects' };
+    case 'reviews': return { name: 'reviews' };
+    case 'review-detail': return id ? { name: 'review-detail', caseId: id } : { name: 'reviews' };
+    case 'runs': return { name: 'runs' };
+    case 'run-detail': return id ? { name: 'run-detail', processId: id } : { name: 'runs' };
+  }
+}
+
+function syncRoute(route: Route): void {
+  activeRoute = route;
+  active = route.name;
+  if (route.name === 'project-detail') selectedProjectId = route.projectId;
+  if (route.name === 'review-detail') selectedReviewId = route.caseId;
+  if (route.name === 'run-detail') selectedRunId = route.processId;
+  if (!appReady) return;
+  const navHost = document.getElementById('nav');
+  if (navHost) navHost.replaceWith(renderNav());
+  void renderContent();
+}
+
+router.subscribe(syncRoute);
+const stopRouter = router.start();
+
 async function renderContent(): Promise<void> {
   const content = document.getElementById('content')!;
   content.replaceChildren(loading('Loading…'));
@@ -1291,19 +1312,20 @@ async function renderContent(): Promise<void> {
 }
 
 export function navigate(view: View, id?: string): void {
-  active = view;
-  if (view === 'project-detail' && id) selectedProjectId = id;
-  if (view === 'review-detail' && id) selectedReviewId = id;
-  if (view === 'run-detail' && id) selectedRunId = id;
-  const navHost = document.getElementById('nav');
-  if (navHost) navHost.replaceWith(renderNav());
-  void renderContent();
+  router.navigate(routeForView(view, id));
 }
 
 /* --------------------------------- shell --------------------------------- */
 export function renderApp(service: WorkspaceReadService): void {
   svc = service;
+  appReady = true;
+  const runtimeHost = document.getElementById('runtime-identity');
+  if (runtimeHost) renderRuntimeIdentity(runtimeHost, demoRuntimeIdentity(buildSha));
   const navHost = document.getElementById('nav');
   if (navHost) navHost.replaceWith(renderNav());
-  void renderContent();
+  syncRoute(router.current());
 }
+
+// Keep the listener alive for the lifetime of the single-page app. The value is
+// intentionally retained to make the ownership of the browser event explicit.
+void stopRouter;
