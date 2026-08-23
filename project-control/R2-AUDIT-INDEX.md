@@ -44,6 +44,7 @@
 | UNIFIED-OS-REBASELINE-01 | Unified AI Business OS product design, sequencing and control-state reconciliation (planning only) | `8f9ad4a830cfb8217bed2227269c570cc1237fb8` | planning branch tip verified externally after push; not merged to main | NOT APPLICABLE (control documents only; baseline tests recorded in packet) | NOT APPLICABLE | NOT APPLICABLE | NOT APPLICABLE | OWNER ACCEPTANCE PENDING (written repository artifact) | `project-control/BUSOS-R2-UNIFIED-OS-REBASELINE-01.md` |
 | UNIFIED-OS-REBASELINE-CORR-01 | Docs-only correction: parallel lanes, SCS production connection boundary, dual journeys, Evaluation loop, Runtime Identity ownership | `19499b28ad3572bd6c3e707d55660e2f5a437bb9` | planning branch tip verified externally after push; not merged to main | NOT APPLICABLE (control documents only) | NOT APPLICABLE | NOT APPLICABLE | NOT APPLICABLE | OWNER RE-REVIEW PENDING; implementation remains unauthorized | `project-control/BUSOS-R2-UNIFIED-OS-REBASELINE-CORR-01.md` |
 | BUSOS-R2-UX-01 | Scalable IA shell, typed routes, responsive navigation and RuntimeIdentityView; preserves Overview / Projects / Reviews / Runs | `b3a059d84d0b612387d465077799af6e1fe2fa94` | implementation `cb32548`; task report `f42db76`; authoritative main closure verified externally after push | ENGINEERING PASS | DEMO PRODUCT PASS (route/runtime tests + existing app smoke) | NOT APPLICABLE | NOT APPLICABLE | OWNER ACCEPTANCE PENDING | `project-control/tasks/BUSOS-R2-UX-01.md` |
+| BUSOS-R2-WORKSPACE-API-01 | Canonical WorkspaceDataSource boundary, DEMO/CONNECTED envelopes, server transport and Project/Review/Run migration | `b3a059d84d0b612387d465077799af6e1fe2fa94` (task base `b7754a7`) | implementation `6388d80`; task report `2f03953`; pushed branch tip `2f03953`; coordinator fast-forward integrated | ENGINEERING PASS | DEMO PRODUCT PASS (contract, app, review/run/closure smoke) | BLOCKED without server-side Connected configuration; no DEMO fallback | NOT APPLICABLE — no LIVE authorization | OWNER ACCEPTANCE PENDING | `project-control/tasks/BUSOS-R2-WORKSPACE-API-01.md` |
 
 > **Note on H1-04 / H1-05 Final SHA:** the implementation commit is recorded first; a small follow-up commit corrected the SHA line inside the completion report. The "Final SHA" above is the task-era tip. The report's own `Pushed:` line may cite the implementation commit — both are listed for traceability.
 >
@@ -73,10 +74,14 @@
   production stage or cross-repository work.
 - `BUSOS-R2-UX-01` — ENGINEERING PASS and integrated into the orchestration branch;
   report `project-control/tasks/BUSOS-R2-UX-01.md`.
-- Next authorized task: `BUSOS-R2-WORKSPACE-API-01`. After that merge, the owner
-  explicitly authorized the isolated SCS, Feishu and Evaluation lanes. SCS
-  production connection, Lumen repair, Unified Production Closure, H3 and H4
-  remain outside this Goal.
+- `BUSOS-R2-WORKSPACE-API-01` — ENGINEERING PASS and integrated into the
+  orchestration branch at `2f03953`; report
+  `project-control/tasks/BUSOS-R2-WORKSPACE-API-01.md`.
+- Next authorized work is one active task per isolated lane:
+  `BUSOS-R2-SCS-RUNTIME-01`, `BUSOS-R2-FEISHU-CONNECT-01`, and
+  `BUSOS-R2-EVAL-UI-01`. SCS UI and Business Data UI follow their respective
+  runtime tasks; lane workers do not merge. SCS production connection, Lumen
+  repair, Unified Production Closure, H3 and H4 remain outside this Goal.
 
 ---
 
