@@ -12,25 +12,27 @@ CURRENT PHASE:
 R2 — H2 Governed Intelligence (H1 Operator Workspace MVP closed)
 
 CURRENT TASK:
-BUSOS-R2-X01-CLOSE — Stable Preview + CI Green Closure
-[ENGINEERING COMPLETE — REMOTE CI PASS — STABLE PUBLIC DEMO AVAILABLE —
-PUBLIC DEMO VERIFIED — PUSHED / REMOTE VERIFIED — OWNER ACCEPTANCE PENDING]
-- Stable Operator Workspace DEMO Preview: **AVAILABLE**
-- URL: **https://ai-business-os-demo-ochre.vercel.app** (project `catcher1/ai-business-os-demo`,
-  production alias; maps to current production deployment `dpl_7VezF3X82JjnwhvobqM2RUkJ1kkp`)
-- Deployed Build: **c7a25d8** (deployed implementation SHA — final `vercel.json`
-  SPA-fallback routing + `.gitignore` `.vercel`; Vercel GitHub integration auto-deploy
-  from the committed state; bundle contains `c7a25d8`, no stale `aba746a`)
-- GitHub CI: **PASS** (run `32447350665` for CI-repair `aba746a`; run `32450422601`
-  for deployable `c7a25d8` — first green `main` CI since H2-02)
-- Public Demo: **VERIFIED** (HTTP all-200 incl. deep-path SPA fallback; bundle identity;
-  deployed-bundle product journey 21/21 PASS; secret scan PASS)
-- Owner Acceptance: **PENDING** (manual pass at the stable URL, per checklist §0)
-- BL-018: **OPEN** (unchanged — NON-ENGINEERING LIVE DEPENDENCY; DEMO-only preview)
-- H2-03: **NOT STARTED / NOT AUTHORIZED**
-- See `BUSOS-R2-X01-CLOSE.md` (Audit Packet) + `R2-ACCEPTANCE-CHECKLIST.md` (Owner journey).
+BUSOS-R2-H2-03 — Evaluation Harness + Golden Set
+[ENGINEERING COMPLETE — REMOTE CI PASS — PUSHED / REMOTE VERIFIED —
+OWNER ACCEPTANCE NOT APPLICABLE (backend evaluation harness)]
+- Evaluation Harness (`@busos/evaluation`): deterministic Tier-1 judges — MEMORY
+  (real `MemoryService` + `assembleMemoryContext`) and GOVERNANCE (real `govern`);
+  RETRIEVAL / GENERATION honestly `NOT_EVALUABLE` (no production surface in BUSOS,
+  KB-SNAPSHOT F-01), never faked.
+- Canonical Golden Set: **42 cases → 28 PASS / 0 FAIL / 0 ERROR / 14 NOT_EVALUABLE**.
+- CORR-01 (`a9b81a5`): MEM-17 production bearer-secret redaction defect repaired in
+  `packages/memory/src/memory-context.ts`; golden-set expectation NOT weakened;
+  no whitelist / known-gap used to fake PASS.
+- Remote CI: **PASS** (run `32590688601`, `verify` job) on implementation SHA `eea166f`.
+- Implementation SHA: **eea166f** (origin/main tip).
+- H2-03 ≠ Full Evaluation Center — see `BUSOS-R2-H2-03.md`.
+- BL-018: **OPEN** (unchanged — NON-ENGINEERING LIVE DEPENDENCY).
+- See `BUSOS-R2-H2-03.md` (Completion / Audit Packet) + `R2-AUDIT-INDEX.md`.
 
 PRIOR TASK (closed):
+BUSOS-R2-X01-CLOSE — Stable Preview + CI Green Closure
+[COMPLETE — REMOTE CI PASS — STABLE PUBLIC DEMO LIVE at
+`https://ai-business-os-demo-ochre.vercel.app` (Build `c7a25d8`, DEMO) — OWNER ACCEPTANCE PENDING]
 BUSOS-R2-GOV-01 — Verification, Preview & Audit Protocol
 [CONTROL / GOVERNANCE COMPLETE — PUSHED / REMOTE VERIFIED]
 
@@ -163,6 +165,23 @@ orchestrator **49 passed / 1 skipped** (+5), workspace-read **5**, workspace-rev
 workspace-run **15**; all seven app smokes green; no existing test weakened. Gates
 H2-02-A..H2-02-J all PASS. See `BUSOS-R2-H2-02.md`.
 
+H2-03 COMPLETE — **Evaluation Harness + Golden Set**, the third H2 task and the first
+real **evaluation foundation** for BUSOS. A new `@busos/evaluation` package provides
+deterministic Tier-1 judges (MEMORY via real `MemoryService` + `assembleMemoryContext`;
+GOVERNANCE via real `govern`), metrics, regression gates (hard gate + baseline delta), a
+machine-readable reporter, and a CLI (`npm run eval`) with contract exit codes
+**0 (dataset PASS) / 1 (hard-gate FAIL) / 2 (malformed dataset)**. The Canonical Golden
+Set (`datasets/golden-set.v0.json`) holds **42 cases → 28 PASS / 0 FAIL / 0 ERROR / 14
+NOT_EVALUABLE**; RETRIEVAL / GENERATION cases are honestly `NOT_EVALUABLE` (no production
+surface in BUSOS, KB-SNAPSHOT F-01) — never faked, never auto-passed. CORR-01
+(`a9b81a5`) repaired the MEM-17 production bearer-secret redaction defect in
+`packages/memory/src/memory-context.ts` without weakening any golden-set expectation and
+without any whitelist / known-gap. Engineering evidence: Memory **36/36**, Evaluation **83/83**
+(12 test files), Golden Set **28/0/0/14**, Hard Gate **PASS**, CLI **0/1/2**; Remote CI **PASS**
+(run `32590688601`). **H2-03 is NOT the Full Evaluation Center** — UI comparison, prompt/model
+version comparison, Memory durability, stronger LLM extraction, and multimodal ingestion
+remain deferred. See `BUSOS-R2-H2-03.md` for the full completion / audit packet.
+
 EXISTING CAPABILITIES (short list):
 - Candidate / Governance (Service Agent → `LeadCandidateV1`, deterministic governance)
 - Human Review (`@busos/human-review`: approve / edit+approve / reject)
@@ -185,23 +204,18 @@ ACTIVE BLOCKERS:
   CONNECTED boundary probe; only the live execution is deferred.
 
 NEXT AUTHORIZED WORK:
-**None beyond X01 — awaiting explicit owner authorization.** H1 is closed (final verdict B,
+**NONE — awaiting explicit owner authorization.** H1 is closed (final verdict B,
 `H1 ENGINEERING COMPLETE / MVP LIVE CLOSURE BLOCKED — BL-018`); H2-01 (Canonical Memory
-Foundation) and H2-02 (Governed Memory Context Consumption) are COMPLETE and pushed with
-gates A–J PASS. GOV-01 (governance protocol) is COMPLETE and pushed. X01-CLOSE (this task)
-is COMPLETE: CI green, stable public DEMO preview LIVE at
-`https://ai-business-os-demo-ochre.vercel.app` (Build `c7a25d8`, DEMO), public demo
-verified 21/21 — the only remaining step is Owner manual acceptance. Per the STOP rule and
-`R2-VERIFICATION-AND-AUDIT-PROTOCOL.md`, do NOT auto-start the **Evaluation Center**, memory
-scoring/decay, embeddings / vector / semantic retrieval, LLM-based extraction, **H2-03**, H3 /
-H4, or BL-018 remediation — none of these can be auto-started. Owner choices for the next
-increment: **A. run the one-command X01 deploy and complete manual acceptance**, **B. Golden
-Set + minimal Evaluation**, **C. Memory durability**, **D. stronger deterministic extraction**,
-or **E. BL-018 LIVE closure** (owner supplies `LUMEN_BASE_URL` + `LUMEN_AUTH_PASSWORD` +
-`FEISHU_*` + `FEISHU_ASSET_TABLE_ID` + CloudBase quota, then one live re-run of
-`runConnectedGenerateVisualReference`).
-
-H2-03: **NOT STARTED / NOT AUTHORIZED.**
+Foundation), H2-02 (Governed Memory Context Consumption), and H2-03 (Evaluation Harness +
+Golden Set) are COMPLETE and pushed with gates PASS / remote CI PASS. GOV-01 (governance
+protocol) and X01-CLOSE (stable preview + CI green) are COMPLETE and pushed. Per the STOP
+rule and `R2-VERIFICATION-AND-AUDIT-PROTOCOL.md`, do NOT auto-start **H2-04**, the **Evaluation
+Center** UI, memory scoring/decay, embeddings / vector / semantic retrieval, LLM-based
+extraction, **H3 / H4**, or BL-018 remediation — none of these can be auto-started. Owner
+choices for the next increment: **B. Golden Set extension / Evaluation Center UI**,
+**C. Memory durability**, **D. stronger deterministic extraction**, or **E. BL-018 LIVE closure**
+(owner supplies `LUMEN_BASE_URL` + `LUMEN_AUTH_PASSWORD` + `FEISHU_*` + `FEISHU_ASSET_TABLE_ID`
++ CloudBase quota, then one live re-run of `runConnectedGenerateVisualReference`).
 
 IMPORTANT DEFERRED ITEMS:
 - BL-018 — live full-process E2E (P6-C); OPEN / NON-ENGINEERING LIVE DEPENDENCY.
@@ -212,10 +226,10 @@ IMPORTANT DEFERRED ITEMS:
 - BL-016 — CLOSED (P5 owner override).
 - BL-017 — Feishu Lead DateTime write; DEFERRED / NON-BLOCKING maintenance item.
 - BL-019 — CLOSED (BUSOS-P6-03 golden-path simulator regression repaired).
-- H2 (beyond H2-02) / H3 / H4 horizons — deferred per `R2-LONG-TERM-ROADMAP.md`;
-  cannot be auto-started. H2-01 (Canonical Memory Foundation) and H2-02 (Governed Memory
-  Context Consumption) are the only H2 tasks authorized and completed so far; the Evaluation
-  Center and H2-03+ are NOT started.
+- H2 (beyond H2-03) / H3 / H4 horizons — deferred per `R2-LONG-TERM-ROADMAP.md`;
+  cannot be auto-started. H2-01 (Canonical Memory Foundation), H2-02 (Governed Memory
+  Context Consumption), and H2-03 (Evaluation Harness + Golden Set) are the H2 tasks
+  authorized and completed so far; the Full Evaluation Center UI (H2-04+) is NOT started.
 - Memory durability — H2-01 ships `InMemoryMemoryRepository` only; a durable backend
   behind the `MemoryRepository` port is deferred (non-blocking, by design).
 

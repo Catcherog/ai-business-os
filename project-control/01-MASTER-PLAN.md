@@ -1,6 +1,6 @@
 # AI Business OS — Master Plan
 
-## Top-Level Planning State (updated by BUSOS-R2-00, 2026-08-15; H1-04 status 2026-08-17)
+## Top-Level Planning State (updated by BUSOS-R2-00, 2026-08-15; H2-03 status 2026-08-23)
 
 - **R1 / P0–P6 = COMPLETED TECHNICAL BASELINE.** The R1 sections below are
   preserved as history and remain authoritative for what was built.
@@ -10,16 +10,23 @@
 - **R2 = productization of the R1 core**, beginning with **H1 — Operator
   Workspace MVP** (see `R2-LONG-TERM-ROADMAP.md`). R2 is an extension of R1, not
   a replacement or restart.
-- **H1 — Operator Workspace MVP progress:** H1-01 (Shell + Project Read) COMPLETE;
-  H1-02 (Review Surface) COMPLETE; H1-03 (Run / Trace Surface) COMPLETE;
-  **H1-04 (First Real AI Action — Generate Visual Reference) ENGINEERING COMPLETE,
-  LIVE GATE BLOCKED under BL-018**; H1-05 (Real Usage Closure / MVP Review) NOT
-  started (requires explicit authorization).
-- **H2 / H3 / H4 remain deferred horizons** and cannot be auto-started.
-- Current authorized planning task: **BUSOS-R2-00 — R1→R2 Planning Baseline**
-  (control-document only). H1-01..H1-03 shipped; H1-04 engineering shipped with the
-  live gate honestly reported BLOCKED (BL-018). Next authorized implementation
-  unit: **H1-05**, only after explicit owner authorization.
+- **H1 — Operator Workspace MVP = CLOSED** (final verdict B: `H1 ENGINEERING
+  COMPLETE / MVP LIVE CLOSURE BLOCKED — BL-018`): H1-01 (Shell + Project Read)
+  COMPLETE; H1-02 (Review Surface) COMPLETE; H1-03 (Run / Trace Surface)
+  COMPLETE; H1-04 (First Real AI Action — Generate Visual Reference) ENGINEERING
+  COMPLETE / LIVE GATE BLOCKED under BL-018; H1-05 (Real Usage Closure / MVP
+  Review) COMPLETE. See `BUSOS-R2-H1-05.md`.
+- **H2 — Governed Intelligence progress:** H2-01 (Canonical Memory Foundation)
+  COMPLETE; H2-02 (Governed Memory Context Consumption) COMPLETE; **H2-03
+  (Evaluation Harness + Golden Set) COMPLETE / ENGINEERING PASS / REMOTE CI PASS**
+  (impl `eea166f`, CORR-01 `a9b81a5`); **H2-03 ≠ Full Evaluation Center**.
+- **H3 / H4 remain deferred horizons** and cannot be auto-started.
+- Current authorized planning task: **BUSOS-R2-H2-03-GOV-CLOSE — reconcile
+  evaluation closure control state** (control-document only). H2-03 engineering is
+  complete and pushed (impl `eea166f`, CORR-01 `a9b81a5`). Next authorized
+  implementation unit: **NONE — awaiting explicit owner authorization** (owner
+  choices: Golden Set extension / Evaluation Center UI, Memory durability,
+  stronger deterministic extraction, or BL-018 LIVE closure).
 
 The R1 plan (P0–P6) below is retained verbatim as the completed baseline history.
 
