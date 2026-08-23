@@ -7,8 +7,9 @@
   to the Integration Coordinator**
 - CONNECTED/LIVE: **not applicable / not authorized**
 - Owner acceptance: **PENDING**
-- Implementation commit: **recorded by the implementation commit below; the
-  final report commit is externally verified after push**.
+- Implementation commit: `e8ecb7492624bc4cbcc1d0161ee1bfba7e8af2c5`
+- Final report commit: **externally verified after push; not written here to
+  avoid a self-referential SHA**.
 - Deterministic harness: **authoritative; no judge behavior changed**.
 
 ## Authority and isolation
@@ -78,17 +79,19 @@ repaired and rerun.
 - The default feature endpoint recomputed the canonical Golden Set as **42 total
   → 28 PASS / 0 FAIL / 0 ERROR / 14 NOT_EVALUABLE**.
 - Operator Workspace typecheck — **PASS**.
-- Operator Workspace build — **PASS**; server/browser boundary remains clean.
+- Operator Workspace build at implementation commit — **PASS**; build identity
+  `DEMO · build e8ecb74 · BUSOS-R2-X01`; server/browser boundary remains clean.
 - Operator Workspace smoke — **PASS**, including the no-secret browser bundle
   scan and honest missing-credential `BLOCKED` server smoke.
 - Root `npm run verify` with the repository-documented
   `PYTHONUTF8=1` / `PYTHONIOENCODING=utf-8` settings — **PASS** (all workspace
   typechecks/tests, app build, and smoke).
-- `git diff --check` and final ownership review — required before commit.
+- `git diff --cached --check` — **PASS** before the implementation commit;
+  final report diff is checked before the report commit.
 
 ## Implementation and handoff
 
-- Implementation commit: **to be recorded after the first lane commit**.
+- Implementation commit: `e8ecb7492624bc4cbcc1d0161ee1bfba7e8af2c5`.
 - Report commit: **externally verified after push; not written here to avoid a
   self-referential SHA**.
 - Branch to push: `codex/busos-r2-eval-ui-01` only.
