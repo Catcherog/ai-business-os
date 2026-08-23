@@ -86,6 +86,16 @@ export {
 } from './gates.js';
 
 export {
+  createEvaluationReportStore,
+  type EvaluationDataset,
+  type EvaluationDatasetIssue,
+  type EvaluationReportStore,
+  type EvaluationReportStoreOptions,
+  type EvaluationRunResult,
+  type EvaluationRunStatus,
+} from './report-store.js';
+
+export {
   renderSummaryMarkdown,
   caseTable,
 } from './reporter.js';
