@@ -12,20 +12,27 @@ CURRENT PHASE:
 R2 — Unified AI Business OS Productization Rebaseline
 
 CURRENT TASK:
-BUSOS-R2-UNIFIED-OS-REBASELINE-01 — Unified AI Business OS Product Rebaseline
-[PLANNING PACKET READY FOR OWNER REPOSITORY REVIEW — IMPLEMENTATION NOT AUTHORIZED]
+REBASELINE-CORR-01 — Unified AI Business OS Control Patch
+[DOCS-ONLY CONTROL PATCH READY FOR OWNER RE-REVIEW — IMPLEMENTATION NOT AUTHORIZED]
 - Authority baseline: `origin/main@8f9ad4a830cfb8217bed2227269c570cc1237fb8`.
+- Correction baseline: planning commit
+  `19499b28ad3572bd6c3e707d55660e2f5a437bb9`.
 - Planning branch: `codex/busos-r2-unified-os-rebaseline`.
 - Scope: product design, task sequencing, control-state reconciliation and
   acceptance/audit planning only; no product code, deployment, PR or merge.
-- Target sequence: IA → Workspace API → Service Agent Runtime/UI → Connected
-  Feishu → Business Data UI → Evaluation Center → independent SCS/Lumen
-  production prerequisites → Unified Production Closure.
+- Review verdict: `PLAN DIRECTION APPROVED / CONTROL PATCH REQUIRED /
+  IMPLEMENTATION NOT YET AUTHORIZED`.
+- Target sequence: Rebaseline → IA → Workspace API → parallel SCS/Feishu/Evaluation
+  development lanes → serialized authoritative integration → BUSOS SCS production
+  connection + Lumen prerequisite → Unified Production Closure.
 - Written plan: `BUSOS-R2-UNIFIED-OS-REBASELINE-01.md`.
+- Correction record: `BUSOS-R2-UNIFIED-OS-REBASELINE-CORR-01.md`.
 - `R2-LONG-TERM-ROADMAP.md` remains historical for H0/H1 but is superseded by the
   rebaseline document for post-H1 product sequencing.
-- Next authorized implementation work: **NONE** pending owner review of the
-  written branch artifact.
+- Authorized development lanes: **NONE**.
+- Authoritative Integration Coordinator task: **NONE**.
+- `NEXT AUTHORIZED IMPLEMENTATION WORK = NONE` pending owner re-review of the
+  corrected written branch artifact.
 
 PRIOR TASK (closed):
 BUSOS-R2-SCS-INTEGRATION-01 — Service Agent → Business OS 真实集成
@@ -221,15 +228,26 @@ ACTIVE BLOCKERS:
   writes/readback succeeded, while deployed Lumen writes did not reach the DB and
   timed out at the Vercel function boundary. Repair belongs to the separate
   `picture-edit` task `LUMEN-WRITE-PATH-FIX-01`; Unified LIVE closure remains blocked.
-- Service Agent production runtime is not proven. The current bridge is local-real
-  (`spawnSync` + local Python/source/model assets); production requires the separate
-  runtime and deploy gates defined by the rebaseline.
+- External SCS production deployment prerequisite is complete based on the reviewed
+  `SCS-R2-CLOUDBASE-REDEPLOY-02` evidence: repair SHA `ab2b03bc...`, Deploy `046`,
+  `PRODUCTION_REDEPLOY_PASS`. BUSOS still lacks a production endpoint binding and
+  contract/timeout/handoff/evidence → Run/Trace proof; that is the later
+  `BUSOS-R2-SCS-PROD-CONNECT-01` gate, not another SCS deployment.
 
-NEXT AUTHORIZED WORK:
-**NONE — awaiting owner review of `BUSOS-R2-UNIFIED-OS-REBASELINE-01.md`.**
+AUTHORIZED DEVELOPMENT LANES:
+**NONE.** Future owner-authorized SCS, Feishu and Evaluation lanes may run concurrently
+only after their shared Workspace API dependency is merged. Each lane must record its
+own task ID, branch/worktree, baseline SHA, file ownership, Audit Packet and STOP.
+
+AUTHORITATIVE INTEGRATION TASK:
+**NONE.** At most one Integration Coordinator / merge task may be active at a time.
+
+NEXT AUTHORIZED IMPLEMENTATION WORK:
+**NONE — awaiting owner re-review of `BUSOS-R2-UNIFIED-OS-REBASELINE-01.md` plus
+`BUSOS-R2-UNIFIED-OS-REBASELINE-CORR-01.md`.**
 The first proposed implementation task is `BUSOS-R2-UX-01`, but it is not
 authorized by this planning branch. Do not auto-start UX code, Workspace API,
-Service Agent UI/runtime, Feishu Connected work, Evaluation UI, SCS deployment,
+Service Agent UI/runtime, Feishu Connected work, Evaluation UI, SCS connection,
 Lumen repair, BL-018 LIVE closure, H3 or H4.
 
 IMPORTANT DEFERRED ITEMS:
@@ -238,9 +256,11 @@ IMPORTANT DEFERRED ITEMS:
 - PUBLIC PREVIEW — LIVE at `https://ai-business-os-demo-ochre.vercel.app`
   (X01-CLOSE, Build `c7a25d8`, DEMO). Owner manual acceptance still PENDING
   (no new product work required).
-- **SCS PRODUCTION DEPLOYMENT — `BUSOS-R2-SCS-PROD-DEPLOY-01`（下一独立 Gate，未授权）。
-  SCS 集成已完成并收敛进 main，但**未部署生产**：本任务（MERGE-01）明确不触碰
-  CloudBase / Vercel / 生产代码；部署需 owner 另行显式授权。**
+- **SCS PRODUCTION — external deployment prerequisite CLOSED; BUSOS binding OPEN /
+  NOT AUTHORIZED.** SCS-R2 production is evidenced at repair SHA `ab2b03bc...`,
+  Deploy `046`. The future BUSOS gate is `BUSOS-R2-SCS-PROD-CONNECT-01`: bind BUSOS
+  to that endpoint and prove contract/timeout/handoff/evidence/Run/Trace/build identity
+  without modifying or redeploying SCS.
 - BL-015 — P1-02 extraction gap ("新中式" alone); DEFERRED / NON-BLOCKING.
 - BL-016 — CLOSED (P5 owner override).
 - BL-017 — Feishu Lead DateTime write; DEFERRED / NON-BLOCKING maintenance item.

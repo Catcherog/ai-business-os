@@ -128,11 +128,16 @@ Business Action. Neither becomes a top-level tool surface in this roadmap.
 Status: PROPOSED — PENDING MERGE
 
 ## D027 — Production deployment is an independent gate
-Local-real integration, product UI, push, merge, SCS deployment, Lumen deployment
-and Unified LIVE closure are separately authorized and separately evidenced.
+Local-real integration, product UI, push, merge, BUSOS production connection to SCS,
+Lumen deployment and Unified LIVE closure are separately authorized and separately
+evidenced. The completed external SCS deployment prerequisite is not reopened by BUSOS.
 Status: PROPOSED — PENDING MERGE
 
-## D028 — One active bounded task
+## D028 — Parallel lanes with serialized authoritative integration
 Only `02-CURRENT-STATE.md` plus an explicit owner instruction authorizes execution.
-Every task uses an isolated branch/worktree, exact staging, an Audit Packet and STOP.
+There may be one active bounded task per isolated lane/worktree, with an exact baseline
+SHA, file ownership, Audit Packet and STOP. Multiple explicitly authorized development
+lanes may run concurrently after their shared contract dependency is merged. There is at
+most one authoritative Integration Coordinator / merge task at a time; completed lanes
+stop and never self-merge into main.
 Status: PROPOSED — PENDING MERGE

@@ -7,7 +7,7 @@
 | Document type | Product design, roadmap, governance and audit baseline |
 | Task type | Planning / control documents only |
 | Design direction | Owner-approved in conversation on 2026-08-23 |
-| Repository review | Pending owner review of this written branch artifact |
+| Repository review | Plan direction approved; `REBASELINE-CORR-01` control patch pending owner re-review |
 | Authority baseline | `origin/main@8f9ad4a830cfb8217bed2227269c570cc1237fb8` |
 | Planning branch | `codex/busos-r2-unified-os-rebaseline` |
 | Product code changes | None |
@@ -17,6 +17,11 @@
 This document supersedes `R2-LONG-TERM-ROADMAP.md` **only for post-H1 product
 sequencing and information architecture**. It does not rewrite R1 history, reopen
 D001–D020, or retroactively change prior task evidence.
+
+`BUSOS-R2-UNIFIED-OS-REBASELINE-CORR-01.md` records the repository-review control
+patch applied directly to this document: parallel lane governance, the SCS production
+connection boundary, dual product journeys, the separate Evaluation loop and Runtime
+Identity ownership.
 
 ---
 
@@ -52,12 +57,13 @@ generic chatbot, a workflow builder, or a multi-tenant SaaS expansion.
 |---|---|---|
 | Operator Workspace | Overview / Projects / Reviews / Runs are implemented | No scalable post-H1 IA; browser remains DEMO-first |
 | Project workspace | Project + Customer ref + Tasks + Assets + embedded Memory + GVR action | Connected Feishu is not the Workspace-wide data source |
-| Service Agent | `ServiceAgentPort`, real local bridge, orchestrator run, evidence/risk/handoff projection, Run Detail | No conversation store/read model, product API, conversation workspace or proven production runtime adapter |
+| Service Agent in BUSOS | `ServiceAgentPort`, real local bridge, orchestrator run, evidence/risk/handoff projection, Run Detail | No conversation store/read model, product API, conversation workspace or BUSOS binding to the production SCS endpoint |
+| External SCS production | `SCS-R2-CLOUDBASE-REDEPLOY-02` evidence review: repair SHA `ab2b03bc3f1f6ac0c3c7481de33eb1e6a1d753f8`, Deploy `046`, readiness/smoke PASS | This closes the external deployment prerequisite only; it is not BUSOS Connected/LIVE evidence |
 | Feishu | `BusinessRepository` + real/fake `FeishuAdapter`, canonical mapping, write readback | Current Connected server boundary covers a narrow GVR action, not all business reads/writes |
 | Memory | Governed records and bounded context consumption | Embedded/read-only product surface; no durable repository |
 | Evaluation | Deterministic harness, Golden Set, gates, JSON/Markdown reports and CLI | No server application boundary, report store or Evaluation Center UI |
 | Lumen | Adapter and project business action exist | BL-018 is blocked at deployed Lumen auth/write path |
-| Production | Stable public DEMO exists | Service Agent is not deployed; Unified Connected/LIVE journey is not proven |
+| Production | Stable public DEMO exists; external SCS production prerequisite is complete | BUSOS production binding and the Unified Connected/LIVE journeys are not proven |
 
 ### 2.2 BL-018 classification correction
 
@@ -88,27 +94,71 @@ $env:PYTHONUTF8='1'
 This is an execution-environment requirement for current tests, not evidence that a
 production runtime adapter exists.
 
+### 2.4 External SCS production prerequisite
+
+`SCS-R2-CLOUDBASE-REDEPLOY-02` is treated as a completed external prerequisite:
+
+- production repair SHA: `ab2b03bc3f1f6ac0c3c7481de33eb1e6a1d753f8`;
+- remote ref independently rechecked during this correction:
+  `refs/heads/scs/rag-phase-ab-01` resolves to that exact SHA;
+- CloudBase deployment: `046`;
+- reviewed evidence: source revision matched, `/healthz` and readiness returned 200,
+  the prior manifest-integrity regression was absent, and the three-case smoke matrix
+  passed;
+- evidence verdict: `PRODUCTION_REDEPLOY_PASS / PRODUCTION_CLOSED` for SCS-R2.
+
+This planning branch independently verifies the remote repair ref and records an
+evidence-reviewed production prerequisite; it does not claim an independent live
+endpoint/readiness rerun. The remaining BUSOS work is production **binding**, not another
+SCS deployment. If the endpoint or deployed source revision drifts from this evidence,
+the later BUSOS connection gate must stop.
+
 ---
 
 ## 3. Target product definition
 
 ### 3.1 Product success statement
 
-A user can open one AI Business OS address and complete this bounded business journey:
+A user can open one AI Business OS address and complete two distinct business
+lifecycles. They may be verified continuously during release acceptance, but they are
+not one domain state chain.
+
+**Acquisition Journey**
 
 ```text
-Customer / Lead
+Prospect
   → Service Agent consultation
   → Intent / Risk / Route / Evidence / Handoff
   → LeadCandidateV1
   → GovernanceResultV1
   → Human Review
-  → canonical Feishu business fact + readback
-  → Customer / Project / Task / Asset
-  → Project-bound Lumen action
-  → Run / Trace
-  → governed Memory context
-  → Evaluation result
+  → canonical Lead + Feishu readback
+  → optional Customer conversion
+  → Project only after conversion
+```
+
+`Prospect` is a product-entry concept, not a new canonical entity. A Lead may remain
+anonymous. Service Agent remains candidate-only, and Customer/Project creation follows
+the frozen conversion rules.
+
+**Existing Business Journey**
+
+```text
+Customer / Project
+  → contextual Service Agent + governed Memory
+  → Task / Asset / Project-bound Lumen action
+  → canonical Run / Trace
+```
+
+Evaluation is a separate operator loop, not an automatic downstream step of every
+business run:
+
+```text
+Evaluation operator
+  → approved Golden Set
+  → deterministic Harness
+  → Report
+  → Cases / Metrics / Gates
 ```
 
 The product must expose its current runtime truth—DEMO, CONNECTED or LIVE—without a
@@ -244,6 +294,11 @@ Tokens, workspace secrets, raw field maps and full table IDs are not product fie
 The existing harness remains authoritative. The product slice adds an application
 boundary and report storage; it does not reimplement judges or metrics.
 
+The Evaluation Center is operator-triggered and report-oriented in this roadmap. A
+normal Service Agent, Feishu or Lumen business run ends at its canonical Run/Trace; it
+does not automatically invoke the Golden Set harness. Online/per-run evaluation is a
+future capability and is out of scope here.
+
 Minimum Evaluation Center behavior:
 
 - run the approved deterministic dataset;
@@ -268,27 +323,50 @@ and stopped. A roadmap row is never authorization.
 | Order | Task | Dependency | Primary outcome |
 |---:|---|---|---|
 | 0 | `BUSOS-R2-UNIFIED-OS-REBASELINE-01` | `main@8f9ad4a` | Written product/governance baseline |
+| 0c | `REBASELINE-CORR-01` | Rebaseline review | Docs-only control correction; no implementation authority |
 | 1 | `BUSOS-R2-UX-01` | Rebaseline merged | Scalable IA shell and explicit runtime identity |
 | 2 | `BUSOS-R2-WORKSPACE-API-01` | UX-01 | Browser/server data-source boundary |
 | 3 | `BUSOS-R2-SCS-RUNTIME-01` | Workspace API | Service Agent application/runtime boundary |
 | 4 | `BUSOS-R2-SCS-UI-01` | SCS runtime | Productized Service Agent workspace |
 | 5 | `BUSOS-R2-FEISHU-CONNECT-01` | Workspace API | Real Workspace-wide Feishu data plane |
-| 6 | `BUSOS-R2-BUSINESS-DATA-UI-01` | Feishu connect + SCS UI | Customers/Leads and Integrations surfaces |
+| 6 | `BUSOS-R2-BUSINESS-DATA-UI-01` | Feishu connect | Customers/Leads and Integrations surfaces |
 | 7 | `BUSOS-R2-EVAL-UI-01` | Workspace API | Minimal Evaluation Center |
-| 8a | `BUSOS-R2-SCS-PROD-DEPLOY-01` | SCS runtime + SCS UI | Independently verified SCS production runtime |
+| 8a | `BUSOS-R2-SCS-PROD-CONNECT-01` | SCS runtime + SCS UI + completed external SCS deployment prerequisite | BUSOS binding to the verified SCS production endpoint |
 | 8b | `LUMEN-WRITE-PATH-FIX-01` in `picture-edit` | Separate owner authorization | Repair deployed Lumen write path and unblock BL-018 |
-| 9 | `BUSOS-R2-PROD-01` | Tasks 1–8 complete | Unified production closure and owner journey |
+| 9 | `BUSOS-R2-PROD-01` | Required lanes integrated + SCS production binding + Lumen prerequisite | Unified production closure and owner journeys |
 
-Tasks 3–4 and 5–6 may be developed as separate branches after the shared Workspace API
-is merged, but authoritative integration and acceptance remain sequential. Task 8b is a
-cross-repository prerequisite and must never be folded into a BUSOS product commit.
+After the shared Workspace API is merged, three isolated development lanes may be
+authorized concurrently:
+
+```text
+SCS lane:     SCS-RUNTIME-01 → SCS-UI-01
+FEISHU lane:  FEISHU-CONNECT-01 → BUSINESS-DATA-UI-01
+EVAL lane:    EVAL-UI-01
+```
+
+Each lane owns its own branch/worktree, baseline SHA, file ownership, Audit Packet and
+STOP. Lane development may be parallel; authoritative integration into main is handled
+by one serialized Integration Coordinator task at a time. Integration tasks are
+authorization gates, not additional product roadmap scope. Task 8b is a cross-repository
+prerequisite and must never be folded into a BUSOS product commit.
+
+The resulting dependency shape is:
+
+```text
+REBASELINE → UX-01 → WORKSPACE-API-01
+  → { SCS lane || FEISHU lane || EVAL lane }
+  → serialized authoritative integration
+  → SCS PROD CONNECT + Lumen prerequisite
+  → UNIFIED PROD
+```
 
 ### 5.2 `BUSOS-R2-UX-01 — Product IA Rebaseline`
 
 **In scope**
 
 - scalable navigation/router structure;
-- runtime identity area showing Mode, Build SHA and connection summary;
+- define and render the `RuntimeIdentityView` UI contract for Mode, Build SHA and
+  connection summary;
 - existing Overview/Projects/Reviews/Runs behavior preserved;
 - route and navigation tests;
 - responsive navigation verification.
@@ -296,7 +374,8 @@ cross-repository prerequisite and must never be folded into a BUSOS product comm
 **Out of scope**
 
 - empty Customers/Service Agent/Evaluation/Integrations pages;
-- server APIs, real Feishu reads, Agent calls or deployment;
+- canonical server runtime-identity implementation, server APIs, real Feishu reads,
+  Agent calls or deployment;
 - broad visual redesign unrelated to IA.
 
 **Exit gates**
@@ -312,6 +391,8 @@ cross-repository prerequisite and must never be folded into a BUSOS product comm
 - Workspace Data Source contract;
 - explicit Demo and Server implementations;
 - canonical API envelopes with mode/build/status;
+- real Server implementation that supplies `RuntimeIdentityView` without changing its
+  UI-facing contract;
 - migrate existing Project/Review/Run reads and review decisions;
 - fail-closed error handling and browser secret/bundle checks.
 
@@ -336,7 +417,7 @@ cross-repository prerequisite and must never be folded into a BUSOS product comm
 - consultation command and conversation read contracts;
 - session/conversation store port;
 - local-real bridge adapter retained;
-- production adapter decision plus executable probe;
+- production adapter contract plus a controlled executable probe;
 - server endpoints for run/list/read;
 - canonical Run/Trace projection and idempotency;
 - one R0 success and one R2 human-required local-real E2E.
@@ -346,12 +427,14 @@ cross-repository prerequisite and must never be folded into a BUSOS product comm
 - generic chatbot behavior;
 - direct canonical Lead/Project writes;
 - changing the frozen Service Agent implementation;
-- production deployment itself.
+- changing/redeploying the already verified SCS production service;
+- binding BUSOS to the real production endpoint.
 
 **Exit gates**
 
 - ENGINEERING PASS and LOCAL CONNECTED PASS.
-- Production adapter is either proven or explicitly `CONNECTED BLOCKED` with evidence.
+- Production adapter contract and controlled probe PASS; binding the real endpoint is
+  explicitly NOT APPLICABLE until `BUSOS-R2-SCS-PROD-CONNECT-01`.
 - No prompt/customer-message/provider dump enters Trace.
 
 ### 5.5 `BUSOS-R2-SCS-UI-01 — Service Agent Surface`
@@ -452,13 +535,22 @@ cross-repository prerequisite and must never be folded into a BUSOS product comm
 
 ### 5.9 Production prerequisites
 
-#### `BUSOS-R2-SCS-PROD-DEPLOY-01`
+#### Completed external prerequisite — `SCS-R2-CLOUDBASE-REDEPLOY-02`
 
-- package or connect the approved production Agent adapter;
-- verify model/vector/runtime dependencies;
-- verify timeout, error and handoff behavior;
-- match deployment metadata to the exact commit;
-- do not claim Unified OS production closure.
+- repair SHA `ab2b03bc3f1f6ac0c3c7481de33eb1e6a1d753f8`;
+- CloudBase Deploy `046`;
+- evidence review verdict `PRODUCTION_REDEPLOY_PASS / PRODUCTION_CLOSED`;
+- this prerequisite must not be repeated or folded into BUSOS implementation.
+
+#### `BUSOS-R2-SCS-PROD-CONNECT-01`
+
+- bind the BUSOS server-side production adapter to the verified SCS endpoint;
+- run request/response contract tests against that endpoint;
+- verify timeout, error, handoff and evidence mapping;
+- project the real call into canonical BUSOS Run/Trace;
+- match SCS source/deployment identity and BUSOS build identity to the evidence;
+- fail closed on endpoint/configuration drift and never fall back to Demo;
+- do not modify or redeploy SCS and do not claim Unified OS production closure.
 
 #### `LUMEN-WRITE-PATH-FIX-01` (`picture-edit` repository)
 
@@ -471,22 +563,42 @@ cross-repository prerequisite and must never be folded into a BUSOS product comm
 
 ### 5.10 `BUSOS-R2-PROD-01 — Unified Production Closure`
 
-This task starts only after the product slices, SCS deployment and Lumen repair are complete.
+This task starts only after the required product lanes are integrated, BUSOS production
+binding to SCS is complete, and the Lumen repair prerequisite is complete.
 
-Required LIVE journey:
+Required release identity gate:
 
-1. Open the exact production URL and verify Mode + Build SHA.
-2. Read a real Customer/Lead from the Connected data plane.
-3. Run a real Service Agent consultation.
-4. Inspect intent/risk/route/evidence/handoff and the corresponding Run/Trace.
-5. Generate a LeadCandidate and route it through Governance and Human Review.
-6. Commit the approved business fact to Feishu and verify readback.
-7. Open the resulting Customer/Project/Task/Asset context.
-8. Run the Project-bound Lumen action and verify the resulting Asset.
-9. Inspect governed Memory context and Evaluation evidence.
-10. Record owner acceptance separately; the agent cannot self-assign it.
+1. Open the exact production URL.
+2. Verify Mode, BUSOS Build SHA and connection summary.
 
-No partial journey, fake adapter, stub transport or old deployment can satisfy LIVE PASS.
+Required **Acquisition Journey**:
+
+1. Start an anonymous or identified Prospect consultation.
+2. Inspect intent/risk/route/evidence/handoff and the corresponding Run/Trace.
+3. Generate `LeadCandidateV1` and route it through Governance and Human Review.
+4. Verify rejection causes zero canonical writes; or approve and verify the canonical
+   Lead write/readback.
+5. Verify an anonymous Lead may remain anonymous.
+6. Convert to Customer only through the frozen conversion rules.
+7. Create/open a Project only after conversion.
+
+Required **Existing Business Journey**:
+
+1. Read a real Customer/Project through the Connected data plane.
+2. Run a contextual Service Agent consultation with governed Memory references.
+3. Inspect the resulting canonical Run/Trace.
+4. Read the related Task/Asset state.
+5. Run the Project-bound Lumen action and verify the resulting Asset/readback.
+
+Required **Evaluation operator loop**:
+
+1. An operator starts the approved Golden Set.
+2. The deterministic harness produces a stored Report.
+3. Evaluation UI cases, metrics and gates match that Report.
+4. No assertion implies that ordinary business runs automatically invoke Evaluation.
+
+Record owner acceptance separately; the agent cannot self-assign it. No partial
+journey, fake adapter, stub transport or old deployment can satisfy LIVE PASS.
 
 ---
 
@@ -504,12 +616,22 @@ Before every task:
 
 Conversation history, local stale branches and agent memory are not code authority.
 
-### 6.2 One active task
+### 6.2 Parallel lanes with serialized authoritative integration
 
-- `02-CURRENT-STATE.md` names at most one authorized implementation task.
-- A roadmap row is never authorization.
-- Each task has exact In Scope, Out of Scope, interfaces, files, commands and gates.
-- A completed task stops. The next task requires new owner authorization.
+- There is at most one active task **per isolated lane/worktree**, not one active task
+  for the whole program.
+- `02-CURRENT-STATE.md` may list multiple explicitly owner-authorized development lanes,
+  each with task ID, branch/worktree, baseline SHA, file ownership and status.
+- There is at most one authoritative Integration Coordinator / merge task at a time.
+  Only that serialized task may integrate lane results into main and reconcile shared
+  control state.
+- Shared contracts or overlapping file ownership must be frozen before parallel work or
+  routed through the Integration Coordinator; a lane may not silently take another
+  lane's files.
+- A roadmap row is never authorization. Each lane/task still requires explicit owner
+  authorization, exact scope, commands, gates, Audit Packet and STOP.
+- A completed lane stops and does not self-merge. New lane work and each integration task
+  require owner authorization.
 
 ### 6.3 Change isolation
 
@@ -566,6 +688,8 @@ This planning task changes control documents only.
 - Mark `project-control/R2-LONG-TERM-ROADMAP.md` historical for post-H1 sequencing.
 - Update `project-control/R2-AUDIT-INDEX.md`.
 - Add the planned Unified OS journey to `project-control/R2-ACCEPTANCE-CHECKLIST.md`.
+- Record repository-review corrections in
+  `project-control/BUSOS-R2-UNIFIED-OS-REBASELINE-CORR-01.md`.
 
 ### 7.2 Planning verification
 
@@ -574,7 +698,7 @@ This planning task changes control documents only.
   the current-control sections;
 - existing D001–D020 remain intact;
 - every roadmap task has dependency, scope and exit gates;
-- `NEXT AUTHORIZED WORK` remains NONE pending owner repository review;
+- `NEXT AUTHORIZED IMPLEMENTATION WORK` remains NONE pending owner repository review;
 - branch is pushed without PR, merge or deployment.
 
 ---
@@ -617,5 +741,6 @@ No implementation, merge or deployment is authorized by this packet.
 
 ### STOP
 
-After the planning branch is pushed, stop and request owner review of this written file.
-Do not create `BUSOS-R2-UX-01` code or an implementation plan until that review is approved.
+After the corrected planning branch is pushed, stop and request owner re-review of this
+written file plus `BUSOS-R2-UNIFIED-OS-REBASELINE-CORR-01.md`. Do not create
+`BUSOS-R2-UX-01` code or an implementation plan until that review is approved.

@@ -75,23 +75,57 @@ node build.mjs                 # builds dist/bundle.js + dist/index.html + dist/
 
 ---
 
-## 1A. Unified OS target journey — planned, not yet available
+## 1A. Unified OS target journeys — planned, not yet available
 
 These rows are acceptance targets from `BUSOS-R2-UNIFIED-OS-REBASELINE-01.md`.
 `PLANNED` is not engineering, product, Connected, LIVE or owner evidence.
 
+### Release identity
+
 | # | Target step | Current status | Required future evidence |
 |---|---|---|---|
-| U1 | Open one Unified OS URL; verify Mode and Build SHA | PLANNED | Deployment metadata matched to commit + browser check |
-| U2 | Read a real Customer/Lead through the Connected data plane | PLANNED | Real server read with sanitized provenance |
-| U3 | Run a real Service Agent consultation | PLANNED | Production runtime call + Run/Trace |
-| U4 | Inspect intent, risk, route, evidence and handoff | PLANNED | Product UI + structured output/trace consistency |
-| U5 | Generate `LeadCandidateV1`; route through Governance and Review | PLANNED | Candidate/governance/review E2E; no direct fact write |
-| U6 | Commit approved fact to Feishu and verify critical-field readback | PLANNED | Real record IDs + readback PASS, secrets redacted |
-| U7 | Inspect Customer/Project/Task/Asset in the same OS | PLANNED | Connected canonical read models |
-| U8 | Run Project-bound Lumen action and inspect resulting Asset | PLANNED | Repaired Lumen LIVE call + Feishu Asset readback |
-| U9 | Inspect governed Memory and Evaluation evidence | PLANNED | Memory context refs + harness/report/UI parity |
-| U10 | Complete owner manual acceptance | PLANNED | Explicit owner verdict only |
+| G1 | Open one Unified OS URL; verify Mode, Build SHA and connection summary | PLANNED | Deployment metadata matched to commit + browser check |
+
+### Acquisition Journey
+
+| # | Target step | Current status | Required future evidence |
+|---|---|---|---|
+| A1 | Start an anonymous or identified Prospect consultation | PLANNED | Production SCS call through BUSOS + conversation ID |
+| A2 | Inspect intent, risk, route, evidence, handoff and canonical Run/Trace | PLANNED | Product UI + structured output/trace consistency |
+| A3 | Generate `LeadCandidateV1` | PLANNED | Valid candidate; no direct canonical write |
+| A4 | Route Candidate through Governance and Human Review | PLANNED | Approve/edit/reject evidence |
+| A5 | Reject with zero writes, or approve canonical Lead and verify Feishu readback | PLANNED | Real record ID + critical-field readback; secrets redacted |
+| A6 | Preserve anonymous Lead when conversion is not approved/required | PLANNED | Canonical Lead without invented Customer identity |
+| A7 | Convert Lead to Customer only through frozen conversion rules | PLANNED | Conversion contract + canonical readback |
+| A8 | Create/open Project only after Customer conversion | PLANNED | Project lifecycle gate + canonical IDs |
+
+### Existing Business Journey
+
+| # | Target step | Current status | Required future evidence |
+|---|---|---|---|
+| B1 | Read a real Customer/Project through the Connected data plane | PLANNED | Real server read with sanitized provenance |
+| B2 | Run contextual Service Agent with Customer/Project/Memory references | PLANNED | Production call + governed context references |
+| B3 | Inspect resulting Run/Trace and verify no Connected-to-Demo fallback | PLANNED | Runtime identity + structured trace consistency |
+| B4 | Inspect related Task and Asset state | PLANNED | Connected canonical read models |
+| B5 | Run Project-bound Lumen action and inspect resulting Asset/readback | PLANNED | Repaired Lumen LIVE call + Feishu Asset readback |
+| B6 | Inspect governed Memory provenance in Customer/Project context | PLANNED | Memory references + lifecycle/provenance consistency |
+
+### Evaluation operator loop
+
+| # | Target step | Current status | Required future evidence |
+|---|---|---|---|
+| E1 | Operator starts the approved Golden Set | PLANNED | Explicit evaluation command/API event |
+| E2 | Deterministic Harness produces a report | PLANNED | Harness output bound to dataset/version |
+| E3 | Store and retrieve the machine-readable Report | PLANNED | Report store round trip |
+| E4 | Show matching Cases, Metrics and Gates in Evaluation UI | PLANNED | JSON/report/UI field consistency |
+| E5 | Preserve `NOT_EVALUABLE` and hard-gate failures honestly | PLANNED | Regression evidence; no auto-promotion to PASS |
+
+| # | Target step | Current status | Required future evidence |
+|---|---|---|---|
+| G2 | Complete owner manual acceptance across the required loops | PLANNED | Explicit owner verdict only |
+
+Business execution ends at Run/Trace. The Evaluation operator loop is separate; these
+rows do not require automatic Evaluation after each production business run.
 
 No implementing task may promote a row directly from PLANNED to OWNER VERIFIED.
 

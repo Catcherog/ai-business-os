@@ -7,12 +7,15 @@ Document type: **planning direction, not execution authorization**
 > H0/H1 history and the original product principles remain valid. The H1 rule of
 > exactly four top-level surfaces applied to H1 only. Current post-H1 information
 > architecture, task order and gates are defined by
-> `BUSOS-R2-UNIFIED-OS-REBASELINE-01.md`. Neither document authorizes execution.
+> `BUSOS-R2-UNIFIED-OS-REBASELINE-01.md` as corrected by
+> `BUSOS-R2-UNIFIED-OS-REBASELINE-CORR-01.md`. None of these documents authorizes
+> execution.
 
 ## 0. How to read this file
 
 - This file describes **horizons**, not active work.
-- Only `02-CURRENT-STATE.md` + the current task file authorize work.
+- Only the explicit lane/integration ledger in `02-CURRENT-STATE.md` plus each
+  owner-authorized task file authorize work.
 - **Planning windows** may read this file to select or refine the next bounded task.
 - **Execution windows** must NOT treat any horizon, candidate area or roadmap unit
   in this file as permission to start work. See `07-HANDOFF.md`.

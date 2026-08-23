@@ -22,16 +22,20 @@
   COMPLETE; H2-02 (Governed Memory Context Consumption) COMPLETE; **H2-03
   (Evaluation Harness + Golden Set) COMPLETE / ENGINEERING PASS / REMOTE CI PASS**
   (impl `eea166f`, CORR-01 `a9b81a5`); **H2-03 ≠ Full Evaluation Center**.
-- **Service Agent integration is in authoritative main**, but the current product
-  evidence is a local-real Port/orchestrator/Run Detail integration—not a
-  conversation workspace or a proven production runtime deployment.
+- **Service Agent integration is in authoritative BUSOS main.** The external SCS-R2
+  production prerequisite is also evidence-reviewed as complete at repair SHA
+  `ab2b03bc...`, CloudBase Deploy `046`. BUSOS still has only the local-real
+  Port/orchestrator/Run Detail path and has not bound its server runtime to that
+  production endpoint.
 - **Post-H1 product direction:** `BUSOS-R2-UNIFIED-OS-REBASELINE-01` defines the
-  Unified AI Business OS sequence: IA → Workspace API → Service Agent surface →
-  Connected Feishu data → Business Data UI → Evaluation Center → independent
-  SCS/Lumen production prerequisites → Unified Production Closure.
+  Unified AI Business OS sequence, corrected by `REBASELINE-CORR-01`: IA → Workspace
+  API → parallel SCS/Feishu/Evaluation development lanes → serialized authoritative
+  integration → BUSOS SCS production connection + Lumen prerequisite → Unified
+  Production Closure.
 - **H3 / H4 remain deferred horizons** and cannot be auto-started.
-- Current planning packet: **BUSOS-R2-UNIFIED-OS-REBASELINE-01** on branch
-  `codex/busos-r2-unified-os-rebaseline`, pending owner repository review.
+- Current planning packet: **BUSOS-R2-UNIFIED-OS-REBASELINE-01 +
+  REBASELINE-CORR-01** on branch `codex/busos-r2-unified-os-rebaseline`, pending
+  owner re-review of the docs-only control patch.
 - Next authorized implementation unit: **NONE**. A roadmap row is not execution
   authorization; each unit requires an explicit owner instruction.
 
