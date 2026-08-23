@@ -12,27 +12,18 @@ CURRENT PHASE:
 R2 — Unified AI Business OS Productization Rebaseline
 
 CURRENT TASK:
-REBASELINE-CORR-01 — Unified AI Business OS Control Patch
-[DOCS-ONLY CONTROL PATCH READY FOR OWNER RE-REVIEW — IMPLEMENTATION NOT AUTHORIZED]
-- Authority baseline: `origin/main@8f9ad4a830cfb8217bed2227269c570cc1237fb8`.
-- Correction baseline: planning commit
-  `19499b28ad3572bd6c3e707d55660e2f5a437bb9`.
-- Planning branch: `codex/busos-r2-unified-os-rebaseline`.
-- Scope: product design, task sequencing, control-state reconciliation and
-  acceptance/audit planning only; no product code, deployment, PR or merge.
-- Review verdict: `PLAN DIRECTION APPROVED / CONTROL PATCH REQUIRED /
-  IMPLEMENTATION NOT YET AUTHORIZED`.
-- Target sequence: Rebaseline → IA → Workspace API → parallel SCS/Feishu/Evaluation
-  development lanes → serialized authoritative integration → BUSOS SCS production
-  connection + Lumen prerequisite → Unified Production Closure.
-- Written plan: `BUSOS-R2-UNIFIED-OS-REBASELINE-01.md`.
-- Correction record: `BUSOS-R2-UNIFIED-OS-REBASELINE-CORR-01.md`.
-- `R2-LONG-TERM-ROADMAP.md` remains historical for H0/H1 but is superseded by the
-  rebaseline document for post-H1 product sequencing.
-- Authorized development lanes: **NONE**.
-- Authoritative Integration Coordinator task: **NONE**.
-- `NEXT AUTHORIZED IMPLEMENTATION WORK = NONE` pending owner re-review of the
-  corrected written branch artifact.
+BUSOS-R2-ENGINEERING-BATCH-1 — Owner-authorized implementation batch
+[UX-01 ENGINEERING PASS / INTEGRATED; WORKSPACE-API-01 NEXT]
+- Authority baseline: `origin/main@b3a059d84d0b612387d465077799af6e1fe2fa94`.
+- Orchestration branch: `codex/busos-r2-engineering-batch-1`.
+- UX-01 task branch: `codex/busos-r2-ux-01`, implementation `cb32548`, report
+  `f42db76`, Audit Packet `project-control/tasks/BUSOS-R2-UX-01.md`.
+- UX-01 is integrated into the orchestration branch; authoritative main closure
+  still requires the coordinator push and external SHA verification.
+- Active scope: UX-01 → Workspace API-01 → isolated SCS/Feishu/Evaluation lanes
+  → one serialized authoritative integration. No production or cross-repository
+  work is included.
+- `R2-LONG-TERM-ROADMAP.md` remains historical for post-H1 sequencing.
 
 PRIOR TASK (closed):
 BUSOS-R2-SCS-INTEGRATION-01 — Service Agent → Business OS 真实集成
@@ -235,20 +226,21 @@ ACTIVE BLOCKERS:
   `BUSOS-R2-SCS-PROD-CONNECT-01` gate, not another SCS deployment.
 
 AUTHORIZED DEVELOPMENT LANES:
-**NONE.** Future owner-authorized SCS, Feishu and Evaluation lanes may run concurrently
-only after their shared Workspace API dependency is merged. Each lane must record its
-own task ID, branch/worktree, baseline SHA, file ownership, Audit Packet and STOP.
+**NONE ACTIVE BEFORE WORKSPACE-API-01.** After the shared API is merged, the Goal
+authorizes one bounded active task per isolated SCS, Feishu and Evaluation lane.
+Each lane must record its task ID, branch/worktree, baseline SHA, file ownership,
+Audit Packet and STOP; lane workers never self-merge.
 
 AUTHORITATIVE INTEGRATION TASK:
-**NONE.** At most one Integration Coordinator / merge task may be active at a time.
+**BUSOS-R2-ENGINEERING-BATCH-1 coordinator active.** At most one authoritative
+Integration Coordinator / merge task may be active at a time. UX-01 is integrated
+on the orchestration branch; main push and post-merge verification remain controlled
+by this coordinator.
 
 NEXT AUTHORIZED IMPLEMENTATION WORK:
-**NONE — awaiting owner re-review of `BUSOS-R2-UNIFIED-OS-REBASELINE-01.md` plus
-`BUSOS-R2-UNIFIED-OS-REBASELINE-CORR-01.md`.**
-The first proposed implementation task is `BUSOS-R2-UX-01`, but it is not
-authorized by this planning branch. Do not auto-start UX code, Workspace API,
-Service Agent UI/runtime, Feishu Connected work, Evaluation UI, SCS connection,
-Lumen repair, BL-018 LIVE closure, H3 or H4.
+**BUSOS-R2-WORKSPACE-API-01** — explicitly authorized by the active owner Goal and
+dependent on the integrated UX-01 branch. Do not start SCS production connection,
+Lumen repair, BL-018 LIVE closure, Unified Production Closure, H3 or H4.
 
 IMPORTANT DEFERRED ITEMS:
 - BL-018 — OPEN; live full-process E2E remains blocked pending a separate Lumen

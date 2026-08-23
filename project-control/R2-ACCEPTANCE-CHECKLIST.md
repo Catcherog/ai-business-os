@@ -84,7 +84,7 @@ These rows are acceptance targets from `BUSOS-R2-UNIFIED-OS-REBASELINE-01.md`.
 
 | # | Target step | Current status | Required future evidence |
 |---|---|---|---|
-| G1 | Open one Unified OS URL; verify Mode, Build SHA and connection summary | PLANNED | Deployment metadata matched to commit + browser check |
+| G1 | Open one Unified OS URL; verify Mode, Build SHA and connection summary | DEMO VERIFIED (local UX-01 build/smoke; owner acceptance pending) | Deployment metadata matched to commit + browser check |
 
 ### Acquisition Journey
 

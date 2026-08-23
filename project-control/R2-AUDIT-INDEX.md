@@ -43,6 +43,7 @@
 | SCS-R2-CLOUDBASE-REDEPLOY-02 (external prerequisite) | Repair and redeploy the independent SCS-R2 production service | `ebb85686de8315bbdb6d8f5d6cd3cb70cf02bb10` | repair `ab2b03bc3f1f6ac0c3c7481de33eb1e6a1d753f8`; remote `scs/rag-phase-ab-01` independently rechecked; CloudBase Deploy `046` | EXTERNAL EVIDENCE REVIEW PASS | NOT APPLICABLE | SCS readiness/smoke PASS in reviewed completion package | `PRODUCTION_REDEPLOY_PASS / PRODUCTION_CLOSED` for SCS-R2; live endpoints not independently rerun by this BUSOS planning branch | NOT APPLICABLE (external prerequisite) | `project-control/BUSOS-R2-UNIFIED-OS-REBASELINE-CORR-01.md` |
 | UNIFIED-OS-REBASELINE-01 | Unified AI Business OS product design, sequencing and control-state reconciliation (planning only) | `8f9ad4a830cfb8217bed2227269c570cc1237fb8` | planning branch tip verified externally after push; not merged to main | NOT APPLICABLE (control documents only; baseline tests recorded in packet) | NOT APPLICABLE | NOT APPLICABLE | NOT APPLICABLE | OWNER ACCEPTANCE PENDING (written repository artifact) | `project-control/BUSOS-R2-UNIFIED-OS-REBASELINE-01.md` |
 | UNIFIED-OS-REBASELINE-CORR-01 | Docs-only correction: parallel lanes, SCS production connection boundary, dual journeys, Evaluation loop, Runtime Identity ownership | `19499b28ad3572bd6c3e707d55660e2f5a437bb9` | planning branch tip verified externally after push; not merged to main | NOT APPLICABLE (control documents only) | NOT APPLICABLE | NOT APPLICABLE | NOT APPLICABLE | OWNER RE-REVIEW PENDING; implementation remains unauthorized | `project-control/BUSOS-R2-UNIFIED-OS-REBASELINE-CORR-01.md` |
+| BUSOS-R2-UX-01 | Scalable IA shell, typed routes, responsive navigation and RuntimeIdentityView; preserves Overview / Projects / Reviews / Runs | `b3a059d84d0b612387d465077799af6e1fe2fa94` | implementation `cb32548`; task report `f42db76`; authoritative main closure verified externally after push | ENGINEERING PASS | DEMO PRODUCT PASS (route/runtime tests + existing app smoke) | NOT APPLICABLE | NOT APPLICABLE | OWNER ACCEPTANCE PENDING | `project-control/tasks/BUSOS-R2-UX-01.md` |
 
 > **Note on H1-04 / H1-05 Final SHA:** the implementation commit is recorded first; a small follow-up commit corrected the SHA line inside the completion report. The "Final SHA" above is the task-era tip. The report's own `Pushed:` line may cite the implementation commit — both are listed for traceability.
 >
@@ -62,16 +63,20 @@
 
 ---
 
-## Next task readiness (not authorized)
+## Next task readiness (owner-authorized Batch 1)
 
 - **BUSOS-R2-X01-CLOSE — Stable Preview + CI Green Closure** — AUTHORIZED and COMPLETE (rows above). Public preview is **live** at `https://ai-business-os-demo-ochre.vercel.app` (stable alias of project `catcher1/ai-business-os-demo`, Build `c7a25d8`, DEMO mode), CI PASS on both the CI-repair (`aba746a`) and the deployed implementation (`c7a25d8`) commits. Remaining: Owner manual acceptance only.
 - **H2-03** — COMPLETE / ENGINEERING PASS (row above). Evaluation Harness + Golden Set, remote CI PASS (`32590688601`); CORR-01 (`a9b81a5`) repaired MEM-17 production redaction defect without weakening expectations. **H2-03 ≠ Full Evaluation Center.**
 - **SCS-INTEGRATION-01 / SCS-INTEGRATION-MERGE-01** — COMPLETE / ENGINEERING PASS (rows above). Frozen Service Agent integrated into authoritative BUSOS main (merge `450541c`, parents `0d417af` + `617b983`). SCS frozen tests 687 passed (FREEZE_SHA `ebb85686` unchanged); BUSOS full verify 535 passed / 8 skipped / 0 failed. External SCS production deployment was later evidence-reviewed as complete at repair SHA `ab2b03bc...`, Deploy `046`. The future BUSOS gate is `BUSOS-R2-SCS-PROD-CONNECT-01`, not another SCS redeploy.
-- **UNIFIED-OS-REBASELINE-01 / CORR-01** — plan direction approved; docs-only
-  control patch ready for owner re-review. No implementation task is authorized.
-- Proposed first implementation unit after written-plan approval: `BUSOS-R2-UX-01`.
-  Workspace API, Service Agent UI/runtime, Connected Feishu, Evaluation UI, SCS
-  production connection, Lumen repair, H3 and H4 remain not authorized.
+- **UNIFIED-OS-REBASELINE-01 / CORR-01** — owner has now explicitly authorized the
+  bounded Engineering Batch 1 in the active Goal; this does not authorize any
+  production stage or cross-repository work.
+- `BUSOS-R2-UX-01` — ENGINEERING PASS and integrated into the orchestration branch;
+  report `project-control/tasks/BUSOS-R2-UX-01.md`.
+- Next authorized task: `BUSOS-R2-WORKSPACE-API-01`. After that merge, the owner
+  explicitly authorized the isolated SCS, Feishu and Evaluation lanes. SCS
+  production connection, Lumen repair, Unified Production Closure, H3 and H4
+  remain outside this Goal.
 
 ---
 
