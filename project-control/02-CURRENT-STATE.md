@@ -12,6 +12,32 @@ CURRENT PHASE:
 R2 — H2 Governed Intelligence (H1 Operator Workspace MVP closed)
 
 CURRENT TASK:
+BUSOS-R2-SCS-INTEGRATION-MERGE-01 — Service Agent Integration → Authoritative Main
+[ENGINEERING / MERGE COMPLETE — PUSHED / REMOTE VERIFIED —
+PRODUCTION DEPLOYMENT NOT PART OF THIS TASK]
+- 收敛：frozen Service Agent 集成提交 `617b983`（SCS-INTEGRATION-01）安全合并进
+  authoritative main（merge `450541c`, parents `0d417af` + `617b983`；分叉两侧文件集合
+  零重叠 → 零冲突 merge，无 ours/theirs 机械选择；main 侧 BL-018 / H2-03-GOV 控制文档
+  提交原样保留）。
+- 静态合同 Gate A–F 全部 PASS（Port 边界 / query·conversationId·customerId·conversation·topK
+  透传 / output.serviceAgent.answer / I00-I12·R0-R3·KB_PATH|HUMAN_PATH closed enums /
+  R2·R3·must_handoff→HUMAN_REQUIRED / evidence allowlist）。
+- BUSOS 全量 verify：typecheck ✓ · **535 passed / 8 skipped / 0 failed**（15 包）· build ✓ ·
+  smoke ✓（SMOKE_OK · X01 21 项 · PREVIEW_SMOKE_OK）。
+- SCS freeze 回归：冻结 worktree 实测 **687 passed**，FREEZE_SHA `ebb85686` 未变。
+- 真实本地 E2E ×2：canonical「我有点胖，适合拍写真吗？」→ I01/R0/SUCCEEDED（CA-001）；
+  R2「你好，我想咨询新中式写真的价格…」→ I02/R2/HUMAN_PATH/HUMAN_REQUIRED
+  （SERVICE_AGENT_HANDOFF），均非硬编码。
+- BL-018: **OPEN**（unchanged — NON-ENGINEERING LIVE DEPENDENCY）。
+- 生产部署 = 下一独立 Gate `BUSOS-R2-SCS-PROD-DEPLOY-01`，需 owner 另行授权；本任务
+  未触碰 CloudBase / Vercel / 生产代码。
+- 详见 `BUSOS-R2-SCS-INTEGRATION-MERGE-01.md` + `BUSOS-R2-SCS-INTEGRATION-01.md` +
+  `R2-AUDIT-INDEX.md`。
+
+PRIOR TASK (closed):
+BUSOS-R2-SCS-INTEGRATION-01 — Service Agent → Business OS 真实集成
+[ENGINEERING COMPLETE — `@busos/service-agent-port` + orchestrator 窄入口
+`runServiceAgentConsultation` + Run Detail；SCS frozen tests 687 passed；已收敛进 main]
 BUSOS-R2-H2-03 — Evaluation Harness + Golden Set
 [ENGINEERING COMPLETE — REMOTE CI PASS — PUSHED / REMOTE VERIFIED —
 OWNER ACCEPTANCE NOT APPLICABLE (backend evaluation harness)]
@@ -24,9 +50,11 @@ OWNER ACCEPTANCE NOT APPLICABLE (backend evaluation harness)]
   `packages/memory/src/memory-context.ts`; golden-set expectation NOT weakened;
   no whitelist / known-gap used to fake PASS.
 - Remote CI: **PASS** (run `32590688601`, `verify` job) on implementation SHA `eea166f`.
-- Implementation SHA: **eea166f** (origin/main tip).
+- Implementation SHA: **eea166f** (H2-03 tip).
 - H2-03 ≠ Full Evaluation Center — see `BUSOS-R2-H2-03.md`.
-- BL-018: **OPEN** (unchanged — NON-ENGINEERING LIVE DEPENDENCY).
+- BL-018 live closure attempts (`c8b4577` / `0d417af`): owner-authorized re-verification —
+  CloudBase read recovered-but-slow, **WRITE path still hangs** (504 Task timed out); verdict
+  BLOCKED, BL-018 stays OPEN; evidence docs + backlog note only, no production code.
 - See `BUSOS-R2-H2-03.md` (Completion / Audit Packet) + `R2-AUDIT-INDEX.md`.
 
 PRIOR TASK (closed):
@@ -204,24 +232,30 @@ ACTIVE BLOCKERS:
   CONNECTED boundary probe; only the live execution is deferred.
 
 NEXT AUTHORIZED WORK:
-**NONE — awaiting explicit owner authorization.** H1 is closed (final verdict B,
-`H1 ENGINEERING COMPLETE / MVP LIVE CLOSURE BLOCKED — BL-018`); H2-01 (Canonical Memory
-Foundation), H2-02 (Governed Memory Context Consumption), and H2-03 (Evaluation Harness +
-Golden Set) are COMPLETE and pushed with gates PASS / remote CI PASS. GOV-01 (governance
-protocol) and X01-CLOSE (stable preview + CI green) are COMPLETE and pushed. Per the STOP
-rule and `R2-VERIFICATION-AND-AUDIT-PROTOCOL.md`, do NOT auto-start **H2-04**, the **Evaluation
-Center** UI, memory scoring/decay, embeddings / vector / semantic retrieval, LLM-based
-extraction, **H3 / H4**, or BL-018 remediation — none of these can be auto-started. Owner
-choices for the next increment: **B. Golden Set extension / Evaluation Center UI**,
-**C. Memory durability**, **D. stronger deterministic extraction**, or **E. BL-018 LIVE closure**
-(owner supplies `LUMEN_BASE_URL` + `LUMEN_AUTH_PASSWORD` + `FEISHU_*` + `FEISHU_ASSET_TABLE_ID`
-+ CloudBase quota, then one live re-run of `runConnectedGenerateVisualReference`).
+**NONE — awaiting explicit owner authorization.** SCS-INTEGRATION-01 / SCS-INTEGRATION-MERGE-01
+(frozen Service Agent integrated into authoritative main) are COMPLETE and pushed with gates
+PASS / full verify PASS. H2-01 / H2-02 / H2-03, GOV-01, and X01-CLOSE remain COMPLETE (see above).
+Per the STOP rule and `R2-VERIFICATION-AND-AUDIT-PROTOCOL.md`, do NOT auto-start **H2-04**, the
+**Evaluation Center** UI, memory scoring/decay, embeddings / vector / semantic retrieval, LLM-based
+extraction, **H3 / H4**, or BL-018 remediation — none of these can be auto-started. Owner choices
+for the next increment:
+- **`BUSOS-R2-SCS-PROD-DEPLOY-01`** — SCS 生产部署（CloudBase / Vercel）＝下一独立 Gate，
+  需 owner 显式授权（本 merge 任务未触碰生产）。
+- **Owner 公网验收**（ochre DEMO preview `https://ai-business-os-demo-ochre.vercel.app`；
+  或新部署后的验收，由后续 deploy 任务决定）。
+- **B. Golden Set extension / Evaluation Center UI** · **C. Memory durability** ·
+  **D. stronger deterministic extraction** · **E. BL-018 LIVE closure**
+  (owner supplies `LUMEN_BASE_URL` + `LUMEN_AUTH_PASSWORD` + `FEISHU_*` + `FEISHU_ASSET_TABLE_ID`
+  + CloudBase quota, then one live re-run of `runConnectedGenerateVisualReference`).
 
 IMPORTANT DEFERRED ITEMS:
 - BL-018 — live full-process E2E (P6-C); OPEN / NON-ENGINEERING LIVE DEPENDENCY.
 - PUBLIC PREVIEW — LIVE at `https://ai-business-os-demo-ochre.vercel.app`
   (X01-CLOSE, Build `c7a25d8`, DEMO). Owner manual acceptance still PENDING
   (no new product work required).
+- **SCS PRODUCTION DEPLOYMENT — `BUSOS-R2-SCS-PROD-DEPLOY-01`（下一独立 Gate，未授权）。
+  SCS 集成已完成并收敛进 main，但**未部署生产**：本任务（MERGE-01）明确不触碰
+  CloudBase / Vercel / 生产代码；部署需 owner 另行显式授权。**
 - BL-015 — P1-02 extraction gap ("新中式" alone); DEFERRED / NON-BLOCKING.
 - BL-016 — CLOSED (P5 owner override).
 - BL-017 — Feishu Lead DateTime write; DEFERRED / NON-BLOCKING maintenance item.
