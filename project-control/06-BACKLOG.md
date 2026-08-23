@@ -238,6 +238,11 @@ Live evidence (2026-08-23 11:47–11:54 GMT+8, deployed `https://lumen-ink.verce
   Runtime Timeout Error: Task timed out** @ 11:51:48 / 11:52:29 / 11:53:11.
 - Vercel log @ 11:51:42: `GET /api/health → 200 [TCB][WARN] Your current request
   database.get…` — **CloudBase SDK read-quota warning**.
+  > **ERRATUM (2026-08-23, RETRY-01):** the `[TCB][WARN] …database.get…` text is NOT a
+  > quota error. Per the deployed SDK source (`@cloudbase/node-sdk/dist/utils/tcbapirequester.js`
+  > `setSlowWarning`) the full message is `[TCB][WARN] Your current request <action> is longer
+  > than 3s, it may be due to the network or your query performance` — a SLOW-QUERY warning.
+  > See the RETRY-01 note below for the corrected diagnosis.
 
 Conclusion: **CloudBase NoSQL read quota is STILL exhausted as of 2026-08-23** (the
 ~2026-08-21 expected reset did not materialize). The only missing evidence for closure —
@@ -245,6 +250,31 @@ the deployed-Lumen leg (real Vercel+CloudBase generation) — is unreachable at 
 step (Lumen auth reads NoSQL). No BUSOS engineering defect surfaced; no production code
 touched; closure criteria NOT weakened. Retry only after the quota condition changes
 (reset/upgrade).
+
+## BL-018 — 2026-08-23 RETRY-01 Note (BUSOS-R2-BL-018-LIVE-CLOSE-RETRY-01)
+
+Owner-authorized LIVE closure retry executed 2026-08-23 12:29–12:37 GMT+8 (authority
+baseline `origin/main = c8b4577`, verified equal; no conflicting control state).
+Result: **STILL BLOCKED — BL-018 remains OPEN**; H1-X01 remains **TEMPORARY LIVE
+FEASIBILITY**. Full report: `project-control/BUSOS-R2-BL-018-LIVE-CLOSE-RETRY-01.md`.
+
+Live evidence (deployed `https://lumen-ink.vercel.app`):
+- Gate A PASS: `GET /api/health` → 200 ×3 (1.4–2.1 s). (Route does not touch the DB.)
+- Gate B **FAIL**: `POST /api/auth` wrong password → hang (curl `000` @ 30–35 s ×6);
+  Vercel logs **504 Vercel Runtime Timeout Error: Task timed out** @ 12:30:17 / 12:30:47
+  / 12:31:18. Differential probe: empty body `{}` → **400 @ 1.1–1.8 s** (×3, fast) —
+  the NoSQL **read** (`isBlocked`) completes; the hang is the **write**
+  (`recordFailure` → `collection.authThrottle.doc(key).set()`). A correct password
+  would also hang at `recordSuccess` (write) → auth unconditionally non-functional.
+- Corrected diagnosis: CloudBase NoSQL **reads recovered but slow** (one probe logged the
+  SDK slow-query WARN `…is longer than 3s…` @ 12:37:23.70); **writes hang** → Vercel 504.
+  The earlier "read-quota exhausted" reading is superseded (see ERATUM above).
+
+Conclusion: **the deployed Lumen auth path is still not operational as of 2026-08-23
+12:37 GMT+8**; the "CloudBase recovered" premise was NOT confirmed by live evidence.
+No BUSOS engineering defect surfaced (differential is external CloudBase behavior); no
+production code touched; no closure, no weakened criteria, no fabricated downstream
+evidence. Retry only when auth completes without 504 (CloudBase write path recovered).
 
 ## BL-020 H1 nav surfaces mislabelled LIVE (contradicted honest DEMO footer)
 - Type: **DEFERRED → FIXED IN H1-05 (non-blocking at closure)**
