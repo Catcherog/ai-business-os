@@ -43,11 +43,19 @@ export type BusinessProcessStatus =
  *                        Lead/Customer (all three live inside `@busos/golden-path`)
  *   PROJECT_LIFECYCLE  — Lead -> Project + initial Task
  *   CREATIVE_PRODUCTION— Project -> Creative Task -> Lumen -> Asset -> Task DONE
+ *   SERVICE_AGENT      — BUSOS-R2-SCS-INTEGRATION-01: a real customer-service
+ *                        Run through the frozen Service Agent (synchronous
+ *                        inference + structured result). This is a NARROW
+ *                        vertical slice (`runServiceAgentConsultation`), NOT a
+ *                        stage of the consultation pipeline — it is deliberately
+ *                        excluded from `PROCESS_STAGE_ORDER` so the pipeline
+ *                        stage rendering stays untouched.
  */
 export type BusinessProcessStage =
   | 'GOLDEN_PATH'
   | 'PROJECT_LIFECYCLE'
-  | 'CREATIVE_PRODUCTION';
+  | 'CREATIVE_PRODUCTION'
+  | 'SERVICE_AGENT';
 
 export const PROCESS_STAGE_ORDER: readonly BusinessProcessStage[] = [
   'GOLDEN_PATH',
@@ -151,6 +159,52 @@ export interface BusinessProcessOutput {
    * when no governed memory was in scope (memory service or customer not wired).
    */
   governedMemory?: MemoryContextSummary;
+  /**
+   * BUSOS-R2-SCS-INTEGRATION-01 — the Service Agent run result summary surfaced
+   * on a `SERVICE_AGENT` run. Carries the structured answer / intent / risk /
+   * handoff / evidence refs + run metadata. The full structured payload is
+   * defined by `@busos/service-agent-port`; this is a UI/trace-safe projection.
+   */
+  serviceAgent?: ServiceAgentOutputSummary;
+}
+
+/**
+ * BUSOS-R2-SCS-INTEGRATION-01 — minimal, UI-safe summary of one Service Agent
+ * run. No prompt / secret / raw payload: only stable refs, structured status
+ * and a bounded answer preview.
+ */
+export interface ServiceAgentOutputSummary {
+  /** The agent's final reply. Bounded length (sanitized before display). */
+  answer: string;
+  /** Agent intent id (I00..I12). */
+  intent: string;
+  /** Agent risk level (R0..R3). */
+  risk: string;
+  /** Agent route (KB_PATH / HUMAN_PATH). */
+  route: string;
+  /** Human-review / handoff status (structured, never string-guessed). */
+  handoff: {
+    mustHandoff: boolean;
+    needsClarification: boolean;
+    answerRequiresDisclaimer: boolean;
+    needsHumanConfirm: boolean;
+  };
+  /** Retrieval evidence refs (AC-06). */
+  evidence: {
+    sourceModules: string[];
+    retrievalScore: number;
+    canonicalAnswerId: string | null;
+    sourceBlockId: string | null;
+    hasRetrievalEvidence: boolean;
+  };
+  /** Run / trace metadata (AC-08 / AC-13 provenance). */
+  trace: {
+    runId: string;
+    requestId: string;
+    conversationId: string;
+    latencyMs: number;
+    llmUsed: boolean;
+  };
 }
 
 /**

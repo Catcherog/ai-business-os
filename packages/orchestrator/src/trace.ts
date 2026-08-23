@@ -51,6 +51,23 @@ export const ALLOWED_TRACE_METADATA_KEYS: ReadonlySet<string> = new Set([
   'memory_refs',
   'memory_types',
   'memory_truncated',
+  // BUSOS-R2-SCS-INTEGRATION-01 — Service Agent run (stable refs only;
+  // never the customer message, never the raw answer text, never prompts)
+  'serviceAgentRunId',
+  'serviceAgentRequestId',
+  'serviceAgentConversationId',
+  'serviceAgentIntent',
+  'serviceAgentRisk',
+  'serviceAgentRoute',
+  'serviceAgentMustHandoff',
+  'serviceAgentNeedsClarification',
+  'serviceAgentAnswerRequiresDisclaimer',
+  'serviceAgentNeedsHumanConfirm',
+  'serviceAgentCanonicalAnswerId',
+  'serviceAgentSourceBlockId',
+  'serviceAgentRetrievalScore',
+  'serviceAgentHasRetrievalEvidence',
+  'serviceAgentLlmUsed',
 ]);
 
 const MAX_METADATA_VALUE_LENGTH = 200;
