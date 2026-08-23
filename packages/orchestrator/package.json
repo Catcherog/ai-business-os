@@ -18,6 +18,7 @@
     "@busos/contracts": "file:../contracts",
     "@busos/business-repository": "file:../business-repository",
     "@busos/service-agent-candidate": "file:../service-agent-candidate",
+    "@busos/service-agent-port": "file:../service-agent-port",
     "@busos/golden-path": "file:../golden-path",
     "@busos/project-lifecycle": "file:../project-lifecycle",
     "@busos/lumen-adapter": "file:../lumen-adapter",

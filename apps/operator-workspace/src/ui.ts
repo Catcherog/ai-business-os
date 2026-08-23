@@ -1131,6 +1131,39 @@ function outputRows(output: NonNullable<RunDetail['output']>): [string, string][
   if (output.taskId) rows.push(['Task ID', output.taskId]);
   if (output.assetId) rows.push(['Asset ID', output.assetId]);
   if (output.assetUri) rows.push(['Asset URI', output.assetUri]);
+  // BUSOS-R2-SCS-INTEGRATION-01 — Service Agent run result in Run Detail.
+  if (output.serviceAgent) {
+    rows.push(['服务 Agent · 回答', output.serviceAgent.answer]);
+    rows.push(['Intent', output.serviceAgent.intent]);
+    rows.push(['Risk', output.serviceAgent.risk]);
+    rows.push(['Route', output.serviceAgent.route]);
+    rows.push([
+      'Handoff',
+      output.serviceAgent.handoff.mustHandoff
+        ? '转人工（必须）'
+        : output.serviceAgent.handoff.needsClarification
+          ? '需澄清'
+          : output.serviceAgent.handoff.needsHumanConfirm
+            ? '需人工确认'
+            : '无需',
+    ]);
+    rows.push([
+      'Evidence',
+      [
+        output.serviceAgent.evidence.sourceModules.join('、') || '—',
+        output.serviceAgent.evidence.canonicalAnswerId
+          ? `标准话术 ${output.serviceAgent.evidence.canonicalAnswerId}`
+          : '',
+        output.serviceAgent.evidence.hasRetrievalEvidence
+          ? `retrieval ${output.serviceAgent.evidence.retrievalScore.toFixed(3)}`
+          : '无检索命中',
+      ].filter(Boolean).join(' · '),
+    ]);
+    rows.push([
+      'Run',
+      `${output.serviceAgent.trace.runId} · ${output.serviceAgent.trace.conversationId} · ${output.serviceAgent.trace.latencyMs}ms`,
+    ]);
+  }
   return rows;
 }
 

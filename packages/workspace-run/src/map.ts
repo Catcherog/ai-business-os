@@ -51,6 +51,8 @@ function summarizeOutput(output: BusinessProcessOutput | undefined): string {
   if (output.projectId) parts.push('Project');
   if (output.taskId) parts.push('Task');
   if (output.assetId) parts.push('Asset');
+  // BUSOS-R2-SCS-INTEGRATION-01 — Service Agent run marker.
+  if (output.serviceAgent) parts.push('Service Agent');
   return parts.length ? parts.join(' · ') : '—';
 }
 
@@ -79,7 +81,7 @@ function mapStages(
   const completed = new Set(result?.completedStages ?? []);
   const current = rec.currentStage;
   const status = rec.status;
-  return PROCESS_STAGE_ORDER.map((stage): RunStageView => {
+  const stages = PROCESS_STAGE_ORDER.map((stage): RunStageView => {
     let viewStatus: RunStageViewStatus;
     if (!result) {
       // RUNNING registry-only: only the current stage is known — do NOT fake
@@ -117,6 +119,45 @@ function mapStages(
       durationMs: ev?.durationMs,
     };
   });
+
+  // BUSOS-R2-SCS-INTEGRATION-01 — SERVICE_AGENT is a NARROW vertical slice
+  // stage deliberately excluded from PROCESS_STAGE_ORDER (so the consultation
+  // pipeline rendering stays untouched). When a run actually used it, append
+  // its view after the pipeline stages so Run Detail shows it honestly.
+  if (completed.has('SERVICE_AGENT') || current === 'SERVICE_AGENT') {
+    let viewStatus: RunStageViewStatus;
+    if (!result) {
+      viewStatus = current === 'SERVICE_AGENT' ? 'current' : 'not_reached';
+    } else if (completed.has('SERVICE_AGENT')) {
+      viewStatus = 'completed';
+    } else {
+      switch (status) {
+        case 'FAILED':
+          viewStatus = 'failed';
+          break;
+        case 'HUMAN_REQUIRED':
+          viewStatus = 'human_required';
+          break;
+        case 'RUNNING':
+          viewStatus = 'current';
+          break;
+        default:
+          viewStatus = 'not_reached';
+      }
+    }
+    const ev = result?.trace?.find(
+      (e) => e.stage === 'SERVICE_AGENT' && e.status !== 'STARTED',
+    );
+    stages.push({
+      stage: 'SERVICE_AGENT',
+      status: viewStatus,
+      startedAt: ev?.startedAt,
+      endedAt: ev?.endedAt,
+      durationMs: ev?.durationMs,
+    });
+  }
+
+  return stages;
 }
 
 function sanitizedError(err: ProcessError | undefined): ProcessError | undefined {

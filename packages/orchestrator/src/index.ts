@@ -4,6 +4,11 @@ export {
   type CreativeProjectActionInput,
   type CreativeProjectActionDeps,
 } from './run-creative-project-action.js';
+export {
+  runServiceAgentConsultation,
+  type ServiceAgentConsultationInput,
+  type ServiceAgentConsultationDeps,
+} from './run-service-agent-consultation.js';
 export { TraceCollector, sanitizeTraceMetadata, ALLOWED_TRACE_METADATA_KEYS } from './trace.js';
 export { InMemoryProcessRegistry } from './process-registry.js';
 export { classifyFailure, invalidInputError, sanitizeMessage, errorMessage } from './errors.js';
@@ -20,6 +25,7 @@ export type {
   BusinessProcessStage,
   BusinessProcessResult,
   BusinessProcessOutput,
+  ServiceAgentOutputSummary,
   ProcessError,
   ProcessErrorCode,
   ProcessErrorDisposition,

@@ -1,0 +1,25 @@
+{
+  "name": "@busos/service-agent-port",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI Business OS BUSOS-R2-SCS-INTEGRATION-01 — ServiceAgentPort: the bounded boundary that lets BUSOS run the frozen Service Agent (LangGraph) as a real AI capability and maps its structured result back into a canonical BUSOS Run.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --pool=forks",
+    "verify": "npm run typecheck && npm run test"
+  },
+  "dependencies": {
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.2",
+    "typescript": "5.6.3",
+    "vitest": "2.1.8"
+  }
+}
