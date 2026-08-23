@@ -9,7 +9,27 @@
  */
 
 export { ServiceAgentBridgeAdapter } from './bridge-adapter.js';
+export { ServiceAgentProductionAdapter } from './production-adapter.js';
 export type { ServiceAgentPort } from './port.js';
+
+export {
+  InMemoryServiceAgentConversationStore,
+  ServiceAgentConsultationInputSchema,
+  ServiceAgentConversationRecordSchema,
+  ServiceAgentConversationRunSummarySchema,
+  assertServiceAgentConsultationInput,
+  sanitizeServiceAgentContent,
+} from './runtime-contract.js';
+
+export type {
+  ServiceAgentConsultationInput,
+  ServiceAgentConversationListOptions,
+  ServiceAgentConversationRecord,
+  ServiceAgentConversationRunSummary,
+  ServiceAgentConversationStore,
+} from './runtime-contract.js';
+
+export type { ServiceAgentProductionTransport } from './production-adapter.js';
 
 export {
   AGENT_INTENT_IDS,
