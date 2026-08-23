@@ -13,20 +13,31 @@ R2 — Unified AI Business OS Productization Rebaseline
 
 CURRENT TASK:
 BUSOS-R2-ENGINEERING-BATCH-1 — Owner-authorized implementation batch
-[UX-01 + WORKSPACE-API-01 ENGINEERING PASS / INTEGRATED; THREE LANES ACTIVE]
+[ALL SEVEN ENGINEERING TASKS PASS / SERIALLY INTEGRATED; FINAL MAIN CLOSURE PENDING]
 - Authority baseline: `origin/main@b3a059d84d0b612387d465077799af6e1fe2fa94`.
 - Orchestration branch: `codex/busos-r2-engineering-batch-1`.
-- UX-01 task branch: `codex/busos-r2-ux-01`, implementation `cb32548`, report
-  `f42db76`, Audit Packet `project-control/tasks/BUSOS-R2-UX-01.md`.
-- UX-01 is integrated into the orchestration branch; authoritative main closure
-  still requires the coordinator push and external SHA verification.
-- Workspace API-01 implementation `6388d80`, report `2f03953`, and pushed branch
-  `codex/busos-r2-workspace-api-01` are integrated into the orchestration branch
-  at `2f03953`; server Connected review decisions remain blocked because this
-  batch has no live-write authorization.
-- Active scope: UX-01 → Workspace API-01 → isolated SCS/Feishu/Evaluation lanes
-  → one serialized authoritative integration. No production or cross-repository
-  work is included.
+- UX-01 branch `codex/busos-r2-ux-01`: implementation `cb32548`, report
+  `f42db76`, integrated before the API task.
+- Workspace API-01 branch `codex/busos-r2-workspace-api-01`: implementation
+  `6388d80`, report `2f03953`, integrated before lane activation.
+- SCS runtime branch `codex/busos-r2-scs-runtime-01`: implementation `9d3a1e3`,
+  report `0ba5a42`, serially integrated before SCS-UI.
+- Feishu branch `codex/busos-r2-feishu-connect-01`: implementation `be2a691`,
+  report `1462eb6`, serially integrated.
+- Evaluation branch `codex/busos-r2-eval-ui-01`: implementation `e8ecb749`,
+  report `f3177ad`, serially integrated.
+- SCS-UI branch `codex/busos-r2-scs-ui-01`: implementation `a94fc45`, report
+  `20bb1d8`, serial merge `de74070`.
+- Business-Data UI branch `codex/busos-r2-business-data-ui-01`: implementation
+  `b2619da`, report `078ce95`, serial merge `89728c6`.
+- The sole coordinator is at `89728c6`; all lane branches were isolated, pushed,
+  and integrated without shared-ownership changes. Server Connected decisions
+  remain blocked or not applicable because this Goal has no live-write
+  authorization.
+- Active scope is complete: UX-01 → Workspace API-01 → three isolated lanes →
+  follow-on SCS/UI and Business Data/UI tasks → one serialized authoritative
+  integration. Only final coordinator push and external `origin/main` SHA
+  verification remain. No production or cross-repository work is included.
 - `R2-LONG-TERM-ROADMAP.md` remains historical for post-H1 sequencing.
 
 PRIOR TASK (closed):
@@ -230,24 +241,26 @@ ACTIVE BLOCKERS:
   `BUSOS-R2-SCS-PROD-CONNECT-01` gate, not another SCS deployment.
 
 AUTHORIZED DEVELOPMENT LANES:
-**ACTIVE AFTER WORKSPACE-API-01:** the Goal authorizes one bounded active task per
-isolated SCS, Feishu and Evaluation lane. Initial lane tasks are
+**COMPLETE:** the Goal authorized one bounded active task per isolated SCS,
+Feishu and Evaluation lane. Initial tasks
 `BUSOS-R2-SCS-RUNTIME-01`, `BUSOS-R2-FEISHU-CONNECT-01`, and
-`BUSOS-R2-EVAL-UI-01`; SCS UI and Business Data UI follow their runtime tasks
-serially within the same lane. Each lane must record its task ID, branch/worktree,
-baseline SHA, file ownership, Audit Packet and STOP; lane workers never self-merge.
+`BUSOS-R2-EVAL-UI-01`, followed serially in-lane by `BUSOS-R2-SCS-UI-01` and
+`BUSOS-R2-BUSINESS-DATA-UI-01`. Every lane recorded task ID, branch/worktree,
+baseline SHA, file ownership, Audit Packet and verification; lane workers did
+not merge. The sole coordinator performed the serial integration.
 
 AUTHORITATIVE INTEGRATION TASK:
-**BUSOS-R2-ENGINEERING-BATCH-1 coordinator active.** At most one authoritative
-Integration Coordinator / merge task may be active at a time. UX-01 is integrated
-on the orchestration branch; main push and post-merge verification remain controlled
-by this coordinator.
+**BUSOS-R2-ENGINEERING-BATCH-1 coordinator in finalization.** At most one
+authoritative Integration Coordinator / merge task was active at a time. UX-01,
+Workspace API-01, all three initial lanes, and both authorized follow-on UI tasks
+are integrated at coordinator `89728c6`; final main push and post-push SHA
+verification remain controlled by this coordinator.
 
 NEXT AUTHORIZED IMPLEMENTATION WORK:
-**BUSOS-R2-SCS-RUNTIME-01 / BUSOS-R2-FEISHU-CONNECT-01 /
-BUSOS-R2-EVAL-UI-01** — one active task per isolated lane, dependent on the
-integrated Workspace API-01 baseline. Do not start SCS production connection,
-Lumen repair, BL-018 LIVE closure, Unified Production Closure, H3 or H4.
+**NONE within this Goal.** All seven authorized Engineering Batch 1 tasks are
+complete and integrated; finalization is limited to coordinator push and remote
+SHA verification. Do not start SCS production connection, Lumen repair, BL-018
+LIVE closure, Unified Production Closure, H3 or H4.
 
 IMPORTANT DEFERRED ITEMS:
 - BL-018 — OPEN; live full-process E2E remains blocked pending a separate Lumen
