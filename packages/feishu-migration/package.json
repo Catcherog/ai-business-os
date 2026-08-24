@@ -14,7 +14,13 @@
     "./feishu-client": "./src/feishu-client.ts",
     "./base-reader": "./src/base-reader.ts",
     "./sheet-reader": "./src/sheet-reader.ts",
-    "./inventory": "./src/inventory.ts"
+    "./inventory": "./src/inventory.ts",
+    "./dedupe": "./src/dedupe.ts",
+    "./normalize/common": "./src/normalize/common.ts",
+    "./normalize/customers": "./src/normalize/customers.ts",
+    "./normalize/projects": "./src/normalize/projects.ts",
+    "./normalize/resources": "./src/normalize/resources.ts",
+    "./normalize/content": "./src/normalize/content.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

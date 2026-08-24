@@ -4,12 +4,45 @@ export interface SourceRecord {
   fields: Record<string, unknown>;
 }
 
+export interface MigrationConflict {
+  field: string;
+  /** All distinct values observed for this field, including the chosen value. */
+  values: string[];
+  /** Source record that supplied the selected value. */
+  chosenSource: string;
+  /** Structured form retained for callers that need to preserve non-text values. */
+  chosen: unknown;
+  alternatives: unknown[];
+  source_ids: string[];
+}
+
+export type MigrationConfidence = 'HIGH' | 'MEDIUM' | 'LOW';
+
 export interface MigrationDecision<T> {
   source: SourceRecord;
   decision: 'CREATE' | 'UPDATE' | 'SKIP' | 'NEEDS_REVIEW';
   canonical_target: T;
   migration_key: string;
   reason: string;
+  confidence?: MigrationConfidence;
+  conflicts?: MigrationConflict[];
+  entity_type?: string;
+}
+
+export interface MigrationBatch {
+  entity_type: string;
+  decisions: Array<MigrationDecision<unknown>>;
+}
+
+export type TargetSnapshotEntry = SourceRecord | Record<string, unknown>;
+
+export interface TargetSnapshot {
+  records?: TargetSnapshotEntry[];
+  customers?: TargetSnapshotEntry[];
+  projects?: TargetSnapshotEntry[];
+  resources?: TargetSnapshotEntry[];
+  content?: TargetSnapshotEntry[];
+  [key: string]: unknown;
 }
 
 export interface MigrationPlan {
@@ -17,6 +50,9 @@ export interface MigrationPlan {
   source_count: number;
   decisions: Array<MigrationDecision<unknown>>;
   manifest_hash: string;
+  executable_decisions?: Array<MigrationDecision<unknown>>;
+  review_decisions?: Array<MigrationDecision<unknown>>;
+  executable_batches?: MigrationBatch[];
 }
 
 export interface VerificationReport {
@@ -31,3 +67,10 @@ export interface VerificationReport {
 
 export { stableHash } from './hash.js';
 export { redactForLog } from './redact.js';
+export {
+  buildMigrationPlan,
+  canonicalizeXiaohongshuUrl,
+  deduplicateRecords,
+  normalizeProjectCode,
+} from './dedupe.js';
+export type { NormalizedMigrationRecord } from './dedupe.js';
