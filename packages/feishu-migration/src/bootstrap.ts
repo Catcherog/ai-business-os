@@ -329,4 +329,17 @@ export async function bootstrapTargetSchema(
   };
 }
 
+export async function getTargetSchemaFingerprint(
+  client: SchemaBootstrapClient,
+  targetToken: string,
+): Promise<string> {
+  const result = await readTableStates(client, targetToken);
+  if (result.conflicts.length > 0) {
+    throw new Error(
+      `SCHEMA_CONFLICT: ${result.conflicts.map((conflict) => conflict.message).join('; ')}`,
+    );
+  }
+  return result.fingerprint;
+}
+
 export { TARGET_SCHEMA } from './target-schema.js';

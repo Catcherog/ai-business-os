@@ -31,6 +31,10 @@ export interface CreateTableInput {
   description?: string;
 }
 
+export interface RecordWriteInput {
+  fields: Record<string, unknown>;
+}
+
 export interface BaseRecord {
   record_id: string;
   fields: Record<string, unknown>;
@@ -124,6 +128,55 @@ export class FeishuClient {
       `/open-apis/bitable/v1/apps/${encodeURIComponent(appToken)}/tables/${encodeURIComponent(tableId)}/records`,
       'items',
     );
+  }
+
+  async createRecord(
+    appToken: string,
+    tableId: string,
+    input: RecordWriteInput,
+  ): Promise<BaseRecord> {
+    const response = await this.request(
+      `/open-apis/bitable/v1/apps/${encodeURIComponent(appToken)}/tables/${encodeURIComponent(tableId)}/records`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${await this.getTenantAccessToken()}`,
+          'Content-Type': 'application/json; charset=utf-8',
+        },
+        body: JSON.stringify(input),
+      },
+    );
+    const record = response.data?.record ?? response.data;
+    if (!record || typeof record !== 'object') {
+      throw new Error(`Feishu record creation returned no record (table=${tableId})`);
+    }
+    return record as BaseRecord;
+  }
+
+  async updateRecord(
+    appToken: string,
+    tableId: string,
+    recordId: string,
+    input: RecordWriteInput,
+  ): Promise<BaseRecord> {
+    const response = await this.request(
+      `/open-apis/bitable/v1/apps/${encodeURIComponent(appToken)}/tables/${encodeURIComponent(tableId)}/records/${encodeURIComponent(recordId)}`,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${await this.getTenantAccessToken()}`,
+          'Content-Type': 'application/json; charset=utf-8',
+        },
+        body: JSON.stringify(input),
+      },
+    );
+    const record = response.data?.record ?? response.data;
+    if (!record || typeof record !== 'object') {
+      throw new Error(
+        `Feishu record update returned no record (table=${tableId}, record=${recordId})`,
+      );
+    }
+    return record as BaseRecord;
   }
 
   async createTable(appToken: string, input: CreateTableInput): Promise<BaseTable> {

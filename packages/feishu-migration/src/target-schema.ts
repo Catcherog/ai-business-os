@@ -340,7 +340,7 @@ export const TARGET_SCHEMA: readonly SchemaTableDefinition[] = [
     [
       text('Migration ID', 'Stable migration registry identity.'),
       text('Run ID', 'Migration run identifier.'),
-      select('Source Type', ['TARGET_BASE', 'LEGACY_BASE', 'SHEET', 'DOCUMENT'], 'Source system type.'),
+      select('Source Type', ['TARGET_BASE', 'LEGACY_BASE', 'SHEET', 'DOCUMENT', 'OTHER'], 'Source system type.'),
       text('Source Token Hash', 'Redacted stable source token hash.'),
       text('Source Table', 'Source table or sheet name.'),
       text('Source Record ID', 'Source record identifier.'),

@@ -13,6 +13,7 @@
     "build": "npm run build --workspace=@busos/operator-workspace",
     "smoke": "npm run smoke --workspace=@busos/operator-workspace",
     "migrate:plan": "npm run plan --workspace=@busos/feishu-migration",
+    "migrate:bootstrap": "npm run bootstrap --workspace=@busos/feishu-migration",
     "migrate:apply": "npm run apply --workspace=@busos/feishu-migration",
     "migrate:verify": "npm run verify:live --workspace=@busos/feishu-migration",
     "verify": "npm run typecheck && npm run test && npm run build && npm run smoke",

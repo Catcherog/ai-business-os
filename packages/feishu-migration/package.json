@@ -22,15 +22,20 @@
     "./normalize/resources": "./src/normalize/resources.ts",
     "./normalize/content": "./src/normalize/content.ts",
     "./target-schema": "./src/target-schema.ts",
-    "./bootstrap": "./src/bootstrap.ts"
+    "./bootstrap": "./src/bootstrap.ts",
+    "./plan": "./src/plan.ts",
+    "./apply": "./src/apply.ts",
+    "./verify-live": "./src/verify-live.ts",
+    "./cli": "./src/cli.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run --no-cache",
     "verify": "npm run typecheck && npm run test",
-    "plan": "node -e \"console.error('Migration planning is not implemented in Task 2.'); process.exit(1)\"",
-    "apply": "node -e \"console.error('Migration apply is not implemented in Task 2.'); process.exit(1)\"",
-    "verify:live": "node -e \"console.error('Live migration verification is not implemented in Task 2.'); process.exit(1)\""
+    "plan": "vite-node --script ./src/cli.ts plan",
+    "bootstrap": "vite-node --script ./src/cli.ts bootstrap",
+    "apply": "vite-node --script ./src/cli.ts apply",
+    "verify:live": "vite-node --script ./src/cli.ts verify"
   },
   "devDependencies": {
     "@types/node": "22.10.2",

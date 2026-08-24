@@ -74,7 +74,7 @@ export {
   normalizeProjectCode,
 } from './dedupe.js';
 export type { NormalizedMigrationRecord } from './dedupe.js';
-export { bootstrapTargetSchema } from './bootstrap.js';
+export { bootstrapTargetSchema, getTargetSchemaFingerprint } from './bootstrap.js';
 export { TARGET_SCHEMA } from './target-schema.js';
 export type {
   AddedSchemaField,
@@ -87,3 +87,20 @@ export type {
   SchemaFieldDefinition,
   SchemaTableDefinition,
 } from './target-schema.js';
+export { createMigrationManifest, generateMigrationManifest, targetTableName } from './plan.js';
+export type {
+  CreateManifestOptions,
+  MigrationManifest,
+  MigrationManifestExpected,
+} from './plan.js';
+export { applyMigration, selectCanaryDecisions } from './apply.js';
+export type {
+  ApplyFieldMismatch,
+  ApplyOptions,
+  ApplyRecordResult,
+  ApplyReport,
+  CanaryReport,
+  MigrationWriteClient,
+} from './apply.js';
+export { verifyMigration } from './verify-live.js';
+export type { LiveVerificationReport, VerifyOptions } from './verify-live.js';
