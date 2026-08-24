@@ -21,3 +21,6 @@ _trash_hr_nm/
 
 # Vercel local project metadata (never commit)
 .vercel
+
+# Feishu migration local outputs
+packages/feishu-migration/.migration-tmp/
