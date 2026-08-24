@@ -14,6 +14,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { runConnectedGenerateVisualReference } from './workspace-action.js';
+import { runConnectedLumenWorkflow, validateLumenInput } from './lumen-action.js';
 import { createConnectedWorkspaceApi } from './workspace-api.js';
 import { workspaceError } from '../src/workspace-data-source.js';
 import { ServiceAgentRuntime, createServiceAgentEndpoint } from './features/service-agent/service-agent-runtime.js';
@@ -325,6 +326,27 @@ const server = http.createServer(async (req, res) => {
       }
       const result = await canonicalSchedulingApi.draft(input);
       sendJson(res, result.statusCode, result.body);
+      return;
+    }
+
+    // BUSOS-R2-BATCH2C — Lumen image-workbench CONNECTED boundary (RunningHub).
+    // The browser SPA posts the chosen capability + source image; this server
+    // owns the RunningHub key and returns the result. BLOCKED without creds.
+    if (req.method === 'POST' && pathname === '/api/lumen/run') {
+      let body = '';
+      for await (const chunk of req) body += chunk;
+      let parsed: unknown;
+      try { parsed = JSON.parse(body); } catch {
+        sendJson(res, 400, { error: 'invalid JSON body' });
+        return;
+      }
+      const valid = validateLumenInput(parsed);
+      if ('error' in valid) {
+        sendJson(res, 422, { error: valid.error });
+        return;
+      }
+      const out = await runConnectedLumenWorkflow(valid);
+      sendJson(res, 200, out);
       return;
     }
 

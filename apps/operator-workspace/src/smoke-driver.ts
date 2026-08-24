@@ -5,3 +5,5 @@
 export { initWorkspace, getService, getDataSource, getReviewService, getRunService, getRunRegistry, getActionRepo, getActionRegistry, getMemoryService } from './api.js';
 export { renderApp, navigate } from './ui.js';
 export { runGenerateVisualReference } from './action.js';
+export { runLumenWorkflowDemo, runLumenWorkflowLive } from './lumen-action.js';
+export { getLumenHistory } from './ui.js';

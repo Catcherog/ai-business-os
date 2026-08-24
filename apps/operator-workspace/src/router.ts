@@ -6,7 +6,7 @@
  * top-level shape without adding a second state machine.
  */
 
-export type NavigationId = 'overview' | 'projects' | 'reviews' | 'runs' | 'service-agent' | 'business-data' | 'scheduling' | 'evaluation' | 'business' | 'customers' | 'orders' | 'review-queue';
+export type NavigationId = 'overview' | 'projects' | 'reviews' | 'runs' | 'service-agent' | 'business-data' | 'scheduling' | 'evaluation' | 'business' | 'customers' | 'orders' | 'review-queue' | 'lumen';
 
 export type Route =
   | { name: 'overview' }
@@ -27,7 +27,8 @@ export type Route =
   | { name: 'orders' }
   | { name: 'order-detail'; orderId: string }
   | { name: 'review-queue' }
-  | { name: 'review-queue-detail'; reviewId: string };
+  | { name: 'review-queue-detail'; reviewId: string }
+  | { name: 'lumen' };
 
 export const NAVIGATION: readonly { id: NavigationId; label: string; tag?: string }[] = [
   { id: 'overview', label: 'Overview' },
@@ -42,6 +43,7 @@ export const NAVIGATION: readonly { id: NavigationId; label: string; tag?: strin
   { id: 'customers', label: 'Customers', tag: 'CONNECTED' },
   { id: 'orders', label: 'Orders', tag: 'CONNECTED' },
   { id: 'review-queue', label: 'Review Queue', tag: 'CONNECTED' },
+  { id: 'lumen', label: 'Lumen', tag: 'DEMO' },
 ] as const;
 
 const DETAIL_ID = /^[A-Za-z0-9_-]+$/;
@@ -98,6 +100,7 @@ export function parseRoute(hash: string): Route {
   if (parts.length === 2 && parts[0] === 'review-queue' && validId(parts[1])) {
     return { name: 'review-queue-detail', reviewId: parts[1] };
   }
+  if (parts.length === 1 && parts[0] === 'lumen') return { name: 'lumen' };
   return { name: 'overview' };
 }
 
@@ -126,6 +129,7 @@ export function serializeRoute(route: Route): string {
     case 'order-detail': return `#/orders/${encodeId(route.orderId)}`;
     case 'review-queue': return '#/review-queue';
     case 'review-queue-detail': return `#/review-queue/${encodeId(route.reviewId)}`;
+    case 'lumen': return '#/lumen';
   }
 }
 

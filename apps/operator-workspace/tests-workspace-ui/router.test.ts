@@ -126,6 +126,7 @@ describe('workspace router', () => {
       'customers',
       'orders',
       'review-queue',
+      'lumen',
     ]);
   });
 
