@@ -40,6 +40,14 @@ import { createBusinessDataFeature } from './features/business-data/index.js';
 import { createDemoBusinessDataClient } from './demo/business-data-demo.js';
 import { createEvaluationFeature } from './features/evaluation/evaluation-view.js';
 import { createDemoEvaluationReportClient } from './demo/evaluation-demo.js';
+import {
+  LUMEN_CAPABILITIES,
+  getLumenCapability,
+  type LumenWorkflowType,
+  type LumenWorkflowInput,
+  type LumenWorkflowRunResult,
+} from '@busos/lumen-adapter';
+import { runLumenWorkflowDemo, runLumenWorkflowLive, type LumenRunResult } from './lumen-action.js';
 
 type View = Route['name'];
 
@@ -50,6 +58,10 @@ let selectedProjectId: string | null = null;
 let selectedReviewId: string | null = null;
 let selectedRunId: string | null = null;
 let selectedCustomerId: string | null = null;
+
+// BUSOS-R2-BATCH2C — Lumen image workbench local state (in-memory only).
+let lumenSelectedType: LumenWorkflowType | null = null;
+let lumenHistory: { type: LumenWorkflowType; status: string; at: string; mode: string; runId?: string }[] = [];
 
 // BUSOS-R2-BATCH1-PRODUCT-INTEGRATION-CORR-01 — lazy feature holders. Constructed
 // on first use (after initWorkspace resolves) so the DEMO data channels can
@@ -1471,6 +1483,224 @@ async function viewEvaluation(): Promise<HTMLElement> {
   return wrap;
 }
 
+/* -------------------- Lumen image workbench (BATCH2C) -------------------- */
+const LUMEN_ALLOWED_MIME = ['image/png', 'image/jpeg', 'image/webp'];
+
+function readLumenFileAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(typeof fr.result === 'string' ? fr.result : '');
+    fr.onerror = () => reject(new Error('读取文件失败'));
+    fr.readAsDataURL(file);
+  });
+}
+
+/** Render the Lumen image-workbench: capability cards + form + result + history. */
+function viewLumen(): HTMLElement {
+  const wrap = h('div', {});
+  wrap.append(
+    h('div', { class: 'view-head' }, [
+      h('h1', {}, ['Lumen · AI 图像工作台']),
+      h('p', {}, ['内置图像能力层 · 由 RunningHub 工作流引擎驱动（演示模式：浏览器内 Fake 适配器，无密钥）']),
+    ]),
+  );
+
+  const body = h('div', { class: 'lumen' });
+  wrap.append(body);
+
+  const cards = h('div', { class: 'capability-cards lumen-cards' });
+  for (const cap of LUMEN_CAPABILITIES) {
+    const card = h('button', {
+      class: 'btn capability-card lumen-cap-card', 'data-type': cap.type, type: 'button',
+    }, [
+      h('span', { class: 'capability-title' }, [cap.label]),
+      h('span', { class: 'capability-desc muted' }, [cap.description]),
+    ]);
+    card.addEventListener('click', () => {
+      lumenSelectedType = cap.type;
+      renderLumenForm(formHost, statusHost, resultHost, historyHost);
+    });
+    cards.append(card);
+  }
+  body.append(h('h2', {}, ['选择能力']), cards);
+
+  const formHost = h('div', { class: 'section lumen-form' });
+  const statusHost = h('div', { class: 'lumen-status' });
+  const resultHost = h('div', { class: 'lumen-result' });
+  const historyHost = h('div', { class: 'section lumen-history' });
+  body.append(formHost, statusHost, resultHost, historyHost);
+
+  renderLumenForm(formHost, statusHost, resultHost, historyHost);
+  renderLumenHistory(historyHost);
+  return wrap;
+}
+
+function renderLumenForm(
+  formHost: HTMLElement,
+  statusHost: HTMLElement,
+  resultHost: HTMLElement,
+  historyHost: HTMLElement,
+): void {
+  formHost.replaceChildren();
+  if (!lumenSelectedType) {
+    formHost.append(h('p', { class: 'muted' }, ['请先选择一个图像能力。']));
+    statusHost.replaceChildren();
+    resultHost.replaceChildren();
+    return;
+  }
+  const cap = getLumenCapability(lumenSelectedType);
+  if (!cap) { formHost.append(h('p', { class: 'err' }, ['未知能力类型。'])); return; }
+
+  const promptEl = h('textarea', { class: 'lumen-prompt', rows: '3', placeholder: cap.promptPlaceholder });
+  const fileEl = h('input', { class: 'lumen-file', type: 'file', accept: 'image/png,image/jpeg,image/webp' });
+  const dataUrlEl = h('input', { class: 'lumen-dataurl field', type: 'text', placeholder: '或粘贴 data URL（data:image/...;base64,...）' });
+
+  const paramEls: Record<string, HTMLInputElement> = {};
+  const paramRows: HTMLElement[] = cap.params.map((p) => {
+    const el = h('input', { class: 'field', type: 'text', placeholder: p.placeholder ?? '' }) as HTMLInputElement;
+    if (p.default) el.value = p.default;
+    paramEls[p.key] = el;
+    return h('label', { class: 'field-label' }, [`${p.label}`, el]);
+  });
+
+  const demoBtn = h('button', { class: 'btn-primary', type: 'button' }, ['运行（DEMO）']);
+  const liveBtn = h('button', { class: 'btn', type: 'button' }, ['运行（LIVE · RunningHub）']);
+
+  const buildInput = async (): Promise<LumenWorkflowInput | { error: string }> => {
+    const params: Record<string, string> = {};
+    for (const [k, v] of Object.entries(paramEls)) params[k] = v.value.trim();
+    if (!fileEl.files || fileEl.files.length === 0) {
+      const du = dataUrlEl.value.trim();
+      if (!du) return { error: '请上传一张源图，或粘贴 data URL。' };
+      return {
+        workflowType: lumenSelectedType!,
+        sourceImageBase64: du,
+        sourceImageMimeType: (du.split(';')[0].split(':')[1] || 'image/png'),
+        prompt: promptEl.value.trim(),
+        params,
+      };
+    }
+    const file = fileEl.files[0];
+    if (!LUMEN_ALLOWED_MIME.includes(file.type)) return { error: '仅支持 PNG / JPEG / WEBP。' };
+    let pure = '';
+    try { pure = (await readLumenFileAsBase64(file)).split(',')[1] ?? ''; } catch (e) { return { error: '读取失败：' + (e as Error).message }; }
+    if (!pure) return { error: '源图解码失败。' };
+    return {
+      workflowType: lumenSelectedType!,
+      sourceImageBase64: pure,
+      sourceImageMimeType: file.type,
+      prompt: promptEl.value.trim(),
+      params,
+    };
+  };
+
+  const run = async (mode: 'DEMO' | 'LIVE'): Promise<void> => {
+    const built = await buildInput();
+    if ('error' in built) { statusHost.replaceChildren(h('p', { class: 'err' }, [built.error])); return; }
+    demoBtn.setAttribute('disabled', 'true');
+    liveBtn.setAttribute('disabled', 'true');
+    statusHost.replaceChildren(loading(mode === 'DEMO' ? '正在运行（DEMO / in-memory）…' : '正在连接 RunningHub（LIVE）…'));
+    resultHost.replaceChildren();
+    let out: LumenRunResult;
+    try {
+      out = mode === 'DEMO' ? await runLumenWorkflowDemo(built) : await runLumenWorkflowLive(built);
+    } catch (e) {
+      statusHost.replaceChildren(h('p', { class: 'err' }, ['运行异常：' + (e as Error).message]));
+      demoBtn.removeAttribute('disabled');
+      liveBtn.removeAttribute('disabled');
+      return;
+    }
+    renderLumenResult(resultHost, statusHost, out, historyHost);
+    demoBtn.removeAttribute('disabled');
+    liveBtn.removeAttribute('disabled');
+  };
+
+  demoBtn.addEventListener('click', () => void run('DEMO'));
+  liveBtn.addEventListener('click', () => void run('LIVE'));
+
+  const kids: (Node | string)[] = [
+    h('h2', {}, [cap.label]),
+    h('p', { class: 'muted' }, [cap.description]),
+    h('label', { class: 'lumen-label' }, [cap.promptLabel]),
+    promptEl,
+    h('label', { class: 'lumen-label' }, ['Source image (PNG / JPEG / WEBP)']),
+    fileEl,
+    h('label', { class: 'lumen-label' }, ['或粘贴 data URL']),
+    dataUrlEl,
+    ...paramRows,
+    h('div', { class: 'lumen-actions' }, [demoBtn, liveBtn]),
+  ];
+  formHost.append(...kids);
+}
+
+function renderLumenResult(
+  resultHost: HTMLElement,
+  statusHost: HTMLElement,
+  out: LumenRunResult,
+  historyHost: HTMLElement,
+): void {
+  const { result, mode } = out;
+  const modeBadge = mode === 'DEMO'
+    ? h('span', { class: 'badge badge-demo' }, ['DEMO · 模拟 RunningHub'])
+    : h('span', { class: 'badge badge-live' }, ['LIVE · RunningHub']);
+  const rows: (Node | string)[] = [
+    h('div', { class: 'lumen-result-head' }, [
+      h('span', {}, ['Result: ']),
+      runStatusPill(result.status),
+      modeBadge,
+    ]),
+  ];
+  if (result.status === 'SUCCEEDED') {
+    for (const img of result.outputImages) {
+      rows.push(h('div', { class: 'lumen-img' }, [
+        img.url.startsWith('http') || img.url.startsWith('data:') || img.url.startsWith('lumen-demo')
+          ? h('img', { src: img.url, alt: 'result', class: 'lumen-thumb' })
+          : h('span', {}, [img.url]),
+        h('div', { class: 'muted' }, [img.url]),
+      ]));
+    }
+    if (result.runId) rows.push(h('div', { class: 'muted' }, [`runId: ${result.runId}`]));
+    if (result.workflowId) rows.push(h('div', { class: 'muted' }, [`workflowId: ${result.workflowId}`]));
+    if (result.durationMs != null) rows.push(h('div', { class: 'muted' }, [`duration: ${fmtDuration(result.durationMs)}`]));
+  } else {
+    rows.push(h('p', { class: 'err' }, [`${result.errorCode ?? 'ERROR'}: ${result.errorMessage ?? ''}`]));
+  }
+  resultHost.replaceChildren(h('h2', {}, ['结果']), ...rows);
+  statusHost.replaceChildren(h('p', { class: 'muted' }, [
+    mode === 'DEMO'
+      ? 'DEMO 模式：浏览器内 Fake 适配器，非真实 RunningHub 调用。'
+      : 'LIVE 模式：来自服务器边界的真实 RunningHub 结果（或 BLOCKED 说明）。',
+  ]));
+  lumenHistory = [
+    { type: result.workflowType, status: result.status, at: new Date().toISOString().slice(11, 19), mode, runId: result.runId },
+    ...lumenHistory,
+  ].slice(0, 8);
+  renderLumenHistory(historyHost);
+}
+
+function renderLumenHistory(historyHost: HTMLElement): void {
+  historyHost.replaceChildren(h('h2', {}, [`历史记录（${lumenHistory.length}）`]));
+  if (!lumenHistory.length) {
+    historyHost.append(h('p', { class: 'muted' }, ['（暂无运行）']));
+    return;
+  }
+  const list = h('div', { class: 'card lumen-history-list' });
+  for (const rec of lumenHistory) {
+    list.append(h('div', { class: 'lumen-history-row' }, [
+      h('span', {}, [rec.type]),
+      runStatusPill(rec.status),
+      h('span', { class: 'badge badge-demo' }, [rec.mode]),
+      h('span', { class: 'muted' }, [rec.at]),
+    ]));
+  }
+  historyHost.append(list);
+}
+
+/** Test seam: read the in-memory Lumen run history from the UI module. */
+export function getLumenHistory(): typeof lumenHistory {
+  return lumenHistory;
+}
+
 /* ------------------------------- router ---------------------------------- */
 function routeForView(view: View, id?: string): Route {
   switch (view) {
@@ -1485,6 +1715,7 @@ function routeForView(view: View, id?: string): Route {
     case 'business-data': return { name: 'business-data' };
     case 'business-data-detail': return id ? { name: 'business-data-detail', customerId: id } : { name: 'business-data' };
     case 'evaluation': return { name: 'evaluation' };
+    case 'lumen': return { name: 'lumen' };
   }
 }
 
@@ -1520,6 +1751,7 @@ async function renderContent(): Promise<void> {
     case 'business-data': node = await viewBusinessData(); break;
     case 'business-data-detail': node = await viewBusinessDataCustomer(); break;
     case 'evaluation': node = await viewEvaluation(); break;
+    case 'lumen': node = await viewLumen(); break;
     default: node = await viewOverview(); break;
   }
   content.replaceChildren(node);

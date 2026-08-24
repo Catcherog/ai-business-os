@@ -77,6 +77,7 @@ describe('workspace router', () => {
       'service-agent',
       'business-data',
       'evaluation',
+      'lumen',
     ]);
   });
 

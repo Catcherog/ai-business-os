@@ -6,7 +6,7 @@
  * top-level shape without adding a second state machine.
  */
 
-export type NavigationId = 'overview' | 'projects' | 'reviews' | 'runs' | 'service-agent' | 'business-data' | 'evaluation';
+export type NavigationId = 'overview' | 'projects' | 'reviews' | 'runs' | 'service-agent' | 'business-data' | 'evaluation' | 'lumen';
 
 export type Route =
   | { name: 'overview' }
@@ -19,7 +19,8 @@ export type Route =
   | { name: 'service-agent' }
   | { name: 'business-data' }
   | { name: 'business-data-detail'; customerId: string }
-  | { name: 'evaluation' };
+  | { name: 'evaluation' }
+  | { name: 'lumen' };
 
 export const NAVIGATION: readonly { id: NavigationId; label: string; tag?: string }[] = [
   { id: 'overview', label: 'Overview' },
@@ -29,6 +30,7 @@ export const NAVIGATION: readonly { id: NavigationId; label: string; tag?: strin
   { id: 'service-agent', label: 'Service Agent', tag: 'DEMO' },
   { id: 'business-data', label: 'Business Data', tag: 'DEMO' },
   { id: 'evaluation', label: 'Evaluation', tag: 'DEMO' },
+  { id: 'lumen', label: 'Lumen', tag: 'DEMO' },
 ] as const;
 
 const DETAIL_ID = /^[A-Za-z0-9_-]+$/;
@@ -71,6 +73,7 @@ export function parseRoute(hash: string): Route {
     return { name: 'business-data-detail', customerId: parts[1] };
   }
   if (parts.length === 1 && parts[0] === 'evaluation') return { name: 'evaluation' };
+  if (parts.length === 1 && parts[0] === 'lumen') return { name: 'lumen' };
   return { name: 'overview' };
 }
 
@@ -91,6 +94,7 @@ export function serializeRoute(route: Route): string {
     case 'business-data': return '#/business-data';
     case 'business-data-detail': return `#/business-data/${encodeId(route.customerId)}`;
     case 'evaluation': return '#/evaluation';
+    case 'lumen': return '#/lumen';
   }
 }
 
