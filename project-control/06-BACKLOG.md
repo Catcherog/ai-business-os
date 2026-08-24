@@ -31,6 +31,21 @@ authorized.
   accepted writes; the deployed Lumen application/SDK path did not reach the DB.
 - BL-019 — **CLOSED** (BUSOS-P6-03 golden-path simulator regression repaired).
 
+## FEISHU-V3 Planning Note (added by FEISHU-V3-TASK-1, 2026-08-24)
+
+The Feishu v3 migration Goal uses `https://open.feishu.cn` as the recorded target
+Base API URL only. The configured NEW test Base app token and table IDs are live
+environment inputs and must not be written into Git, manifests, fixtures,
+reports, or logs.
+
+During this Goal, the old Base, eight source spreadsheets, Drive, and Wiki stay
+read-only. The NEW test Base is the only permitted future write target, and only
+lane `L2 Feishu Schema/Live Migration` may perform additive schema bootstrap,
+per-table canary (max 5 records/table), and batch migration writes after readback
+gates pass. Any request that would delete/move/rename source assets, destructively
+convert target fields, send real messages, change permissions, or deploy
+production remains out of scope and must be treated as a separate authorization.
+
 ## BL-001 Full Evaluation Center
 - Type: DEFERRED
 - Found in task: Architecture planning

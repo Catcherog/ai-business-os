@@ -12,6 +12,31 @@ CURRENT PHASE:
 R2 — Unified AI Business OS Productization Rebaseline
 
 CURRENT TASK:
+FEISHU-V3-TASK-1 — Clean Baseline and Control Packet
+[CONTROL IN PROGRESS — ISOLATED WORKTREE — NO LIVE FEISHU WRITES]
+- Authority baseline (frozen): `origin/main@729108d8059e3e143194a05f43e510af3587d385`.
+- Branch/worktree: `codex/busos-feishu-v3` at
+  `C:\Users\Catcher\AppData\Local\Temp\codex-busos-feishu-v3`.
+- Scope packet: `project-control/FEISHU-V3-GOAL.md` defines the Feishu v3 migration
+  Goal, source inventory scope, lane ownership, write authority, canary rule, and
+  STOP conditions for the new Base migration + OS cutover.
+- Target Base API URL: `https://open.feishu.cn`. The configured NEW test Base app
+  token and table IDs are provided only at live migration time through environment
+  variables and are never recorded in Git, reports, manifests, tests, or logs.
+- Safety boundary: old Base, source spreadsheets, Drive, and Wiki stay read-only.
+  No delete/move/rename of source systems or destructive conversion/deletion in the
+  new Base is authorized. No real message sending, permission changes, or production
+  deployment is in scope.
+- Live-write boundary: only lane `L2 Feishu Schema/Live Migration` may perform real
+  writes to the NEW test Base, and only after additive schema bootstrap plus a
+  successful per-table canary (max 5 records/table, readback-verified).
+- Current task ownership is docs/control only. No source inventory reads, schema
+  mutation, or migration apply step has started from this task.
+- Next authorized work inside this Goal, after Task 1 is committed: Task 2
+  (`Migration Package and Manifest Contracts`) on a clean lane with the same frozen
+  baseline unless `origin/main` changes.
+
+PRIOR TASK (closed):
 BUSOS-R2-BATCH1-PRODUCT-INTEGRATION-CORR-01 — Product Integration Correction
 [ENGINEERING PASS — PRODUCT INTEGRATION COMPLETE — PUSHED — OWNER ACCEPTED / MERGED TO MAIN]
 - **MERGE CLOSURE (BUSOS-R2-BATCH1-MERGE-CLOSE-01, 2026-08-24)**: `main` fast-forwarded
@@ -259,27 +284,39 @@ ACTIVE BLOCKERS:
   `BUSOS-R2-SCS-PROD-CONNECT-01` gate, not another SCS deployment.
 
 AUTHORIZED DEVELOPMENT LANES:
-**COMPLETE:** the Goal authorized one bounded active task per isolated SCS,
-Feishu and Evaluation lane. Initial tasks
-`BUSOS-R2-SCS-RUNTIME-01`, `BUSOS-R2-FEISHU-CONNECT-01`, and
-`BUSOS-R2-EVAL-UI-01`, followed serially in-lane by `BUSOS-R2-SCS-UI-01` and
-`BUSOS-R2-BUSINESS-DATA-UI-01`. Every lane recorded task ID, branch/worktree,
-baseline SHA, file ownership, Audit Packet and verification; lane workers did
-not merge. The sole coordinator performed the serial integration.
+**ACTIVE FOR FEISHU V3 GOAL:** one bounded active task per isolated lane, with one
+authoritative Integration Coordinator:
+- `L0 Integration Coordinator` — baseline refresh, task state, serialized
+  integration, final verification, and the only merge authority.
+- `L1 Migration Tool` — manifest, source reads, normalization, dedupe, apply,
+  and verification logic; may work in parallel with L3 on frozen fixtures only.
+- `L2 Feishu Schema/Live Migration` — target schema bootstrap, canary, batch
+  migration, and readback; this lane exclusively owns real writes to the NEW
+  test Base.
+- `L3 Contracts/Repository` — new contracts, repository adapter, fake client,
+  and tests; no live writes.
+- `L4 Workspace API/Scheduling` — server read APIs, scheduling, and outreach
+  draft logic on top of L3 interfaces.
+- `L5 Operator UI` — Business Data, scheduling advice, and draft surfaces on top
+  of L4 contracts; fixture-first allowed.
+
+Dependency and integration order are frozen as `L1 → L3 → L4 → L5 → L2 live
+evidence → L0 closure`. Lane workers do not merge, do not write outside owned
+paths, and must stop on the Feishu v3 Goal STOP conditions.
 
 AUTHORITATIVE INTEGRATION TASK:
-**BUSOS-R2-ENGINEERING-BATCH-1 coordinator closed at the engineering boundary.** At most one
-authoritative Integration Coordinator / merge task was active at a time. UX-01,
-Workspace API-01, all three initial lanes, and both authorized follow-on UI tasks
-are integrated at coordinator `89728c6`; the authorized non-force main push and
-post-push SHA verification completed successfully. The final closure SHA is
-recorded in the coordinator handoff rather than self-embedded in this state file.
+`L0 Integration Coordinator` is the sole authoritative merge/cutover owner for
+the Feishu v3 Goal. No other lane may integrate, push to `main`, or perform live
+schema/data writes outside the `L2` exclusive window. Batch 1 coordinator closure
+remains historical and does not authorize self-merge for this Goal.
 
 NEXT AUTHORIZED IMPLEMENTATION WORK:
-**NONE within this Goal.** All seven authorized Engineering Batch 1 tasks are
-complete, integrated, pushed, and remotely verified. Do not start SCS production
-connection, Lumen repair, BL-018 LIVE closure, Unified Production Closure, H3 or
-H4.
+`FEISHU-V3-TASK-1` may complete this control packet only. After that, the next
+authorized implementation step is Task 2 (`Migration Package and Manifest
+Contracts`) on a clean isolated lane from the same frozen baseline, provided
+`origin/main` remains unchanged. Do not start live migration, SCS production
+connection, Lumen repair, BL-018 closure, Unified Production Closure, H3, or H4
+from this task.
 
 IMPORTANT DEFERRED ITEMS:
 - BL-018 — OPEN; live full-process E2E remains blocked pending a separate Lumen
@@ -326,5 +363,5 @@ report never records its own commit SHA — the closure tip is verified external
 `git ls-remote origin refs/heads/main` after push and reported in handoff.
 
 ON TASK COMPLETION:
-Update this file with: task status, next authorized work, evidence location, and
-any new blocker/deferred item.
+Update this file with: task status, next authorized work, evidence location,
+lane ownership/authority changes, and any new blocker/deferred item.
