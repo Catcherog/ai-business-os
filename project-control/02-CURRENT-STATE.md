@@ -13,7 +13,14 @@ R2 — Unified AI Business OS Productization Rebaseline
 
 CURRENT TASK:
 BUSOS-R2-BATCH1-PRODUCT-INTEGRATION-CORR-01 — Product Integration Correction
-[ENGINEERING PASS — PRODUCT INTEGRATION COMPLETE — PUSHED — OWNER ACCEPTANCE PENDING]
+[ENGINEERING PASS — PRODUCT INTEGRATION COMPLETE — PUSHED — OWNER ACCEPTED / MERGED TO MAIN]
+- **MERGE CLOSURE (BUSOS-R2-BATCH1-MERGE-CLOSE-01, 2026-08-24)**: `main` fast-forwarded
+  `1b58f42` → `2ca001e` (`MERGED_MAIN_SHA`); operator + root `npm run verify` GREEN
+  (operator 30 tests = 16 UI + 14 API; root ~573 passed / ~7 skipped / 0 failed);
+  docs-only governance closure commit applied (`FINAL_MAIN_SHA` recorded externally via
+  `git ls-remote`, non-self-referential per protocol §4). **PRODUCTION CONNECTIVITY ≠
+  COMPLETE; PRODUCTION DEPLOYMENT ≠ COMPLETE** — explicitly deferred (no SCS production
+  connect, no CloudBase redeploy, no real Feishu binding; BL-018 / H3 / H4 untouched).
 - Authority baseline (frozen): `origin/main@1b58f42e0339447ce1dc7cd06fc3540b4ad5b79e`
   (re-queried via `git ls-remote`; unchanged).
 - Branch: `codex/busos-r2-batch1-product-integration-corr-01`; isolated worktree

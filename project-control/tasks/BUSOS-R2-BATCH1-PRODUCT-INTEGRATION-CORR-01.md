@@ -11,11 +11,18 @@
   `SUCCESS 42/28/14`), `/api/business-data/customers` (honest
   `CONNECTED/BLOCKED`), and `/api/service-agent/*` (fail-closed `READY` stub).
   No production binding was authorized or attempted.
-- LIVE / Owner acceptance: **NOT AUTHORIZED / PENDING**.
+- LIVE / Owner acceptance: **OWNER ACCEPTED — MERGED TO MAIN (fast-forward @ `2ca001e`; docs-only governance closure commit)**. PRODUCTION CONNECTIVITY / DEPLOYMENT remain NOT COMPLETE (deferred per protocol).
 - Implementation commit: `f1a351643a5797a001881c774db3d11c722406a4`
   (`f1a3516`).
 - Final report commit: **externally verified after push; not written here to
   avoid a self-referential SHA** (protocol §4).
+- **MERGE CLOSURE (BUSOS-R2-BATCH1-MERGE-CLOSE-01, 2026-08-24)**: fast-forward `main`
+  `1b58f42` → `2ca001e` (`MERGED_MAIN_SHA`); operator + root `npm run verify` GREEN
+  (operator 30 tests = 16 UI + 14 API; root ~573 passed / ~7 skipped / 0 failed);
+  docs-only governance closure commit applied — `FINAL_MAIN_SHA` recorded externally via
+  `git ls-remote` (non-self-referential, protocol §4). PRODUCTION CONNECTIVITY /
+  DEPLOYMENT remain NOT COMPLETE (deferred: no SCS production connect, no CloudBase
+  redeploy, no real Feishu binding; BL-018 / H3 / H4 untouched).
 - Deterministic Evaluation harness: **unchanged** — same evaluators, gates and
   canonical Golden Set (42 total / 28 PASS / 0 FAIL / 0 ERROR / 14
   NOT_EVALUABLE); no judge behavior modified.
