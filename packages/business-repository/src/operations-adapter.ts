@@ -29,8 +29,10 @@ import {
   type OperationsTableName,
 } from './operations-types.js';
 
-if (typeof globalThis !== 'undefined' && 'window' in globalThis) {
-  throw new Error('OperationsAdapter is server-only');
+function assertServerOnly(): void {
+  if (typeof globalThis !== 'undefined' && 'window' in globalThis) {
+    throw new Error('OperationsAdapter is server-only');
+  }
 }
 
 const TABLE_ENV_NAMES: Readonly<Record<OperationsTableName, readonly string[]>> = {
@@ -109,6 +111,7 @@ export class ConnectedOperationsAdapter implements OperationsAdapter {
   private readonly tableCache = new Map<OperationsTableName, string>();
 
   constructor(config: OperationsAdapterConfig) {
+    assertServerOnly();
     const clientConfig: FeishuBaseClientConfig = {
       appId: config.appId,
       appSecret: config.appSecret,

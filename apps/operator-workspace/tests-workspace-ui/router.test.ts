@@ -76,6 +76,7 @@ describe('workspace router', () => {
       'runs',
       'service-agent',
       'business-data',
+      'scheduling',
       'evaluation',
     ]);
   });

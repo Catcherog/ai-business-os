@@ -512,3 +512,73 @@ table.trace-tbl td:last-child { font-family: ui-monospace, SFMono-Regular, Menlo
 .tbl th { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
 .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
 .btn-back { background: transparent; border: 1px solid var(--line); color: var(--muted); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+
+/* ---- Feishu v3 operations intelligence surface ------------------------- */
+.v3-view { display: grid; gap: 18px; max-width: 1180px; }
+.v3-headline-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.v3-eyebrow { display: block; color: var(--brand); font-size: 10px; font-weight: 800; letter-spacing: 1.5px; margin-bottom: 5px; }
+.v3-identity { display: inline-flex; align-items: center; gap: 8px; width: fit-content; border: 1px solid var(--line); border-radius: 999px; padding: 6px 10px; background: var(--panel); box-shadow: var(--shadow); }
+.v3-identity-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); }
+.v3-identity.is-connected .v3-identity-dot { background: var(--ok); box-shadow: 0 0 0 4px #e6f7ee; }
+.v3-identity-label { font-size: 11px; font-weight: 800; letter-spacing: .6px; }
+.v3-identity-source { color: var(--muted); font-size: 11px; }
+.v3-connected-surface, .v3-scheduling-surface { display: grid; gap: 16px; }
+.v3-metric-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.v3-metric { border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(135deg, #fff 0%, #f8fbff 100%); padding: 14px 16px; }
+.v3-metric strong { display: block; color: var(--ink); font-size: 24px; line-height: 1.1; }
+.v3-metric span { display: block; color: var(--muted); font-size: 11px; letter-spacing: .5px; margin-top: 6px; text-transform: uppercase; }
+.v3-data-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 16px; }
+.v3-panel, .v3-context-panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; }
+.v3-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.v3-panel-head h2, .v3-panel-head h3 { margin: 0; font-size: 15px; }
+.v3-panel-head h2 { letter-spacing: -.1px; }
+.v3-list { display: grid; gap: 2px; }
+.v3-list-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; width: 100%; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--ink); padding: 11px 4px; text-align: left; }
+button.v3-list-row { cursor: pointer; }
+button.v3-list-row:hover { background: #f7f9fc; }
+.v3-row-main { display: grid; gap: 3px; min-width: 0; }
+.v3-row-main strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v3-row-main .muted { font-size: 11px; }
+.v3-resource-meta { color: var(--brand); font-size: 11px; font-weight: 700; }
+.v3-context-host { min-height: 90px; }
+.v3-context-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.v3-context-columns h3 { color: var(--muted); font-size: 11px; letter-spacing: .7px; text-transform: uppercase; margin: 0 0 8px; }
+.v3-context-list { display: grid; gap: 2px; }
+.v3-requirement-row { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--line); padding: 8px 0; font-size: 12px; }
+.v3-requirement-row:last-child { border-bottom: 0; }
+.v3-blocked { border: 1px solid #f0d9a6; border-radius: var(--radius); background: #fffaf0; color: var(--ink); padding: 24px; }
+.v3-blocked-kicker { color: var(--warn); font-size: 11px; font-weight: 900; letter-spacing: 1.5px; }
+.v3-blocked h2 { margin: 7px 0 6px; font-size: 18px; }
+.v3-blocked p { margin: 4px 0; font-size: 13px; }
+.v3-scheduling-form { display: grid; gap: 14px; }
+.v3-form-grid { display: grid; grid-template-columns: 1.2fr repeat(3, 1fr); gap: 10px; }
+.v3-form-grid label { display: grid; gap: 5px; color: var(--muted); font-size: 11px; font-weight: 700; }
+.v3-form-actions, .v3-proposal-actions { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.btn-secondary { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); padding: 8px 12px; font-size: 12px; font-weight: 700; cursor: pointer; }
+.btn-secondary:hover { border-color: var(--brand); color: var(--brand); }
+.btn-secondary.is-confirmed { border-color: #b7e4ca; color: var(--ok); background: #f1fbf5; }
+.v3-context-count, .v3-score { color: var(--muted); font-size: 11px; }
+.v3-proposal-list { display: grid; gap: 12px; }
+.v3-proposal-card { border: 1px solid var(--line); border-radius: 10px; padding: 14px; background: #fff; }
+.v3-proposal-card.is-recommended { border-color: #b9cdf8; box-shadow: 0 0 0 3px #eef4ff; }
+.v3-proposal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.v3-proposal-head h3 { margin: 3px 0 0; font-size: 15px; }
+.v3-recommended { color: var(--brand); font-size: 10px; font-weight: 900; letter-spacing: 1.1px; }
+.v3-proposal-time { margin: 12px 0; font-size: 14px; font-weight: 700; }
+.v3-reason-list, .v3-warning-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.v3-reason, .v3-warning-list span { border-radius: 999px; padding: 4px 8px; font-size: 11px; }
+.v3-reason { color: var(--ok); background: #f0faf4; }
+.v3-warning-list span { color: var(--warn); background: #fff7e8; }
+.v3-warning-list.is-empty { color: var(--muted); font-size: 11px; }
+.v3-draft-host { margin-top: 12px; }
+.v3-draft-card { border-left: 3px solid var(--brand); background: #f8fbff; padding: 12px; }
+.v3-draft-card pre { margin: 9px 0; white-space: pre-wrap; font: inherit; font-size: 13px; line-height: 1.65; }
+
+@media (max-width: 900px) {
+  .v3-data-grid, .v3-form-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .v3-metric-grid, .v3-context-columns { grid-template-columns: 1fr; }
+  .v3-list-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .v3-resource-meta { display: none; }
+}

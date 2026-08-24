@@ -8,10 +8,11 @@
     "build": "node build.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run tests-workspace-ui && vitest run tests-workspace-api && vitest run tests-connected",
-    "smoke": "node smoke.mjs && node smoke-action.mjs && node smoke-server.mjs && node smoke-memory.mjs && node smoke-preview.mjs && node smoke-product-integration.mjs",
+    "smoke": "node smoke.mjs && node smoke-action.mjs && node smoke-server.mjs && node smoke-memory.mjs && node smoke-preview.mjs && node smoke-product-integration.mjs && node smoke-feishu-v3.mjs",
     "smoke:run": "node smoke-run.mjs",
     "smoke:review": "node smoke-review.mjs",
     "smoke:closure": "node smoke-closure.mjs",
+    "smoke:feishu-v3": "node smoke-feishu-v3.mjs",
     "verify": "npm run typecheck && npm run build && npm run smoke"
   },
   "dependencies": {
