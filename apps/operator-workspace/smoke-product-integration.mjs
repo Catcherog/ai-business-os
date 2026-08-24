@@ -7,13 +7,14 @@
 // the CONNECTED server boundary serves the same product surface routes.
 //
 // Journeys:
-//   A  Navigation discovery — all seven nav surfaces exist and render
+//   A  Navigation discovery — all eight nav surfaces exist and render
 //      (Overview / Projects / Reviews / Runs / Service Agent / Business Data /
-//      Evaluation), driven through the real router (hashchange) AND a real nav
+//      Scheduling / Evaluation), driven through the real router (hashchange) AND a real nav
 //      button click.
 //   B  Service Agent — type a consultation, submit, assert answer / intent /
 //      risk / route / evidence / handoff / run link (KB path + handoff path).
-//   C  Business Data — customer list -> customer detail -> Leads / Projects.
+//   C  Connected Business Data / Scheduling — blocked without server
+//      configuration; no seeded demo fallback is allowed.
 //   D  Evaluation — Golden Set recompute rendered (42 / 28 / 14) AND the
 //      server report API returns the same canonical summary.
 //   E  Legacy regression — Overview / Projects / Project detail / Reviews /
@@ -122,6 +123,15 @@ window.removeEventListener = (type, fn) => {
   if (l) { const i = l.indexOf(fn); if (i >= 0) l.splice(i, 1); }
 };
 
+// The DOM journey runs without the connected server. Return the same honest
+// blocked envelope the server emits so the real async views settle quickly;
+// the native fetch is restored before the server seam probes below.
+const nativeFetch = globalThis.fetch?.bind(globalThis);
+globalThis.fetch = async () => new Response(
+  JSON.stringify({ mode: 'BLOCKED', reason: 'Smoke stub: connected configuration is absent.' }),
+  { status: 200, headers: { 'content-type': 'application/json' } },
+);
+
 // ---------------------------------------------------------------------------
 // Harness
 // ---------------------------------------------------------------------------
@@ -168,7 +178,8 @@ const NAV_EXPECT = [
   ['#/reviews', 'Reviews', 'Reviews'],
   ['#/runs', 'Runs', 'Runs'],
   ['#/service-agent', 'Service Agent', 'Service Agent'],
-  ['#/business-data', 'Customers', 'Business Data'],
+  ['#/business-data', 'Business Data', 'Business Data'],
+  ['#/scheduling', 'Scheduling', 'Scheduling'],
   ['#/evaluation', 'Evaluation', 'Evaluation'],
 ];
 const navText = navHost().text();
@@ -221,44 +232,26 @@ await go('#/service-agent', 'Service Agent', 'Journey B — Service Agent');
   }
 }
 
-// ---- Journey C — Business Data (list -> detail -> Leads / Projects) ---------
-await go('#/business-data', 'Customers', 'Journey C — Business Data');
+// ---- Journey C — connected Business Data + Scheduling ----------------------
+await go('#/business-data', 'Business Data', 'Journey C — Business Data');
 {
-  const listOk = await waitFor(() => {
+  const blockedOk = await waitFor(() => {
     const t = content().text();
-    return t.includes('林晚晴') && t.includes('陈思远');
-  }, 'Business Data customer list');
-  if (listOk) pass('Business Data list: seeded customers 林晚晴 / 陈思远 rendered (DEMO projection)');
-
-  // OWNER-REVIEW-FIX-01 — runtime identity closure. The seeded DEMO surface
-  // must show DEMO · READY and must NOT claim CONNECTED · READY.
-  const idOk = await waitFor(() => content().text().includes('DEMO · READY'), 'Business Data DEMO identity');
-  if (idOk) {
-    pass('Browser Business Data identity: DEMO · READY (honest seeded demo, connected=false)');
-    if (content().text().includes('CONNECTED · READY')) {
-      fail('Browser Business Data must NOT show CONNECTED · READY for seeded demo data');
-    } else {
-      pass('Browser Business Data identity: CONNECTED · READY absent in DEMO UI');
-    }
-  } else {
-    fail('Browser Business Data identity: DEMO · READY not rendered');
-  }
-
-  const custBtn = content().findByText('button', '林晚晴');
-  if (!custBtn) { fail('Business Data customer row button not found'); }
-  else {
-    custBtn.dispatch('click'); // real onSelectCustomer -> navigate('business-data-detail', id)
-    const detailOk = await waitFor(() => {
-      const t = content().text();
-      return t.includes('Leads') && t.includes('Projects') && t.includes('林晚晴');
-    }, 'Business Data customer detail');
-    if (detailOk && location.hash.includes('/business-data/')) {
-      pass(`Business Data detail: Leads / Projects rendered, router hash=${location.hash}`);
-    } else {
-      fail(`Business Data detail missing or hash wrong: ${location.hash}`);
-    }
-  }
+    return t.includes('BLOCKED') && t.includes('No demo fallback');
+  }, 'Business Data blocked identity');
+  if (blockedOk) pass('Business Data: BLOCKED without server config; no demo fallback');
+  else fail('Business Data blocked state missing');
 }
+await go('#/scheduling', 'Scheduling', 'Journey C — Scheduling');
+{
+  const blockedOk = await waitFor(() => {
+    const t = content().text();
+    return t.includes('BLOCKED') && t.includes('No demo proposals');
+  }, 'Scheduling blocked identity');
+  if (blockedOk) pass('Scheduling: BLOCKED without server config; no demo proposals');
+  else fail('Scheduling blocked state missing');
+}
+if (nativeFetch) globalThis.fetch = nativeFetch;
 
 // ---- Journey D — Evaluation (browser recompute + server report API) ---------
 await go('#/evaluation', 'Evaluation', 'Journey D — Evaluation');
@@ -296,9 +289,9 @@ await import(new URL('./server/dist/server.js', import.meta.url).href);
     fail(`Evaluation server seam mismatch: ${JSON.stringify(ev).slice(0, 200)}`);
   }
 
-  const bd = await (await fetch('http://localhost:4195/api/business-data/customers')).json();
-  if (bd.mode === 'CONNECTED' && bd.status === 'BLOCKED' && bd.error?.code === 'BUSINESS_DATA_NOT_CONFIGURED') {
-    pass('Business Data server seam: CONNECTED/BLOCKED (honest boundary, no fake DEMO)');
+  const bd = await (await fetch('http://localhost:4195/api/business-data/projects')).json();
+  if (bd.mode === 'BLOCKED' && typeof bd.reason === 'string') {
+    pass('Business Data server seam: BLOCKED (honest boundary, no fake DEMO)');
   } else {
     fail(`Business Data server seam mismatch: ${JSON.stringify(bd).slice(0, 200)}`);
   }
@@ -359,6 +352,7 @@ await import(new URL('./server/dist/server.js', import.meta.url).href);
   try { bundle = readFileSync(new URL('./dist/bundle.js', import.meta.url), 'utf8'); }
   catch (e) { fail(`cannot read bundle: ${e.message}`); }
   const forbidden = [
+    'FEISHU_',
     'FEISHU_APP_SECRET', 'FEISHU_APP_ID', 'FEISHU_BASE_APP_TOKEN',
     'FEISHU_LEAD_TABLE_ID', 'FEISHU_CUSTOMER_TABLE_ID', 'FEISHU_PROJECT_TABLE_ID',
     'FEISHU_TASK_TABLE_ID', 'FEISHU_ASSET_TABLE_ID', 'LUMEN_AUTH_PASSWORD',
