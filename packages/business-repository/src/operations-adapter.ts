@@ -15,6 +15,7 @@ import {
   mapAvailabilityRecord,
   mapCommunicationScriptRecord,
   mapKnowledgeRecord,
+  mapProjectRecord,
   mapProjectAssignmentRecord,
   mapProjectRequirementRecord,
   mapResourceRecord,
@@ -34,6 +35,7 @@ if (typeof globalThis !== 'undefined' && 'window' in globalThis) {
 
 const TABLE_ENV_NAMES: Readonly<Record<OperationsTableName, readonly string[]>> = {
   resources: ['FEISHU_TARGET_TABLE_RESOURCES_ID', 'FEISHU_TARGET_RESOURCES_TABLE_ID'],
+  projects: ['FEISHU_TARGET_TABLE_PROJECTS_ID', 'FEISHU_TARGET_PROJECTS_TABLE_ID'],
   availability: [
     'FEISHU_TARGET_TABLE_RESOURCE_AVAILABILITY_ID',
     'FEISHU_TARGET_RESOURCE_AVAILABILITY_TABLE_ID',
@@ -97,7 +99,7 @@ function parseWindow(window: { start: string; end: string }): { start: number; e
   return { start, end };
 }
 
-function sortByKey<T extends { resource_key?: string; availability_id?: string; requirement_id?: string; assignment_id?: string; script_id?: string; knowledge_id?: string }>(items: T[], key: keyof T): T[] {
+function sortByKey<T extends { project_id?: string; resource_key?: string; availability_id?: string; requirement_id?: string; assignment_id?: string; script_id?: string; knowledge_id?: string }>(items: T[], key: keyof T): T[] {
   return items.sort((left, right) => String(left[key] ?? '').localeCompare(String(right[key] ?? '')));
 }
 
@@ -118,6 +120,13 @@ export class ConnectedOperationsAdapter implements OperationsAdapter {
     };
     this.client = new FeishuBaseClient(clientConfig);
     this.tableIds = { ...(config.tableIds ?? {}) };
+  }
+
+  async listProjects(filter?: { limit?: number }): Promise<import('@busos/contracts').Project[]> {
+    const limit = validateLimit(filter?.limit);
+    const projects = (await this.records('projects')).map((record) => mapProjectRecord(record));
+    sortByKey(projects, 'project_id');
+    return limit === undefined ? projects : projects.slice(0, limit);
   }
 
   async listResources(filter?: { type?: string; status?: string; limit?: number }): Promise<Resource[]> {

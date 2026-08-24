@@ -21,6 +21,8 @@ import { createEvaluationServerFeature } from './features/evaluation/evaluation-
 import { InMemoryServiceAgentConversationStore, type ServiceAgentPort, type ServiceAgentRunInput } from '@busos/service-agent-port';
 import { InMemoryProcessRegistry } from '@busos/orchestrator';
 import { createConnectedFeishuDataSource } from './features/feishu/connected-data-source.js';
+import { createBusinessDataApi } from './business-data.js';
+import { createSchedulingApi } from './scheduling-api.js';
 
 const PORT = Number(process.env.PORT ?? 4173);
 
@@ -76,6 +78,8 @@ const saEndpoint = createServiceAgentEndpoint(
 );
 const evaluationFeature = createEvaluationServerFeature({ datasetPath: evaluationDatasetPath });
 const businessDataSource = createConnectedFeishuDataSource({ buildSha: 'server' });
+const canonicalBusinessDataApi = createBusinessDataApi({ env: process.env });
+const canonicalSchedulingApi = createSchedulingApi({ repository: canonicalBusinessDataApi.repository });
 
 function businessBlockedCustomersEnvelope() {
   const health = businessDataSource.health();
@@ -214,6 +218,73 @@ const server = http.createServer(async (req, res) => {
         parsed.idempotencyKey ?? `srv-${Date.now()}`,
       );
       sendJson(res, 200, out);
+      return;
+    }
+
+    // Feishu v3 canonical operations surface. These handlers are server-only;
+    // without target credentials they return BLOCKED and never seed DEMO data.
+    if (req.method === 'GET' && pathname === '/api/business-data/projects') {
+      const query = new URL(url, 'http://localhost').searchParams;
+      const result = await canonicalBusinessDataApi.listProjects({
+        limit: query.get('limit') ?? undefined,
+        cursor: query.get('cursor') ?? undefined,
+      });
+      sendJson(res, result.statusCode, result.body);
+      return;
+    }
+    if (req.method === 'GET' && pathname === '/api/business-data/resources') {
+      const query = new URL(url, 'http://localhost').searchParams;
+      const result = await canonicalBusinessDataApi.listResources({
+        limit: query.get('limit') ?? undefined,
+        cursor: query.get('cursor') ?? undefined,
+        type: query.get('type') ?? undefined,
+        status: query.get('status') ?? undefined,
+      });
+      sendJson(res, result.statusCode, result.body);
+      return;
+    }
+    const businessPath = pathname.split('/').filter(Boolean);
+    if (
+      req.method === 'GET' && businessPath[0] === 'api' && businessPath[1] === 'business-data' &&
+      businessPath[2] === 'resources' && businessPath[4] === 'availability' && businessPath.length === 5
+    ) {
+      const query = new URL(url, 'http://localhost').searchParams;
+      const resourceKey = decodeURIComponent(businessPath[3] ?? '');
+      const result = await canonicalBusinessDataApi.listAvailability(resourceKey, {
+        start: query.get('start') ?? undefined,
+        end: query.get('end') ?? undefined,
+        limit: query.get('limit') ?? undefined,
+      });
+      sendJson(res, result.statusCode, result.body);
+      return;
+    }
+    if (
+      req.method === 'GET' && businessPath[0] === 'api' && businessPath[1] === 'business-data' &&
+      businessPath[2] === 'projects' && businessPath[4] === 'context' && businessPath.length === 5
+    ) {
+      const projectId = decodeURIComponent(businessPath[3] ?? '');
+      const result = await canonicalBusinessDataApi.getProjectContext(projectId);
+      sendJson(res, result.statusCode, result.body);
+      return;
+    }
+    if (req.method === 'POST' && pathname === '/api/scheduling/proposals') {
+      let input: unknown;
+      try { input = await readJson(req); } catch {
+        sendJson(res, 400, { mode: 'CONNECTED', source: 'FEISHU_NEW_BASE', error: { code: 'INVALID_REQUEST', message: 'Invalid JSON body.' } });
+        return;
+      }
+      const result = await canonicalSchedulingApi.proposals(input);
+      sendJson(res, result.statusCode, result.body);
+      return;
+    }
+    if (req.method === 'POST' && pathname === '/api/outreach/draft') {
+      let input: unknown;
+      try { input = await readJson(req); } catch {
+        sendJson(res, 400, { mode: 'CONNECTED', source: 'FEISHU_NEW_BASE', error: { code: 'INVALID_REQUEST', message: 'Invalid JSON body.' } });
+        return;
+      }
+      const result = await canonicalSchedulingApi.draft(input);
+      sendJson(res, result.statusCode, result.body);
       return;
     }
 

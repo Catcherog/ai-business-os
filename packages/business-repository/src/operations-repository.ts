@@ -4,6 +4,7 @@ import type {
   KnowledgeItem,
   ProjectAssignment,
   ProjectRequirement,
+  Project,
   Resource,
 } from '@busos/contracts';
 import { createOperationsAdapterFromEnv } from './operations-adapter.js';
@@ -12,6 +13,10 @@ import type { OperationsAdapter, OperationsRepositoryPort } from './operations-t
 /** Domain-facing read repository; no Feishu record shape crosses this port. */
 export class OperationsRepository implements OperationsRepositoryPort {
   constructor(private readonly adapter: OperationsAdapter) {}
+
+  listProjects(filter?: { limit?: number }): Promise<Project[]> {
+    return this.adapter.listProjects(filter);
+  }
 
   listResources(filter?: { type?: string; status?: string; limit?: number }): Promise<Resource[]> {
     return this.adapter.listResources(filter);
