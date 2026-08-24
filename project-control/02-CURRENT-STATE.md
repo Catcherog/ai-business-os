@@ -28,6 +28,15 @@ BUSOS-R2-BATCH1-PRODUCT-INTEGRATION-CORR-01 — Product Integration Correction
 - Implementation commit: `f1a351643a5797a001881c774db3d11c722406a4`
   (`f1a3516`); report commit pushed; branch tip externally verified via
   `git ls-remote` after push (protocol §4, non-self-referential).
+- **OWNER-REVIEW-FIX-01 (erratum)**: Service Agent server fail-closed adapter
+  unsafe double cast (`as unknown as ServiceAgentPort`) removed → typed adapter;
+  Business Data seeded DEMO data relabelled `DEMO / READY / connected=false`
+  (was wrongly `CONNECTED / READY / connected=true`); presentation contract
+  `mode: 'DEMO' | 'CONNECTED'` while the Connected transport still requires
+  `CONNECTED` (fail-closed, no DEMO fallback); server seam stays
+  `CONNECTED / BLOCKED`. Fix implementation `86bd4b5`; dedicated identity suite
+  + Journey C smoke identity closure (DEMO · READY in browser, CONNECTED/BLOCKED
+  on server).
 - Browser product-integration smoke `smoke-product-integration.mjs` drives the
   REAL router/navigation/UI (Journeys A–E) + the built CONNECTED server seams:
   static SPA 200, `/api/evaluation/report` SUCCESS 42/28/14,
