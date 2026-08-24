@@ -38,6 +38,8 @@ import { serviceAgentConversationMarkup, createCandidateReviewAction } from './f
 import { createDemoServiceAgentClient } from './demo/service-agent-demo.js';
 import { createBusinessDataFeature } from './features/business-data/index.js';
 import { createDemoBusinessDataClient } from './demo/business-data-demo.js';
+import { renderBusinessDataView } from './business-data-view.js';
+import { renderSchedulingView } from './scheduling-view.js';
 import { createEvaluationFeature } from './features/evaluation/evaluation-view.js';
 import { createDemoEvaluationReportClient } from './demo/evaluation-demo.js';
 
@@ -1404,23 +1406,11 @@ async function viewServiceAgent(): Promise<HTMLElement> {
 }
 
 async function viewBusinessData(): Promise<HTMLElement> {
-  const wrap = h('div', {});
-  wrap.append(
-    h('div', { class: 'view-head' }, [
-      h('h1', {}, ['Business Data']),
-      h('p', {}, ['客户 / Lead / 项目 · DEMO 数据（seeded in-memory，只读；未连接生产 Feishu）']),
-    ]),
-  );
-  const host = h('div', { class: 'business-data-host' });
-  wrap.append(host);
-  host.append(loading('正在加载客户列表…'));
-  try {
-    const node = await businessDataFeature().renderList((customerId) => navigate('business-data-detail', customerId));
-    host.replaceChildren(node);
-  } catch (err) {
-    host.replaceChildren(empty(`加载失败：${(err as Error).message}`));
-  }
-  return wrap;
+  return renderBusinessDataView({ onSchedule: (projectId) => { selectedProjectId = projectId; navigate('scheduling'); } });
+}
+
+async function viewScheduling(): Promise<HTMLElement> {
+  return renderSchedulingView({ initialProjectId: selectedProjectId });
 }
 
 async function viewBusinessDataCustomer(): Promise<HTMLElement> {
@@ -1484,6 +1474,7 @@ function routeForView(view: View, id?: string): Route {
     case 'service-agent': return { name: 'service-agent' };
     case 'business-data': return { name: 'business-data' };
     case 'business-data-detail': return id ? { name: 'business-data-detail', customerId: id } : { name: 'business-data' };
+    case 'scheduling': return { name: 'scheduling' };
     case 'evaluation': return { name: 'evaluation' };
   }
 }
@@ -1519,6 +1510,7 @@ async function renderContent(): Promise<void> {
     case 'service-agent': node = await viewServiceAgent(); break;
     case 'business-data': node = await viewBusinessData(); break;
     case 'business-data-detail': node = await viewBusinessDataCustomer(); break;
+    case 'scheduling': node = await viewScheduling(); break;
     case 'evaluation': node = await viewEvaluation(); break;
     default: node = await viewOverview(); break;
   }
