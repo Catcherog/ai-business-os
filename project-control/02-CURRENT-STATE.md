@@ -12,34 +12,35 @@ CURRENT PHASE:
 R2 — Unified AI Business OS Productization Rebaseline
 
 CURRENT TASK:
-BUSOS-R2-ENGINEERING-BATCH-1 — Owner-authorized implementation batch
-[ALL SEVEN ENGINEERING TASKS PASS / SERIALLY INTEGRATED; FINAL MAIN CLOSURE VERIFIED]
-- Authority baseline: `origin/main@b3a059d84d0b612387d465077799af6e1fe2fa94`.
-- Orchestration branch: `codex/busos-r2-engineering-batch-1`.
-- UX-01 branch `codex/busos-r2-ux-01`: implementation `cb32548`, report
-  `f42db76`, integrated before the API task.
-- Workspace API-01 branch `codex/busos-r2-workspace-api-01`: implementation
-  `6388d80`, report `2f03953`, integrated before lane activation.
-- SCS runtime branch `codex/busos-r2-scs-runtime-01`: implementation `9d3a1e3`,
-  report `0ba5a42`, serially integrated before SCS-UI.
-- Feishu branch `codex/busos-r2-feishu-connect-01`: implementation `be2a691`,
-  report `1462eb6`, serially integrated.
-- Evaluation branch `codex/busos-r2-eval-ui-01`: implementation `e8ecb749`,
-  report `f3177ad`, serially integrated.
-- SCS-UI branch `codex/busos-r2-scs-ui-01`: implementation `a94fc45`, report
-  `20bb1d8`, serial merge `de74070`.
-- Business-Data UI branch `codex/busos-r2-business-data-ui-01`: implementation
-  `b2619da`, report `078ce95`, serial merge `89728c6`.
-- The sole coordinator is at `89728c6`; all lane branches were isolated, pushed,
-  and integrated without shared-ownership changes. Server Connected decisions
-  remain blocked or not applicable because this Goal has no live-write
-  authorization.
-- Active scope is complete: UX-01 → Workspace API-01 → three isolated lanes →
-  follow-on SCS/UI and Business Data/UI tasks → one serialized authoritative
-  integration. The coordinator push and external `origin/main` SHA verification
-  completed at the engineering boundary. No production or cross-repository work
-  is included.
-- `R2-LONG-TERM-ROADMAP.md` remains historical for post-H1 sequencing.
+BUSOS-R2-BATCH1-PRODUCT-INTEGRATION-CORR-01 — Product Integration Correction
+[ENGINEERING PASS — PRODUCT INTEGRATION COMPLETE — PUSHED — OWNER ACCEPTANCE PENDING]
+- Authority baseline (frozen): `origin/main@1b58f42e0339447ce1dc7cd06fc3540b4ad5b79e`
+  (re-queried via `git ls-remote`; unchanged).
+- Branch: `codex/busos-r2-batch1-product-integration-corr-01`; isolated worktree
+  `D:/360Downloads/Trae 项目/busos-corr01`; dependency isolation via `npm ci`
+  (lockfile/manifests UNCHANGED).
+- Root cause corrected: Batch 1's Service Agent / Business Data / Evaluation
+  feature modules reached `main` without Router / Navigation / UI / server
+  wiring — the product now exposes all seven surfaces: Overview / Projects /
+  Reviews / Runs / **Service Agent** / **Business Data** / **Evaluation**
+  (typed routes `#/service-agent`, `#/business-data`, `#/business-data/:id`,
+  `#/evaluation`).
+- Implementation commit: `f1a351643a5797a001881c774db3d11c722406a4`
+  (`f1a3516`); report commit pushed; branch tip externally verified via
+  `git ls-remote` after push (protocol §4, non-self-referential).
+- Browser product-integration smoke `smoke-product-integration.mjs` drives the
+  REAL router/navigation/UI (Journeys A–E) + the built CONNECTED server seams:
+  static SPA 200, `/api/evaluation/report` SUCCESS 42/28/14,
+  `/api/business-data/customers` CONNECTED/BLOCKED, `/api/service-agent/*`
+  READY fail-closed. Bundled-server path defects repaired (esbuild
+  `import.meta.url` rewrite → cwd-anchored paths + `pathToFileURL`).
+- Gates: operator typecheck + vitest (27 + 7) + service-agent-port 21
+  (incl. 3 REAL E2E) + evaluation 86 + full root `npm run verify` GREEN +
+  `git diff --check` clean + browser bundle secret scan clean.
+- Next authorized work (Owner choice): Owner product review/acceptance of this
+  correction → or the previously deferred `BUSOS-R2-SCS-PROD-DEPLOY-01` / Lumen
+  write-path repair / Golden Set / Memory durability — each requires explicit
+  authorization; nothing auto-starts.
 
 PRIOR TASK (closed):
 BUSOS-R2-SCS-INTEGRATION-01 — Service Agent → Business OS 真实集成
