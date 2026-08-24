@@ -1,6 +1,7 @@
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { applyMigration, type ApplyReport } from './apply.js';
+import { applyMigration, type ApplyReport, type CanaryReport } from './apply.js';
 import { bootstrapTargetSchema, getTargetSchemaFingerprint } from './bootstrap.js';
 import { loadFeishuMigrationConfig } from './config.js';
 import { FeishuClient } from './feishu-client.js';
@@ -11,18 +12,24 @@ import { verifyMigration, type LiveVerificationReport } from './verify-live.js';
 import type { TargetSnapshot } from './types.js';
 
 export type MigrationCliCommand = 'plan' | 'bootstrap' | 'apply' | 'verify' | 'help';
+export type MigrationVerifyScope = 'canary' | 'full';
+
+export const DEFAULT_OUTPUT_DIR = '.artifacts/feishu-migration';
 
 export interface ParsedCliArgs {
   command: MigrationCliCommand;
   run_id?: string;
   manifest_path?: string;
+  output_dir?: string;
   canary: boolean;
+  schema_only: boolean;
+  scope?: MigrationVerifyScope;
 }
 
 export function parseCliArgs(args: string[]): ParsedCliArgs {
   const rawCommand = args[0];
   if (!rawCommand || rawCommand === '--help' || rawCommand === '-h') {
-    return { command: 'help', canary: false };
+    return { command: 'help', canary: false, schema_only: false };
   }
   const command = rawCommand as MigrationCliCommand;
   if (!['plan', 'bootstrap', 'apply', 'verify'].includes(command)) {
@@ -30,35 +37,103 @@ export function parseCliArgs(args: string[]): ParsedCliArgs {
   }
   let run_id: string | undefined;
   let manifest_path: string | undefined;
+  let output_dir: string | undefined;
   let canary = false;
+  let schema_only = false;
+  let scope: MigrationVerifyScope | undefined;
   for (let index = 1; index < args.length; index += 1) {
     const argument = args[index];
     if (argument === '--canary') {
       canary = true;
       continue;
     }
-    if (argument === '--run-id' || argument === '--manifest') {
+    if (argument === '--run-id' || argument === '--manifest' || argument === '--output') {
       const value = args[index + 1]?.trim();
       if (!value) throw new Error(`${argument} requires a value`);
       if (argument === '--run-id') run_id = value;
-      else manifest_path = value;
+      else if (argument === '--manifest') manifest_path = value;
+      else output_dir = value;
+      index += 1;
+      continue;
+    }
+    if (argument === '--schema-only') {
+      schema_only = true;
+      continue;
+    }
+    if (argument === '--scope') {
+      const value = args[index + 1]?.trim();
+      if (value !== 'canary' && value !== 'full') {
+        throw new Error('--scope must be canary or full');
+      }
+      scope = value;
       index += 1;
       continue;
     }
     throw new Error(`Unknown migration argument: ${argument}`);
   }
-  return { command, run_id, manifest_path, canary };
+  if (schema_only && command !== 'apply') {
+    throw new Error('--schema-only is only valid for apply');
+  }
+  if (canary && command !== 'apply') {
+    throw new Error('--canary is only valid for apply');
+  }
+  if (scope && command !== 'verify') {
+    throw new Error('--scope is only valid for verify');
+  }
+  return {
+    command,
+    run_id,
+    manifest_path,
+    output_dir,
+    canary,
+    schema_only,
+    scope,
+  };
 }
 
 function usage(): string {
   return [
     'Usage:',
-    '  npm run plan --workspace=@busos/feishu-migration -- --run-id <run_id>',
-    '  npm run bootstrap --workspace=@busos/feishu-migration',
-    '  npm run apply --workspace=@busos/feishu-migration -- --canary --manifest <path>',
-    '  npm run apply --workspace=@busos/feishu-migration -- --run-id <run_id> --manifest <path>',
-    '  npm run verify:live --workspace=@busos/feishu-migration -- --run-id <run_id> --manifest <path>',
+    '  npm run migrate:plan -- --output .artifacts/feishu-migration',
+    '  npm run migrate:apply -- --schema-only --run-id <run_id>',
+    '  npm run migrate:apply -- --canary --run-id <run_id>',
+    '  npm run migrate:verify -- --run-id <run_id> --scope canary',
+    '  npm run migrate:apply -- --run-id <run_id>',
+    '  npm run migrate:verify -- --run-id <run_id> --scope full',
   ].join('\n');
+}
+
+function outputDirectory(args: ParsedCliArgs): string {
+  return resolve(args.output_dir ?? DEFAULT_OUTPUT_DIR);
+}
+
+function manifestPath(args: ParsedCliArgs): string {
+  return resolve(args.manifest_path ?? join(outputDirectory(args), 'manifest.json'));
+}
+
+async function writeJsonArtifact(path: string, value: unknown): Promise<void> {
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+}
+
+async function readOptionalJson<T>(path: string): Promise<T | undefined> {
+  try {
+    return JSON.parse(await readFile(path, 'utf8')) as T;
+  } catch (error) {
+    const code = error && typeof error === 'object' && 'code' in error
+      ? (error as { code?: unknown }).code
+      : undefined;
+    if (code === 'ENOENT') return undefined;
+    throw error;
+  }
+}
+
+async function loadCanaryReport(args: ParsedCliArgs): Promise<CanaryReport | undefined> {
+  const report = await readOptionalJson<CanaryReport>(join(outputDirectory(args), 'canary.json'));
+  if (report && report.run_id !== args.run_id) {
+    throw new Error('canary report run_id does not match requested run_id');
+  }
+  return report;
 }
 
 async function readTargetSnapshot(
@@ -105,51 +180,81 @@ async function runPlan(args: ParsedCliArgs): Promise<number> {
     run_id: runId(args),
     target_schema_fingerprint: schemaFingerprint,
   });
-  process.stdout.write(`${JSON.stringify(manifest, null, 2)}\n`);
+  const path = join(outputDirectory(args), 'manifest.json');
+  await writeJsonArtifact(path, manifest);
+  process.stdout.write(`${JSON.stringify({
+    run_id: manifest.run_id,
+    manifest_path: path,
+    source_count: manifest.source_count,
+    target_schema_fingerprint: manifest.target_schema_fingerprint,
+  }, null, 2)}\n`);
   return 0;
 }
 
-async function runBootstrap(): Promise<number> {
+async function runSchemaOnly(args: ParsedCliArgs): Promise<number> {
   const config = loadFeishuMigrationConfig();
   const client = new FeishuClient({ appId: config.appId, appSecret: config.appSecret });
   const result = await bootstrapTargetSchema(client, config.targetBaseToken);
-  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  const path = join(outputDirectory(args), 'schema.json');
+  await writeJsonArtifact(path, { run_id: runId(args), ...result });
+  process.stdout.write(`${JSON.stringify({ ...result, artifact_path: path }, null, 2)}\n`);
   return result.status === 'SCHEMA_CONFLICT' ? 1 : 0;
 }
 
+async function runBootstrap(args: ParsedCliArgs): Promise<number> {
+  return runSchemaOnly(args);
+}
+
 async function runApply(args: ParsedCliArgs): Promise<number> {
+  if (args.schema_only) {
+    return runSchemaOnly(args);
+  }
   const config = loadFeishuMigrationConfig();
-  const manifestPath = args.manifest_path;
-  if (!manifestPath) throw new Error('apply requires --manifest <path>');
-  const manifest = await loadManifest(manifestPath);
+  const manifest = await loadManifest(manifestPath(args));
   if (args.run_id && args.run_id !== manifest.run_id) {
     throw new Error('apply --run-id does not match manifest run_id');
   }
   const client = new FeishuClient({ appId: config.appId, appSecret: config.appSecret });
   const currentFingerprint = await getTargetSchemaFingerprint(client, config.targetBaseToken);
+  const canaryReport = args.canary ? undefined : await loadCanaryReport({
+    ...args,
+    run_id: args.run_id ?? manifest.run_id,
+  });
   const result = await applyMigration(client, manifest, {
     target_token: config.targetBaseToken,
     mode: args.canary ? 'canary' : 'full',
     current_schema_fingerprint: currentFingerprint,
+    canary_report: canaryReport,
   });
+  const artifact = args.canary ? 'canary.json' : 'full.json';
+  const path = join(outputDirectory(args), artifact);
+  await writeJsonArtifact(path, result);
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   return result.status === 'PASS' ? 0 : 1;
 }
 
 async function runVerify(args: ParsedCliArgs): Promise<number> {
   const config = loadFeishuMigrationConfig();
-  const manifestPath = args.manifest_path;
-  if (!manifestPath) throw new Error('verify requires --manifest <path>');
-  const manifest = await loadManifest(manifestPath);
+  const manifest = await loadManifest(manifestPath(args));
   if (args.run_id && args.run_id !== manifest.run_id) {
     throw new Error('verify --run-id does not match manifest run_id');
+  }
+  const scope = args.scope ?? 'full';
+  const canaryReport = scope === 'canary' ? await loadCanaryReport({
+    ...args,
+    run_id: args.run_id ?? manifest.run_id,
+  }) : undefined;
+  if (scope === 'canary' && !canaryReport) {
+    throw new Error('canary verification requires canary.json from a successful canary apply');
   }
   const client = new FeishuClient({ appId: config.appId, appSecret: config.appSecret });
   const currentFingerprint = await getTargetSchemaFingerprint(client, config.targetBaseToken);
   const result = await verifyMigration(client, manifest, {
     target_token: config.targetBaseToken,
     current_schema_fingerprint: currentFingerprint,
+    migration_keys: canaryReport?.selected_keys,
   });
+  await writeJsonArtifact(join(outputDirectory(args), `verify-${scope}.json`), result);
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   return result.status === 'PASS' ? 0 : 1;
 }
@@ -161,7 +266,7 @@ export async function runCli(args: string[] = process.argv.slice(2)): Promise<nu
     return 0;
   }
   if (parsed.command === 'plan') return runPlan(parsed);
-  if (parsed.command === 'bootstrap') return runBootstrap();
+  if (parsed.command === 'bootstrap') return runBootstrap(parsed);
   if (parsed.command === 'apply') return runApply(parsed);
   return runVerify(parsed);
 }

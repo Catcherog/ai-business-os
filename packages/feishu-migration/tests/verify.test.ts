@@ -49,7 +49,7 @@ class VerifyClient implements MigrationWriteClient {
   }
 }
 
-function manifestFor(): ReturnType<typeof createMigrationManifest> {
+function manifestFor(count = 1): ReturnType<typeof createMigrationManifest> {
   const inventory: SourceInventory = {
     base: { tables: [] },
     spreadsheets: [
@@ -58,13 +58,11 @@ function manifestFor(): ReturnType<typeof createMigrationManifest> {
         sheets: [
           {
             sheet: { sheet_id: 'sheet-1', title: 'Projects' },
-            rows: [
-              {
+            rows: Array.from({ length: count }, (_, index) => ({
                 entity_type: 'project',
-                project_code: 'FZ1',
-                project_name: 'Project 1',
-              },
-            ] as unknown as unknown[][],
+                project_code: `FZ${index + 1}`,
+                project_name: `Project ${index + 1}`,
+              })) as unknown as unknown[][],
           },
         ],
       },
@@ -124,5 +122,26 @@ describe('verifyMigration', () => {
     });
     expect(driftReport.status).toBe('FAIL');
     expect(driftReport.schema_fingerprint_verified).toBe(false);
+  });
+
+  it('can verify only the migration keys selected by a canary report', async () => {
+    const client = new VerifyClient();
+    const manifest = manifestFor(2);
+    const applied = await applyMigration(client, manifest, {
+      target_token: 'target-test-token',
+      mode: 'canary',
+    });
+    expect(applied.status).toBe('PASS');
+
+    const firstKey = manifest.plan.decisions[0].migration_key;
+    const report = await verifyMigration(client, manifest, {
+      target_token: 'target-test-token',
+      current_schema_fingerprint: FINGERPRINT,
+      migration_keys: [firstKey],
+    });
+
+    expect(report.status).toBe('PASS');
+    expect(report.planned_count).toBe(1);
+    expect(report.sample_readbacks).toEqual([firstKey]);
   });
 });

@@ -24,6 +24,7 @@ export interface VerifyOptions {
   current_schema_fingerprint?: string;
   required_fields?: Record<string, string[]>;
   sample_limit?: number;
+  migration_keys?: string[];
 }
 
 function fieldValue(fields: Record<string, unknown>, name: string): unknown {
@@ -76,7 +77,10 @@ export async function verifyMigration(
 
   const tables = await client.listAllTables(options.target_token);
   const tableIds = new Map(tables.map((table) => [table.name, table.table_id]));
-  const decisions = manifestDecisions(manifest);
+  const selectedKeys = options.migration_keys ? new Set(options.migration_keys) : undefined;
+  const decisions = manifestDecisions(manifest).filter((decision) =>
+    !selectedKeys || selectedKeys.has(decision.migration_key),
+  );
   const expectedTables = new Set(decisions.filter((decision) => decision.decision !== 'NEEDS_REVIEW').map(targetTableName));
   expectedTables.add('Migration Registry');
   const recordsByTable = new Map<string, BaseRecord[]>();
