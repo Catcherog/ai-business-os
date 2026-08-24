@@ -4,12 +4,14 @@ import {
   KnowledgeItemSchema,
   ProjectAssignmentSchema,
   ProjectRequirementSchema,
+  ProjectSchema,
   ResourceSchema,
   type AvailabilitySlot,
   type CommunicationScript,
   type KnowledgeItem,
   type ProjectAssignment,
   type ProjectRequirement,
+  type Project,
   type Resource,
 } from '@busos/contracts';
 import type { FeishuBaseRecord } from './feishu-adapter.js';
@@ -88,6 +90,12 @@ function dateValue(fields: Record<string, unknown>, label: string, ...names: str
   const date = typeof raw === 'number' ? new Date(raw) : new Date(String(raw));
   if (!Number.isFinite(date.getTime())) throw new MappingFieldError(label);
   return date.toISOString();
+}
+
+function requiredDate(fields: Record<string, unknown>, label: string, ...names: string[]): string {
+  const date = dateValue(fields, label, ...names);
+  if (!date) throw new MappingFieldError(label);
+  return date;
 }
 
 function enumValue<T extends string>(
@@ -178,6 +186,20 @@ export function mapResourceRecord(record: FeishuBaseRecord): Resource {
     source_aliases_json: textValue(record.fields, 'Source Aliases JSON', 'source_aliases_json'),
     migration_key: requiredText(record.fields, 'Migration Key', 'Migration Key', 'migration_key'),
     legacy_updated_at: dateValue(record.fields, 'Legacy Updated At', 'Legacy Updated At', 'legacy_updated_at'),
+  }));
+}
+
+export function mapProjectRecord(record: FeishuBaseRecord): Project {
+  return safeMap('Projects', record, 'Project ID', ProjectSchema, () => ({
+    project_id: requiredText(record.fields, 'Project ID', 'Project ID', 'project_id'),
+    customer_id: requiredText(record.fields, 'Customer ID', 'Customer ID', 'customer_id'),
+    lead_id: requiredText(record.fields, 'Lead ID', 'Lead ID', 'lead_id'),
+    project_type: requiredText(record.fields, 'Project Type', 'Project Type', 'project_type'),
+    title: requiredText(record.fields, 'Title', 'Title', 'Project Name', 'title'),
+    status: enumValue(record.fields, 'Status', ['DRAFT', 'CONFIRMED', 'IN_PROGRESS', 'DELIVERED', 'CANCELLED'], 'Status', 'status'),
+    scheduled_date: textValue(record.fields, 'Scheduled Date', 'scheduled_date'),
+    created_at: requiredDate(record.fields, 'Created At', 'Created At', 'created_at'),
+    updated_at: requiredDate(record.fields, 'Updated At', 'Updated At', 'Legacy Updated At', 'Created At', 'updated_at'),
   }));
 }
 

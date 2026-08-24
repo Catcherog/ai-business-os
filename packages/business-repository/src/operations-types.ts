@@ -4,6 +4,7 @@ import type {
   KnowledgeItem,
   ProjectAssignment,
   ProjectRequirement,
+  Project,
   Resource,
 } from '@busos/contracts';
 import type { FeishuBaseRecord } from './feishu-adapter.js';
@@ -16,6 +17,7 @@ export interface OperationsFilters {
 }
 
 export interface OperationsRepositoryPort {
+  listProjects(filter?: { limit?: number }): Promise<Project[]>;
   listResources(filter?: { type?: string; status?: string; limit?: number }): Promise<Resource[]>;
   listAvailability(resourceKeys: string[], window: { start: string; end: string }): Promise<AvailabilitySlot[]>;
   listProjectRequirements(projectId: string): Promise<ProjectRequirement[]>;
@@ -27,6 +29,7 @@ export interface OperationsRepositoryPort {
 export interface OperationsAdapter extends OperationsRepositoryPort {}
 
 export type OperationsTableName =
+  | 'projects'
   | 'resources'
   | 'availability'
   | 'projectRequirements'
@@ -35,6 +38,7 @@ export type OperationsTableName =
   | 'knowledge';
 
 export const OPERATIONS_TABLE_NAMES: Readonly<Record<OperationsTableName, string>> = {
+  projects: 'Projects',
   resources: 'Resources',
   availability: 'Resource Availability',
   projectRequirements: 'Project Requirements',

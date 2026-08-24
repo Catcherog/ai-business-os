@@ -7,7 +7,7 @@
   "scripts": {
     "build": "node build.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run tests-workspace-ui && vitest run tests-workspace-api",
+    "test": "vitest run tests-workspace-ui && vitest run tests-workspace-api && vitest run tests-connected",
     "smoke": "node smoke.mjs && node smoke-action.mjs && node smoke-server.mjs && node smoke-memory.mjs && node smoke-preview.mjs && node smoke-product-integration.mjs",
     "smoke:run": "node smoke-run.mjs",
     "smoke:review": "node smoke-review.mjs",
@@ -27,7 +27,8 @@
     "@busos/project-lifecycle": "file:../../packages/project-lifecycle",
     "@busos/creative-production": "file:../../packages/creative-production",
     "@busos/lumen-adapter": "file:../../packages/lumen-adapter",
-    "@busos/service-agent-candidate": "file:../../packages/service-agent-candidate"
+    "@busos/service-agent-candidate": "file:../../packages/service-agent-candidate",
+    "@busos/scheduling": "file:../../packages/scheduling"
   },
   "devDependencies": {
     "@types/node": "22.10.2",

@@ -80,6 +80,7 @@ export {
 export { OperationsRepository, createOperationsRepository, createOperationsRepositoryFromEnv } from './operations-repository.js';
 export {
   mapResourceRecord,
+  mapProjectRecord,
   mapAvailabilityRecord,
   mapProjectRequirementRecord,
   mapProjectAssignmentRecord,

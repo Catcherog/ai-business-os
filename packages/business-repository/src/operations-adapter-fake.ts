@@ -4,11 +4,13 @@ import type {
   KnowledgeItem,
   ProjectAssignment,
   ProjectRequirement,
+  Project,
   Resource,
 } from '@busos/contracts';
 import { OperationsAdapterError, type OperationsAdapter } from './operations-types.js';
 
 export interface FakeOperationsAdapterOptions {
+  projects?: Project[];
   resources?: Resource[];
   availability?: AvailabilitySlot[];
   projectRequirements?: ProjectRequirement[];
@@ -37,6 +39,7 @@ export class FakeOperationsAdapter implements OperationsAdapter {
 
   constructor(options: FakeOperationsAdapterOptions = {}) {
     this.data = {
+      projects: options.projects ?? [],
       resources: options.resources ?? [],
       availability: options.availability ?? [],
       projectRequirements: options.projectRequirements ?? [],
@@ -44,6 +47,14 @@ export class FakeOperationsAdapter implements OperationsAdapter {
       scripts: options.scripts ?? [],
       knowledge: options.knowledge ?? [],
     };
+  }
+
+  async listProjects(filter?: { limit?: number }): Promise<Project[]> {
+    const limit = limitValue(filter?.limit);
+    const result = this.data.projects
+      .slice()
+      .sort((left, right) => left.project_id.localeCompare(right.project_id));
+    return limit === undefined ? result : result.slice(0, limit);
   }
 
   async listResources(filter?: { type?: string; status?: string; limit?: number }): Promise<Resource[]> {
