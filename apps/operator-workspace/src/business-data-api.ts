@@ -6,7 +6,7 @@ import type {
   Resource,
 } from '@busos/contracts';
 
-export const CONNECTED_SOURCE = 'FEISHU_NEW_BASE' as const;
+export type ConnectedSource = 'FEISHU_NEW_BASE';
 
 export interface ProjectContext {
   project: Project;
@@ -17,8 +17,8 @@ export interface ProjectContext {
 
 export type ApiEnvelope<T> =
   | { mode: 'BLOCKED'; reason: string }
-  | { mode: 'CONNECTED'; source: typeof CONNECTED_SOURCE; data: T; nextCursor?: string | null }
-  | { mode: 'CONNECTED'; source: typeof CONNECTED_SOURCE; error: { code: string; message: string } };
+  | { mode: 'CONNECTED'; source: ConnectedSource; data: T; nextCursor?: string | null }
+  | { mode: 'CONNECTED'; source: ConnectedSource; error: { code: string; message: string } };
 
 export class ConnectedApiError extends Error {
   constructor(message: string) {

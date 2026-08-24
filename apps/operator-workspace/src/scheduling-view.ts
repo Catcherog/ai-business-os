@@ -87,7 +87,7 @@ function buildSchedulingSurface(client: BusinessDataClient, projects: Project[],
   });
 
   return el('div', { class: 'v3-scheduling-surface' }, [
-    el('div', { class: 'v3-identity is-connected' }, [el('span', { class: 'v3-identity-dot' }), el('span', { class: 'v3-identity-label' }, ['CONNECTED TEST BASE']), el('span', { class: 'v3-identity-source' }, ['FEISHU_NEW_BASE'])]),
+    el('div', { class: 'v3-identity is-connected' }, [el('span', { class: 'v3-identity-dot' }), el('span', { class: 'v3-identity-label' }, ['CONNECTED TEST BASE']), el('span', { class: 'v3-identity-source' }, ['NEW BASE'])]),
     el('section', { class: 'v3-panel v3-scheduling-form' }, [
       el('div', { class: 'v3-panel-head' }, [el('div', {}, [el('span', { class: 'v3-eyebrow' }, ['PROPOSAL INPUT']), el('h2', {}, ['Find a workable slot'])]), el('span', { class: 'muted' }, ['read-only facts'])]),
       el('div', { class: 'v3-form-grid' }, [
