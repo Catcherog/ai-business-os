@@ -176,7 +176,7 @@ function makePagedTransport() {
                 [
                   'Header',
                   { type: 'image', fileToken: 'image-token-1' },
-                  1_704_067_200_000,
+                  { type: 'datetime', value: 1_704_067_200_000 },
                 ],
                 [null, ''],
               ],
@@ -382,6 +382,23 @@ describe('source readers', () => {
       .filter((call) => call.url.pathname.includes('/values/'))
       .map((call) => decodeURIComponent(call.url.pathname.split('/values/')[1]));
     expect(ranges).toEqual(['sheet-1!A1:C2', 'sheet-1!A3:C4']);
+  });
+
+  it('preserves bare large numeric cells instead of guessing they are dates', async () => {
+    const client = {
+      listSheets: async () => [
+        {
+          sheet_id: 'sheet-ids',
+          title: 'IDs',
+          grid_properties: { row_count: 1, column_count: 1 },
+        },
+      ],
+      readSheetRange: async () => [[1_704_067_200_000]],
+    } as unknown as FeishuClient;
+
+    const source = await readSpreadsheetSource(client, 'sheet-source');
+
+    expect(source.sheets[0].rows).toEqual([[1_704_067_200_000]]);
   });
 
   it('discovers the Base and all eight configured Sheet sources', async () => {

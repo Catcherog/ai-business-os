@@ -33,11 +33,15 @@ function normalizeEpoch(value: number): string | number {
 }
 
 function normalizeCell(value: unknown): unknown {
-  if (typeof value === 'number') return normalizeEpoch(value);
+  if (typeof value === 'number') return value;
   if (Array.isArray(value)) return value.map(normalizeCell);
   if (!value || typeof value !== 'object') return value;
 
   const record = value as Record<string, unknown>;
+  if (record.type === 'datetime' || record.type === 'date') {
+    const rawEpoch = record.value ?? record.timestamp ?? record.epoch;
+    if (typeof rawEpoch === 'number') return normalizeEpoch(rawEpoch);
+  }
   const fileToken = record.file_token ?? record.fileToken;
   if (record.type === 'image' && typeof fileToken === 'string') {
     return { type: 'image', file_token: fileToken };
