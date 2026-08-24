@@ -22,3 +22,16 @@ Get GP-001 running as quickly as possible:
 `Consultation -> LeadCandidate -> Governance -> Lead / optional Customer -> BusinessRepository -> Feishu -> Readback`
 
 This package intentionally does not define later modules such as Creative Agent, Memory, Eval Platform, RBAC, multi-tenant architecture, or full observability.
+
+## Feishu v3 status
+
+The Feishu v3 engineering slice is implemented on the isolated
+`codex/busos-feishu-v3` branch: server-only Business Data reads, deterministic
+Scheduling proposals, and copyable outreach drafts. These surfaces use
+`CONNECTED TEST BASE` when the target Base is configured and show `BLOCKED`
+without credentials; they never present seeded demo data as connected success.
+
+The live migration and cutover remain **BLOCKED** because this environment has
+no authorized Feishu configuration. No Base records were changed. See
+[`project-control/FEISHU-V3-MIGRATION-REPORT.md`](project-control/FEISHU-V3-MIGRATION-REPORT.md)
+and [`project-control/FEISHU-V3-CLOSURE.md`](project-control/FEISHU-V3-CLOSURE.md).

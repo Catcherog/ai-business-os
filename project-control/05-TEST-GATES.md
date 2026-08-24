@@ -1366,6 +1366,41 @@ embeddings/vector/semantic retrieval, no autonomous LLM extraction. BL-018 stays
 
 **Status: PASS — CLOSED (commit + push + remote verification).**
 
+## FEISHU-V3 Gates
+
+### V3-A — Browser boundary
+
+PASS when the built browser artifact contains no Feishu credentials, access
+tokens, Base tokens, or OpenAPI paths and the v3 route labels are present.
+
+Evidence: `npm run smoke:feishu-v3 --workspace=@busos/operator-workspace`
+returned `SMOKE_FEISHU_V3_OK`.
+
+### V3-B — Connected API fail-closed behavior
+
+PASS when missing server configuration returns `mode: BLOCKED` for Business
+Data and Scheduling and never substitutes seeded data.
+
+Evidence: local static server returned HTTP 200; the projects, resources, and
+proposal routes returned `mode: BLOCKED` without Feishu configuration.
+
+### V3-C — Operations and scheduling regression
+
+PASS when the Operator UI/API/connected suites, business repository, and
+scheduling package pass; scheduling ranking remains deterministic and outreach
+is text-only.
+
+Evidence: Operator UI 16, API 14, connected 6; business repository 46 with 1
+existing live skip; scheduling 5 tests passed.
+
+### V3-D — Live migration and cutover
+
+PASS only with a fresh source inventory, target schema fingerprint, additive
+bootstrap readback, canary/full/idempotency evidence, and redacted target Base
+verification. Current status is **BLOCKED**: the migration CLI stopped before
+any Feishu request with `Missing required environment variable: FEISHU_APP_ID`.
+See `project-control/FEISHU-V3-MIGRATION-REPORT.md`.
+
 ## R2-H2-02 Gate — Governed Memory Context Consumption (BUSOS-R2-H2-02)
 
 **VERDICT: `COMPLETE` — all gates A–J PASS.**

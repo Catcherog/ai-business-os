@@ -12,8 +12,8 @@ CURRENT PHASE:
 R2 — Unified AI Business OS Productization Rebaseline
 
 CURRENT TASK:
-FEISHU-V3-TASK-1 — Clean Baseline and Control Packet
-[CONTROL IN PROGRESS — ISOLATED WORKTREE — NO LIVE FEISHU WRITES]
+FEISHU-V3-TASK-13 — Cutover Verification and Closure
+[ENGINEERING COMPLETE — LIVE MIGRATION BLOCKED — NO LIVE FEISHU WRITES]
 - Authority baseline (frozen): `origin/main@729108d8059e3e143194a05f43e510af3587d385`.
 - Branch/worktree: `codex/busos-feishu-v3` at
   `C:\Users\Catcher\AppData\Local\Temp\codex-busos-feishu-v3`.
@@ -32,11 +32,16 @@ FEISHU-V3-TASK-1 — Clean Baseline and Control Packet
 - Live-write boundary: only lane `L2 Feishu Schema/Live Migration` may perform real
   writes to the NEW test Base, and only after additive schema bootstrap plus a
   successful per-table canary (max 5 records/table, readback-verified).
-- Current task ownership is docs/control only. No source inventory reads, schema
-  mutation, or migration apply step has started from this task.
-- Next authorized work inside this Goal, after Task 1 is committed: Task 2
-  (`Migration Package and Manifest Contracts`) on a clean lane with the same frozen
-  baseline unless `origin/main` changes.
+- Implementation checkpoint: `b410bce` adds the connected Business Data and
+  Scheduling surfaces, server-only target-Base reads, deterministic proposals,
+  copyable outreach drafts, and a browser secret-boundary smoke.
+- Live-gate attempt: `npm run migrate:plan` and the bootstrap/apply/verify
+  configuration gates stopped with `Missing required environment variable:
+  FEISHU_APP_ID`; no Feishu HTTP request or write occurred. See
+  `project-control/FEISHU-V3-MIGRATION-REPORT.md`.
+- Closure status: `project-control/FEISHU-V3-CLOSURE.md` records engineering
+  completion but does not claim live migration, connected counts, or production
+  readiness. The next action requires authorized live environment configuration.
 
 PRIOR TASK (closed):
 BUSOS-R2-BATCH1-PRODUCT-INTEGRATION-CORR-01 — Product Integration Correction

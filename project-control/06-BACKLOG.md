@@ -414,3 +414,19 @@ Required closure order:
   (no refactor of existing packages allowed). **CLOSED by BUSOS-P6-03 (2026-08-15):
   the `/records/search` stub branch was added; no production code touched.**
 
+## FEISHU-V3-LIVE-GATE — live migration blocked
+
+- Type: **OPEN / LIVE DEPENDENCY**
+- Found in task: FEISHU-V3 migration and OS cutover.
+- Evidence: migration plan, bootstrap, apply, and verify entry points fail
+  closed before Feishu client construction because `FEISHU_APP_ID` is not
+  configured in the execution environment. No live inventory, schema
+  bootstrap, canary, full batch, or idempotency run occurred.
+- Additional tooling note: the plan's `--output` artifact argument is not
+  supported by the current migration CLI and is recorded in the redacted
+  migration report for follow-up.
+- Safe next action: provide authorized environment configuration interactively,
+  resolve the artifact-command mismatch, then execute the exclusive L2 live
+  sequence and append redacted evidence. Do not weaken the gate or claim a
+  connected/production result from fixtures.
+

@@ -663,3 +663,27 @@ No second database, no workflow engine, no chat history / prompt store, no embed
 no vector index, no semantic retrieval, no autonomous LLM extraction, no Evaluation
 Center, no memory scoring/decay, no cross-customer aggregation.
 
+## 13. Feishu v3 Operations Interfaces
+
+The v3 operations path is server-only and consumes canonical contracts from
+`@busos/contracts` through `@busos/business-repository`. The browser calls only
+these HTTP routes:
+
+```text
+GET  /api/business-data/projects
+GET  /api/business-data/resources?type=MODEL
+GET  /api/business-data/resources/:resourceKey/availability?start=&end=
+GET  /api/business-data/projects/:projectId/context
+POST /api/scheduling/proposals
+POST /api/outreach/draft
+```
+
+Successful responses identify `source: FEISHU_NEW_BASE`. Missing or invalid
+server configuration returns `mode: BLOCKED`; no seeded demo data is substituted
+for a connected response. Browser code has no Feishu token, access token, app
+secret, or OpenAPI URL. Proposal generation is deterministic and read-only;
+outreach generation returns text only, and local scheduling confirmation is not
+a Feishu write.
+
+**Status: ENGINEERING PASS / LIVE BASE EVIDENCE BLOCKED.**
+

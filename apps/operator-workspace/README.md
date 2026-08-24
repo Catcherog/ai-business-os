@@ -2,8 +2,9 @@
 
 The AI Business OS Operator Workspace — a minimal, maintainable TypeScript web app
 that productizes the R1 core (Golden Path → Project Lifecycle → Creative Production)
-behind four navigation surfaces: **Overview / Projects / Reviews / Runs**, plus the
-first real AI action — **Generate Visual Reference** (H1-04).
+behind the navigation surfaces **Overview / Projects / Reviews / Runs / Business
+Data / Scheduling / Evaluation**, plus the first real AI action — **Generate
+Visual Reference** (H1-04).
 
 It ships in two explicit modes:
 
@@ -13,6 +14,13 @@ It ships in two explicit modes:
 - **CONNECTED** — a server-only boundary (`server/`) that builds the real
   `RealFeishuAdapter` / `RealLumenAdapter` from `FEISHU_*` / `LUMEN_*` env vars. The
   browser never loads this code; secrets stay server-side.
+
+The Feishu v3 Business Data and Scheduling surfaces are explicitly connected
+surfaces: they read canonical operations data through server routes, label the
+source `CONNECTED TEST BASE` when configured, and render `BLOCKED` without
+configuration. They never fall back to in-memory demo data. Scheduling
+proposals are read-only decision support; local confirmation changes only UI
+state, and outreach drafts can be copied but never sent.
 
 ## Prerequisites
 
@@ -110,6 +118,10 @@ curl -X POST http://localhost:4173/api/actions/generate-visual-reference \
 Without credentials the boundary returns `{ "mode": "BLOCKED", "reason": "..." }` —
 it never substitutes a faked LIVE result.
 
+For the v3 operations surface, configure the target Base server-side with
+`FEISHU_TARGET_BASE_TOKEN` and the target table mappings. Do not place these
+values in browser environment variables, source files, reports, or logs.
+
 ## Test / verify
 
 From the repo root:
@@ -134,6 +146,9 @@ Smoke suites (headless, DOM-shimmed):
   recorded in the shared registry + idempotency replay + no secret leak.
 - `smoke-server.mjs` — drives the CONNECTED boundary probe; asserts `BLOCKED` with no
   credentials.
+- `smoke-feishu-v3.mjs` — loads the v3 browser bundle in a DOM shim, asserts the
+  connected-surface labels, and rejects target/source tokens, access-token names,
+  or Feishu OpenAPI paths in the browser artifact.
 - `smoke-preview.mjs` (X01) — asserts the built static preview carries a real build
   SHA (X01-A/B), no secret in the bundle (X01-C), and that `dist/` is a complete
   self-contained static site (X01-D).
