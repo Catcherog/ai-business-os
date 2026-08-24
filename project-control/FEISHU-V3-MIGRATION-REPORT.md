@@ -33,13 +33,23 @@ supported workspace argument form; both stopped at the same configuration
 gate. Therefore this attempt produced **zero Feishu HTTP calls and zero
 Feishu writes**.
 
-## Implementation note
+## CLI contract follow-up
 
-The attached plan's `npm run migrate:plan -- --output .artifacts/feishu-migration`
-example is not accepted by the current CLI: `--output` is not a supported
-argument and the command exits with `Unknown migration argument`. This is a
-tooling compatibility gap to resolve before the next authorized live run; it
-does not justify inventing a manifest or bypassing the credential gate.
+The initial blocked attempt exposed a compatibility gap between the attached
+runbook and the migration CLI: `--output`, `--schema-only`, and `--scope` were
+not accepted, and the root npm scripts did not forward the flags correctly.
+That gap was fixed in `e34843d`. The root commands were re-run without live
+configuration and now reach the intended fail-closed gate:
+
+- `migrate:plan -- --output .artifacts/feishu-migration` → missing
+  `FEISHU_APP_ID` before client construction.
+- `migrate:apply -- --schema-only --run-id blocked-cli-contract` → the same
+  missing-configuration gate.
+- `migrate:verify -- --run-id blocked-cli-contract --scope canary` → the same
+  missing-configuration gate.
+
+These checks produced no Feishu HTTP calls and no writes; they prove CLI
+contract compatibility only, not live migration success.
 
 ## Safe next action
 

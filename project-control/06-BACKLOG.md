@@ -422,11 +422,11 @@ Required closure order:
   closed before Feishu client construction because `FEISHU_APP_ID` is not
   configured in the execution environment. No live inventory, schema
   bootstrap, canary, full batch, or idempotency run occurred.
-- Additional tooling note: the plan's `--output` artifact argument is not
-  supported by the current migration CLI and is recorded in the redacted
-  migration report for follow-up.
+- CLI contract follow-up: fixed in `e34843d`. Root commands now accept the
+  runbook's `--output`, `--schema-only`, `--canary`, and `--scope` arguments,
+  persist migration artifacts, and stop at the credential gate when config is
+  absent.
 - Safe next action: provide authorized environment configuration interactively,
-  resolve the artifact-command mismatch, then execute the exclusive L2 live
-  sequence and append redacted evidence. Do not weaken the gate or claim a
-  connected/production result from fixtures.
+  then execute the exclusive L2 live sequence and append redacted evidence. Do
+  not weaken the gate or claim a connected/production result from fixtures.
 

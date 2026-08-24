@@ -28,6 +28,8 @@ environment.
   tests, operator build, product integration smoke, and Feishu v3 smoke.
 - Product integration smoke covers the new Business Data and Scheduling
   routes and verifies they fail closed without server configuration.
+- Migration CLI contract now matches the attached runbook and persists plan,
+  schema, canary, full, and scoped verification artifacts.
 - Local server checks returned HTTP 200 for the static app and `mode: BLOCKED`
   for Business Data and Scheduling without credentials.
 
@@ -44,7 +46,6 @@ The detailed live-gate result is in
 
 ## Remaining closure gate
 
-Provide live configuration through the authorized environment, resolve the
-CLI artifact-command mismatch recorded in the migration report, run the
+Provide live configuration through the authorized environment, run the
 exclusive L2 migration sequence, and append only redacted evidence. Until
 those gates pass, the v3 cutover remains **BLOCKED**.
