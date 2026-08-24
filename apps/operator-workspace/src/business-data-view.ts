@@ -1,6 +1,6 @@
 import type { Project, Resource } from '@busos/contracts';
 import type { ApiEnvelope, BusinessDataClient, ProjectContext } from './business-data-api.js';
-import { CONNECTED_SOURCE, ConnectedApiError, createBusinessDataClient } from './business-data-api.js';
+import { ConnectedApiError, createBusinessDataClient } from './business-data-api.js';
 
 type NodeChild = Node | string;
 
@@ -46,7 +46,7 @@ function identityRail(connected: boolean): HTMLElement {
   return el('div', { class: `v3-identity ${connected ? 'is-connected' : 'is-blocked'}` }, [
     el('span', { class: 'v3-identity-dot' }),
     el('span', { class: 'v3-identity-label' }, [connected ? 'CONNECTED TEST BASE' : 'BLOCKED']),
-    el('span', { class: 'v3-identity-source' }, [connected ? CONNECTED_SOURCE : 'server-only data boundary']),
+    el('span', { class: 'v3-identity-source' }, [connected ? 'NEW BASE' : 'server-only data boundary']),
   ]);
 }
 
