@@ -151,3 +151,83 @@ export {
   type Task,
   type TaskStatus,
 } from './domain.js';
+
+export {
+  RESOURCE_TYPES,
+  ResourceTypeSchema,
+  COOPERATION_STATUSES,
+  CooperationStatusSchema,
+  ResourceStatusSchema,
+  ResourceSchema,
+  type ResourceType,
+  type CooperationStatus,
+  type ResourceStatus,
+  type Resource,
+} from './resource.js';
+
+export {
+  AVAILABILITY_STATUSES,
+  AvailabilityStatusSchema,
+  AVAILABILITY_GRANULARITIES,
+  AvailabilityGranularitySchema,
+  PARSE_STATUSES,
+  ParseStatusSchema,
+  CONFIDENCE_LEVELS,
+  ConfidenceSchema,
+  AvailabilitySchema,
+  AvailabilitySlotSchema,
+  type AvailabilityStatus,
+  type AvailabilityGranularity,
+  type ParseStatus,
+  type Confidence,
+  type AvailabilitySlot,
+} from './availability.js';
+
+export {
+  REQUIRED_VALUES,
+  RequiredSchema,
+  ProjectRequirementSchema,
+  type RequiredValue,
+  type ProjectRequirement,
+} from './project-requirement.js';
+
+export {
+  ASSIGNMENT_STATUSES,
+  AssignmentStatusSchema,
+  ProjectAssignmentSchema,
+  type AssignmentStatus,
+  type ProjectAssignment,
+} from './project-assignment.js';
+
+export {
+  PUBLISH_PLATFORMS,
+  PublishPlatformSchema,
+  MATERIAL_TYPES,
+  MaterialTypeSchema,
+  PUBLISH_STATUSES,
+  PublishStatusSchema,
+  PublishItemSchema,
+  type PublishPlatform,
+  type MaterialType,
+  type PublishStatus,
+  type PublishItem,
+} from './publish-item.js';
+
+export {
+  KNOWLEDGE_TYPES,
+  KnowledgeTypeSchema,
+  KNOWLEDGE_WORKFLOW_STATUSES,
+  KnowledgeWorkflowStatusSchema,
+  KnowledgeItemSchema,
+  CUSTOMER_STAGES,
+  CustomerStageSchema,
+  SCRIPT_STATUSES,
+  ScriptStatusSchema,
+  CommunicationScriptSchema,
+  type KnowledgeType,
+  type KnowledgeWorkflowStatus,
+  type KnowledgeItem,
+  type CustomerStage,
+  type ScriptStatus,
+  type CommunicationScript,
+} from './knowledge-item.js';
