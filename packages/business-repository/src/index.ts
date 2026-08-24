@@ -23,10 +23,16 @@ export type {
 
 export {
   RealFeishuAdapter,
+  FeishuBaseClient,
   createFeishuAdapter,
   createFeishuAdapterFromEnv,
 } from './feishu-adapter.js';
-export type { FeishuAdapterConfig } from './feishu-adapter.js';
+export type {
+  FeishuAdapterConfig,
+  FeishuBaseClientConfig,
+  FeishuBaseRecord,
+  FeishuBaseTable,
+} from './feishu-adapter.js';
 
 export { FakeFeishuAdapter, createFakeFeishuAdapter } from './feishu-adapter-fake.js';
 export type { FakeFeishuAdapterOptions } from './feishu-adapter-fake.js';
@@ -60,3 +66,33 @@ export {
 } from './verify.js';
 
 export { generateDomainId, nowIso, generateRecordId } from './util.js';
+
+export {
+  ConnectedOperationsAdapter,
+  createOperationsAdapter,
+  createOperationsAdapterFromEnv,
+  resolveOperationsTargetToken,
+} from './operations-adapter.js';
+export {
+  FakeOperationsAdapter,
+  createFakeOperationsAdapter,
+} from './operations-adapter-fake.js';
+export { OperationsRepository, createOperationsRepository, createOperationsRepositoryFromEnv } from './operations-repository.js';
+export {
+  mapResourceRecord,
+  mapAvailabilityRecord,
+  mapProjectRequirementRecord,
+  mapProjectAssignmentRecord,
+  mapCommunicationScriptRecord,
+  mapKnowledgeRecord,
+  OperationsMappingError,
+} from './operations-mapping.js';
+export type {
+  OperationsAdapter,
+  OperationsRepositoryPort,
+  OperationsAdapterConfig,
+  OperationsTableIds,
+  OperationsTableName,
+  OperationsFilters,
+} from './operations-types.js';
+export { OPERATIONS_TABLE_NAMES, OperationsAdapterError } from './operations-types.js';

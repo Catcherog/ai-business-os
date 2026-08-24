@@ -79,6 +79,153 @@ interface FeishuApiResponse {
 const DEFAULT_BASE_URL = 'https://open.feishu.cn';
 
 /**
+ * Small server-side read client shared by the canonical operations adapter.
+ * The legacy RealFeishuAdapter keeps its existing write/readback surface, while
+ * new collection reads use this client so auth, token caching, pagination and
+ * error handling have one implementation.
+ */
+export interface FeishuBaseClientConfig {
+  appId: string;
+  appSecret: string;
+  baseAppToken: string;
+  baseUrl?: string;
+  fetchImpl?: typeof fetch;
+  maxRetries?: number;
+  sleep?: (milliseconds: number) => Promise<void>;
+}
+
+export interface FeishuBaseTable {
+  table_id: string;
+  name: string;
+}
+
+export interface FeishuBaseRecord extends FeishuRecord {
+  [key: string]: unknown;
+}
+
+interface FeishuBaseApiResponse {
+  code?: number;
+  data?: Record<string, unknown>;
+  expire?: number;
+  tenant_access_token?: string;
+}
+
+interface FeishuBasePage<T> {
+  items?: T[];
+  has_more?: boolean;
+  page_token?: string;
+}
+
+/** Server-only Feishu Base client for read collections. */
+export class FeishuBaseClient {
+  private readonly appId: string;
+  private readonly appSecret: string;
+  private readonly baseAppToken: string;
+  private readonly baseUrl: string;
+  private readonly fetchFn: typeof fetch;
+  private readonly maxRetries: number;
+  private readonly sleep: (milliseconds: number) => Promise<void>;
+  private tokenCache: TokenCache | null = null;
+
+  constructor(config: FeishuBaseClientConfig) {
+    if (!config.appId || !config.appSecret || !config.baseAppToken) {
+      throw new Error('FeishuBaseClient requires server-side credentials');
+    }
+    this.appId = config.appId;
+    this.appSecret = config.appSecret;
+    this.baseAppToken = config.baseAppToken;
+    this.baseUrl = (config.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, '');
+    this.fetchFn = config.fetchImpl ?? globalThis.fetch;
+    if (!this.fetchFn) throw new Error('FeishuBaseClient requires fetch');
+    this.maxRetries = config.maxRetries ?? 2;
+    this.sleep = config.sleep ?? (async () => undefined);
+  }
+
+  async listAllTables(): Promise<FeishuBaseTable[]> {
+    return this.listAll<FeishuBaseTable>(
+      `/open-apis/bitable/v1/apps/${encodeURIComponent(this.baseAppToken)}/tables`,
+    );
+  }
+
+  async listAllRecords(tableId: string): Promise<FeishuBaseRecord[]> {
+    if (!tableId.trim()) throw new Error('FeishuBaseClient requires table id');
+    return this.listAll<FeishuBaseRecord>(
+      `/open-apis/bitable/v1/apps/${encodeURIComponent(this.baseAppToken)}/tables/${encodeURIComponent(tableId)}/records`,
+    );
+  }
+
+  private async listAll<T>(path: string): Promise<T[]> {
+    const items: T[] = [];
+    let pageToken: string | undefined;
+    do {
+      const query = new URLSearchParams({ page_size: '500' });
+      if (pageToken) query.set('page_token', pageToken);
+      const response = await this.request(`${path}?${query.toString()}`, { method: 'GET' });
+      const page = (response.data ?? {}) as FeishuBasePage<T>;
+      items.push(...(page.items ?? []));
+      if (page.has_more && !page.page_token) {
+        throw new Error('Feishu pagination response omitted page token');
+      }
+      pageToken = page.has_more ? page.page_token : undefined;
+    } while (pageToken);
+    return items;
+  }
+
+  private async getTenantAccessToken(): Promise<string> {
+    if (this.tokenCache && this.tokenCache.expiresAt > Date.now() + 30_000) {
+      return this.tokenCache.token;
+    }
+    const response = await this.request(
+      '/open-apis/auth/v3/tenant_access_token/internal',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify({ app_id: this.appId, app_secret: this.appSecret }),
+      },
+      true,
+    );
+    if (!response.tenant_access_token) {
+      throw new Error(`Feishu credential request failed (code=${response.code ?? 'unknown'})`);
+    }
+    const lifetimeMs = Math.max(0, (response.expire ?? 7200) * 1000 - 30_000);
+    this.tokenCache = {
+      token: response.tenant_access_token,
+      expiresAt: Date.now() + lifetimeMs,
+    };
+    return response.tenant_access_token;
+  }
+
+  private async request(
+    path: string,
+    init: RequestInit,
+    credentialRequest = false,
+  ): Promise<FeishuBaseApiResponse> {
+    for (let attempt = 0; attempt <= this.maxRetries; attempt += 1) {
+      const headers = new Headers(init.headers);
+      if (!credentialRequest) headers.set('Authorization', `Bearer ${await this.getTenantAccessToken()}`);
+      const response = await this.fetchFn(`${this.baseUrl}${path}`, { ...init, headers });
+      let payload: FeishuBaseApiResponse = {};
+      try {
+        payload = (await response.json()) as FeishuBaseApiResponse;
+      } catch {
+        payload = {};
+      }
+      const retryable = response.status === 429 || payload.code === 1_254_291;
+      if (retryable && attempt < this.maxRetries) {
+        await this.sleep(200 * 2 ** attempt);
+        continue;
+      }
+      if (!response.ok || payload.code !== 0) {
+        const prefix = credentialRequest ? 'Feishu credential request failed' : 'Feishu request failed';
+        throw new Error(`${prefix} (status=${response.status}, code=${payload.code ?? 'unknown'})`);
+      }
+      return payload;
+    }
+    throw new Error('Feishu retry limit exhausted');
+  }
+}
+
+/**
  * The live `/records/search` endpoint wraps text (and other) field values as
  * `[{ text, type }]` arrays, unlike the `GET`/list endpoints which return plain
  * values. Unwrap them so the canonical mapping (which expects plain values)
