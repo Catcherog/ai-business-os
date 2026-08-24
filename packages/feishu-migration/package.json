@@ -9,7 +9,12 @@
   "exports": {
     ".": "./src/types.ts",
     "./hash": "./src/hash.ts",
-    "./redact": "./src/redact.ts"
+    "./redact": "./src/redact.ts",
+    "./config": "./src/config.ts",
+    "./feishu-client": "./src/feishu-client.ts",
+    "./base-reader": "./src/base-reader.ts",
+    "./sheet-reader": "./src/sheet-reader.ts",
+    "./inventory": "./src/inventory.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

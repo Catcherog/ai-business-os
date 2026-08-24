@@ -6,6 +6,7 @@ import { FeishuClient, type FeishuRequest } from '../src/feishu-client.js';
 import { readBaseSource } from '../src/base-reader.js';
 import { readSpreadsheetSource } from '../src/sheet-reader.js';
 import { discoverSourceInventory } from '../src/inventory.js';
+import { discoverSourceInventory as publicDiscoverSourceInventory } from '@busos/feishu-migration/inventory';
 
 interface RecordedCall {
   method: string;
@@ -336,6 +337,10 @@ describe('FeishuClient read-only transport', () => {
 });
 
 describe('source readers', () => {
+  it('exports source discovery through the server-only package subpath', () => {
+    expect(publicDiscoverSourceInventory).toBe(discoverSourceInventory);
+  });
+
   it('normalizes Base hyperlinks and DateTime epochs after full pagination', async () => {
     const fixture = makePagedTransport();
     const source = await readBaseSource(makeClient(fixture.fetchImpl), 'base-source');
