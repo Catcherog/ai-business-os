@@ -74,3 +74,16 @@ export {
   normalizeProjectCode,
 } from './dedupe.js';
 export type { NormalizedMigrationRecord } from './dedupe.js';
+export { bootstrapTargetSchema } from './bootstrap.js';
+export { TARGET_SCHEMA } from './target-schema.js';
+export type {
+  AddedSchemaField,
+  SchemaBootstrapClient,
+  SchemaConflict,
+  SchemaDiffResult,
+  SchemaDiffStatus,
+} from './bootstrap.js';
+export type {
+  SchemaFieldDefinition,
+  SchemaTableDefinition,
+} from './target-schema.js';

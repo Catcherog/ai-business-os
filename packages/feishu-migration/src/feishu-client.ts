@@ -17,6 +17,20 @@ export interface BaseField {
   [key: string]: unknown;
 }
 
+export interface CreateFieldInput {
+  field_name: string;
+  type: number;
+  property?: Record<string, unknown>;
+  description?: string;
+}
+
+export interface CreateTableInput {
+  name: string;
+  default_view_name?: string;
+  fields?: CreateFieldInput[];
+  description?: string;
+}
+
 export interface BaseRecord {
   record_id: string;
   fields: Record<string, unknown>;
@@ -110,6 +124,57 @@ export class FeishuClient {
       `/open-apis/bitable/v1/apps/${encodeURIComponent(appToken)}/tables/${encodeURIComponent(tableId)}/records`,
       'items',
     );
+  }
+
+  async createTable(appToken: string, input: CreateTableInput): Promise<BaseTable> {
+    const response = await this.request(
+      `/open-apis/bitable/v1/apps/${encodeURIComponent(appToken)}/tables`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${await this.getTenantAccessToken()}`,
+          'Content-Type': 'application/json; charset=utf-8',
+        },
+        body: JSON.stringify({
+          table: {
+            name: input.name,
+            default_view_name: input.default_view_name,
+            fields: input.fields,
+            description: input.description,
+          },
+        }),
+      },
+    );
+    const table = response.data?.table ?? response.data;
+    if (!table || typeof table !== 'object') {
+      throw new Error(`Feishu table creation returned no table (name=${input.name})`);
+    }
+    return table as BaseTable;
+  }
+
+  async createField(
+    appToken: string,
+    tableId: string,
+    input: CreateFieldInput,
+  ): Promise<BaseField> {
+    const response = await this.request(
+      `/open-apis/bitable/v1/apps/${encodeURIComponent(appToken)}/tables/${encodeURIComponent(tableId)}/fields`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${await this.getTenantAccessToken()}`,
+          'Content-Type': 'application/json; charset=utf-8',
+        },
+        body: JSON.stringify(input),
+      },
+    );
+    const field = response.data?.field ?? response.data;
+    if (!field || typeof field !== 'object') {
+      throw new Error(
+        `Feishu field creation returned no field (table=${tableId}, field=${input.field_name})`,
+      );
+    }
+    return field as BaseField;
   }
 
   async listSheets(spreadsheetToken: string): Promise<SheetMetadata[]> {

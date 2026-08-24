@@ -20,7 +20,9 @@
     "./normalize/customers": "./src/normalize/customers.ts",
     "./normalize/projects": "./src/normalize/projects.ts",
     "./normalize/resources": "./src/normalize/resources.ts",
-    "./normalize/content": "./src/normalize/content.ts"
+    "./normalize/content": "./src/normalize/content.ts",
+    "./target-schema": "./src/target-schema.ts",
+    "./bootstrap": "./src/bootstrap.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
