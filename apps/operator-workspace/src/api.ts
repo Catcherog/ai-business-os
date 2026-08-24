@@ -1,7 +1,7 @@
 import { BusinessRepository, createFakeFeishuAdapter } from '@busos/business-repository';
 import { InMemoryProcessRegistry } from '@busos/orchestrator';
 import type { ProcessRegistry, ProcessRegistryReadPort } from '@busos/orchestrator';
-import { WorkspaceReadService, seedFakeWorkspace } from '@busos/workspace-read';
+import { WorkspaceReadService, seedFakeWorkspace, type SeededWorkspace } from '@busos/workspace-read';
 import { WorkspaceReviewService } from '@busos/workspace-review';
 import { WorkspaceRunService, buildDemoRuns } from '@busos/workspace-run';
 import { MemoryService, InMemoryMemoryRepository, seedCanonicalMemory } from '@busos/memory';
@@ -35,6 +35,10 @@ let runRegistry: InMemoryProcessRegistry | null = null;
 // H2-01 — canonical governed Memory foundation (read-only surface only).
 let memSvc: MemoryService | null = null;
 let dataSource: WorkspaceDataSource | null = null;
+// Deterministic seeded demo dataset (customers / leads / projects) — surfaced
+// read-only by the Business Data DEMO channel so the Customer list/detail
+// journey renders real, non-hardcoded demo data.
+let seededWorkspace: SeededWorkspace | null = null;
 
 /** Seed the in-memory demo datasets and build the read + review + run services. Idempotent. */
 export async function initWorkspace(buildSha = 'unknown'): Promise<void> {
@@ -43,6 +47,7 @@ export async function initWorkspace(buildSha = 'unknown'): Promise<void> {
   // lead is visible through the canonical write path (no extra UI plumbing).
   repo = new BusinessRepository(createFakeFeishuAdapter());
   const seeded = await seedFakeWorkspace(repo);
+  seededWorkspace = seeded;
   readSvc = new WorkspaceReadService(repo);
   reviewSvc = new WorkspaceReviewService(repo);
   reviewSvc.seedDemo();
@@ -130,6 +135,18 @@ export function getActionRepo(): BusinessRepository {
 export function getMemoryService(): MemoryService {
   if (!memSvc) throw new Error('Workspace not initialized — call initWorkspace() first.');
   return memSvc;
+}
+
+/**
+ * BUSOS-R2-BATCH1-PRODUCT-INTEGRATION-CORR-01 — the deterministic seeded demo
+ * dataset (customers / leads / projects) for the Business Data DEMO channel.
+ * Read-only: the channel projects these canonical shapes into the
+ * `BusinessDataEnvelope` contract; nothing here mutates storage or carries
+ * provider credentials.
+ */
+export function getSeedData(): SeededWorkspace {
+  if (!seededWorkspace) throw new Error('Workspace not initialized — call initWorkspace() first.');
+  return seededWorkspace;
 }
 
 

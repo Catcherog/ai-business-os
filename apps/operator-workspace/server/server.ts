@@ -10,17 +10,92 @@
  * Run: `node server/dist/server.js` (after `npm run build`).
  */
 import http from 'node:http';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { runConnectedGenerateVisualReference } from './workspace-action.js';
 import { createConnectedWorkspaceApi } from './workspace-api.js';
 import { workspaceError } from '../src/workspace-data-source.js';
+import { ServiceAgentRuntime, createServiceAgentEndpoint } from './features/service-agent/service-agent-runtime.js';
+import { createEvaluationServerFeature } from './features/evaluation/evaluation-api.js';
+import { InMemoryServiceAgentConversationStore, type ServiceAgentPort } from '@busos/service-agent-port';
+import { InMemoryProcessRegistry } from '@busos/orchestrator';
+import { createConnectedFeishuDataSource } from './features/feishu/connected-data-source.js';
 
 const PORT = Number(process.env.PORT ?? 4173);
-const here = fileURLToPath(new URL('.', import.meta.url));
-const distDir = fileURLToPath(new URL('../dist/', import.meta.url));
-const indexPath = fileURLToPath(new URL('../index.html', import.meta.url));
+
+// esbuild rewrites `import.meta.url` to the BUNDLE output (server/dist/), so
+// import.meta.url-relative file paths would resolve to the wrong location at
+// runtime (the bundled server returned 500 for the SPA and 422 for the
+// Evaluation Golden Set until this was anchored on process.cwd()). Fallbacks
+// cover the two documented run locations: the repo root, and the app directory
+// per the header's `node server/dist/server.js`.
+function firstExisting(candidates: string[]): string {
+  return candidates.find((p) => existsSync(p)) ?? candidates[0];
+}
+const cwd = process.cwd();
+const distDir = firstExisting([
+  resolve(cwd, 'dist'),
+  resolve(cwd, 'apps/operator-workspace/dist'),
+]);
+const indexPath = firstExisting([
+  resolve(cwd, 'index.html'),
+  resolve(cwd, 'apps/operator-workspace/index.html'),
+]);
+const evaluationDatasetPath = firstExisting([
+  resolve(cwd, '../../packages/evaluation/datasets/golden-set.v0.json'),
+  resolve(cwd, 'packages/evaluation/datasets/golden-set.v0.json'),
+]);
 const workspaceApi = createConnectedWorkspaceApi();
+
+// BUSOS-R2-BATCH1-PRODUCT-INTEGRATION-CORR-01 — register the three product
+// surfaces on the SAME route strings the browser bundle calls, so the contract
+// is `browser path === server route === feature contract`. The CONNECTED server
+// boundary fails closed without authorization: the Service Agent port is an
+// explicit fail-closed stub (no production SCS binding), the Business Data read
+// is read-only and BLOCKED until real configuration is supplied, and the
+// Evaluation surface runs the real deterministic Golden Set harness.
+const saEndpoint = createServiceAgentEndpoint(
+  new ServiceAgentRuntime({
+    serviceAgent: {
+      async run(): Promise<never> {
+        throw Object.assign(new Error('Service Agent is not configured on this server boundary.'), {
+          code: 'SERVICE_AGENT_NOT_CONFIGURED',
+        });
+      },
+    } as unknown as ServiceAgentPort,
+    conversationStore: new InMemoryServiceAgentConversationStore(),
+    processRegistry: new InMemoryProcessRegistry(),
+  }),
+);
+const evaluationFeature = createEvaluationServerFeature({ datasetPath: evaluationDatasetPath });
+const businessDataSource = createConnectedFeishuDataSource({ buildSha: 'server' });
+
+function businessBlockedCustomersEnvelope() {
+  const health = businessDataSource.health();
+  return {
+    mode: 'CONNECTED',
+    buildSha: 'server',
+    status: 'BLOCKED',
+    error: { code: 'BUSINESS_DATA_NOT_CONFIGURED', message: 'Business Data read requires a connected Feishu configuration.' },
+    health: {
+      mode: 'CONNECTED',
+      connected: health.connected,
+      configuredResourceCount: health.configuredResourceCount,
+      lastSuccessfulReadAt: null,
+      lastSuccessfulWriteAt: null,
+      lastReadbackStatus: 'NOT_RUN',
+      latencyBucket: 'UNKNOWN',
+    },
+  };
+}
+
+function businessBlockedCustomerEnvelope(customerId: string) {
+  return {
+    ...businessBlockedCustomersEnvelope(),
+    error: { code: 'BUSINESS_DATA_NOT_CONFIGURED', message: `Business Data read for ${customerId} requires a connected Feishu configuration.` },
+  };
+}
 
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -136,11 +211,41 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // BUSOS-R2-BATCH1-PRODUCT-INTEGRATION-CORR-01 — product surface routes.
+    // Service Agent (fail-closed without configuration).
+    if (pathname.startsWith('/api/service-agent/')) {
+      let body: unknown;
+      if (req.method === 'POST') {
+        try { body = await readJson(req); } catch { body = undefined; }
+      }
+      const result = await saEndpoint({ method: (req.method ?? 'GET') as 'GET' | 'POST', pathname, body });
+      sendJson(res, result.statusCode, result.body);
+      return;
+    }
+    // Evaluation (real deterministic Golden Set harness).
+    const evaluation = await evaluationFeature.handle({ method: req.method ?? 'GET', pathname });
+    if (evaluation) {
+      sendJson(res, evaluation.statusCode, evaluation.body);
+      return;
+    }
+    // Business Data — read-only, BLOCKED until a connected configuration exists.
+    if (req.method === 'GET' && pathname === '/api/business-data/customers') {
+      sendJson(res, 200, businessBlockedCustomersEnvelope());
+      return;
+    }
+    if (req.method === 'GET' && pathname.startsWith('/api/business-data/customers/')) {
+      const id = decodeURIComponent(pathname.split('/')[3] ?? '');
+      sendJson(res, 200, businessBlockedCustomerEnvelope(id));
+      return;
+    }
+
     // Static SPA (DEMO bundle — contains no secrets).
     if (req.method === 'GET') {
       const rel = pathname === '/' ? '/index.html' : pathname;
       const safe = rel.replace(/^\/+/, '');
-      const full = fileURLToPath(new URL(`./${safe}`, `file://${distDir}`));
+      // `file://${distDir}` would be an invalid file URL on Windows (missing the
+      // third slash); pathToFileURL produces the canonical form.
+      const full = fileURLToPath(new URL(`./${safe}`, pathToFileURL(`${distDir}/`)));
       if (!full.startsWith(distDir)) { res.statusCode = 403; res.end('forbidden'); return; }
       try {
         const data = readFileSync(full);

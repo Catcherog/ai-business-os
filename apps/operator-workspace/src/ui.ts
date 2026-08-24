@@ -33,6 +33,13 @@ import {
   unwrapWorkspaceEnvelope,
   type WorkspaceDataSource,
 } from './workspace-data-source.js';
+import { createServiceAgentFeature } from './features/service-agent/index.js';
+import { serviceAgentConversationMarkup, createCandidateReviewAction } from './features/service-agent/index.js';
+import { createDemoServiceAgentClient } from './demo/service-agent-demo.js';
+import { createBusinessDataFeature } from './features/business-data/index.js';
+import { createDemoBusinessDataClient } from './demo/business-data-demo.js';
+import { createEvaluationFeature } from './features/evaluation/evaluation-view.js';
+import { createDemoEvaluationReportClient } from './demo/evaluation-demo.js';
 
 type View = Route['name'];
 
@@ -42,6 +49,23 @@ let active: View = activeRoute.name;
 let selectedProjectId: string | null = null;
 let selectedReviewId: string | null = null;
 let selectedRunId: string | null = null;
+let selectedCustomerId: string | null = null;
+
+// BUSOS-R2-BATCH1-PRODUCT-INTEGRATION-CORR-01 — lazy feature holders. Constructed
+// on first use (after initWorkspace resolves) so the DEMO data channels can
+// safely read the shared registry / seeded dataset.
+let serviceAgentFeatureRef: ReturnType<typeof createServiceAgentFeature> | null = null;
+function serviceAgentFeature(): ReturnType<typeof createServiceAgentFeature> {
+  return (serviceAgentFeatureRef ??= createServiceAgentFeature(createDemoServiceAgentClient()));
+}
+let businessDataFeatureRef: ReturnType<typeof createBusinessDataFeature> | null = null;
+function businessDataFeature(): ReturnType<typeof createBusinessDataFeature> {
+  return (businessDataFeatureRef ??= createBusinessDataFeature(createDemoBusinessDataClient()));
+}
+let evaluationFeatureRef: ReturnType<typeof createEvaluationFeature> | null = null;
+function evaluationFeature(): ReturnType<typeof createEvaluationFeature> {
+  return (evaluationFeatureRef ??= createEvaluationFeature(createDemoEvaluationReportClient()));
+}
 let appReady = false;
 const router = createRouter();
 
@@ -233,6 +257,25 @@ async function viewOverview(): Promise<HTMLElement> {
       { label: 'Runs', value: String(m.runs.length), sub: statusSummary(m.runStatusCounts) },
       { label: '最近活动', value: String(m.recentActivity.length), sub: '跨三个业务面' },
     ]));
+
+    // R2-BATCH1-CORR-01 — entry points to the newly wired product surfaces.
+    body.append(overviewSection('新增产品面（Product Integration）', (() => {
+      const list = h('div', { class: 'capability-cards' });
+      const cards = [
+        { id: 'service-agent' as const, title: 'Service Agent', desc: '客服对话智能体 · DEMO 推理' },
+        { id: 'business-data' as const, title: 'Business Data', desc: '客户 / Lead / 项目 连接态' },
+        { id: 'evaluation' as const, title: 'Evaluation', desc: 'Golden Set 确定性回归' },
+      ];
+      for (const card of cards) {
+        const btn = h('button', { class: 'btn capability-card', type: 'button' }, [
+          h('span', { class: 'capability-title' }, [card.title]),
+          h('span', { class: 'capability-desc muted' }, [card.desc]),
+        ]);
+        btn.addEventListener('click', () => navigate(card.id));
+        list.append(btn);
+      }
+      return list;
+    })()));
 
     // Project status breakdown.
     body.append(overviewSection('项目状态', (() => {
@@ -1295,6 +1338,139 @@ function kv(rows: [string, string][], opts: { statusValue?: string } = {}): HTML
   return dl;
 }
 
+/* -------------------- product integration surfaces (CORR-01) ------------- */
+
+async function viewServiceAgent(): Promise<HTMLElement> {
+  const wrap = h('div', {});
+  wrap.append(
+    h('div', { class: 'view-head' }, [
+      h('h1', {}, ['Service Agent']),
+      h('p', {}, ['客服对话智能体 · DEMO 数据通道（in-memory 确定性推理）· 只读']),
+    ]),
+  );
+  const body = h('div', { class: 'card service-agent-console' });
+  wrap.append(body);
+  body.append(loading('正在加载 Service Agent 控制台…'));
+
+  const input = h('input', {
+    class: 'sa-input', type: 'text', placeholder: '输入客户问题，例如：如何预约拍摄？',
+  }) as HTMLInputElement;
+  const goBtn = h('button', { class: 'btn-primary', type: 'button' }, ['咨询']);
+  const errorEl = h('div', { class: 'err' });
+
+  const form = h('div', { class: 'sa-form' }, [
+    h('label', { class: 'muted' }, ['客户问题']),
+    input,
+    goBtn,
+    errorEl,
+  ]);
+
+  async function run(): Promise<void> {
+    const query = input.value.trim();
+    if (!query) { errorEl.replaceChildren(h('span', {}, ['请输入问题。'])); return; }
+    errorEl.replaceChildren();
+    const resultHost = h('div', { class: 'sa-result' });
+    body.replaceChildren(form, loading('正在咨询 Service Agent（DEMO）…'));
+    try {
+      const { viewModel } = await serviceAgentFeature().consult({
+        query,
+        idempotencyKey: `demo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      });
+      const markup = serviceAgentConversationMarkup(viewModel);
+      const host = h('div', { class: 'sa-markup' });
+      host.innerHTML = markup;
+      const govBtn = host.querySelector('button[data-action="governance-review"]');
+      if (govBtn) govBtn.addEventListener('click', () => {
+        void (async () => {
+          const action = createCandidateReviewAction(viewModel);
+          errorEl.replaceChildren(
+            h('span', { class: 'muted' }, [`已生成治理审阅意图：${JSON.stringify(action)}`]),
+          );
+        })();
+      });
+      body.replaceChildren(form, host, resultHost);
+      resultHost.append(h('p', { class: 'muted' }, ['咨询完成（DEMO 数据通道，未连接生产 SCS）。']));
+    } catch (err) {
+      errorEl.replaceChildren(h('span', {}, [`咨询失败：${(err as Error).message}`]));
+    }
+  }
+  goBtn.addEventListener('click', () => void run());
+  input.addEventListener('keydown', (e) => {
+    if ((e as KeyboardEvent).key === 'Enter') void run();
+  });
+
+  body.replaceChildren(form, h('p', { class: 'muted' }, ['输入问题后点击「咨询」，结果将展示意图 / 风险 / 路由 / 证据 / 转人工 / 关联 Run。']));
+  return wrap;
+}
+
+async function viewBusinessData(): Promise<HTMLElement> {
+  const wrap = h('div', {});
+  wrap.append(
+    h('div', { class: 'view-head' }, [
+      h('h1', {}, ['Business Data']),
+      h('p', {}, ['客户 / Lead / 项目 连接态数据 · DEMO 投影（只读，未连接生产 Feishu）']),
+    ]),
+  );
+  const host = h('div', { class: 'business-data-host' });
+  wrap.append(host);
+  host.append(loading('正在加载客户列表…'));
+  try {
+    const node = await businessDataFeature().renderList((customerId) => navigate('business-data-detail', customerId));
+    host.replaceChildren(node);
+  } catch (err) {
+    host.replaceChildren(empty(`加载失败：${(err as Error).message}`));
+  }
+  return wrap;
+}
+
+async function viewBusinessDataCustomer(): Promise<HTMLElement> {
+  const wrap = h('div', {});
+  if (!selectedCustomerId) {
+    wrap.append(empty('未选择客户。'));
+    return wrap;
+  }
+  const host = h('div', { class: 'business-data-host' });
+  wrap.append(
+    h('div', { class: 'view-head' }, [
+      h('h1', {}, ['Business Data · Customer']),
+      h('p', {}, ['客户详情 · Leads / Projects（只读）']),
+    ]),
+    host,
+  );
+  host.append(loading('正在加载客户详情…'));
+  try {
+    const node = await businessDataFeature().renderCustomer(
+      selectedCustomerId,
+      (projectId) => navigate('project-detail', projectId),
+      () => navigate('business-data'),
+    );
+    host.replaceChildren(node);
+  } catch (err) {
+    host.replaceChildren(empty(`加载失败：${(err as Error).message}`));
+  }
+  return wrap;
+}
+
+async function viewEvaluation(): Promise<HTMLElement> {
+  const wrap = h('div', {});
+  wrap.append(
+    h('div', { class: 'view-head' }, [
+      h('h1', {}, ['Evaluation']),
+      h('p', {}, ['确定性 Golden Set 回归 · 真实 recompute（42 cases / 28 PASS / 14 NOT_EVALUABLE）']),
+    ]),
+  );
+  const host = h('div', { class: 'evaluation-host' });
+  wrap.append(host);
+  host.append(loading('正在运行确定性 Golden Set 回归…'));
+  try {
+    const node = await evaluationFeature().render();
+    host.replaceChildren(node);
+  } catch (err) {
+    host.replaceChildren(empty(`加载失败：${(err as Error).message}`));
+  }
+  return wrap;
+}
+
 /* ------------------------------- router ---------------------------------- */
 function routeForView(view: View, id?: string): Route {
   switch (view) {
@@ -1305,6 +1481,10 @@ function routeForView(view: View, id?: string): Route {
     case 'review-detail': return id ? { name: 'review-detail', caseId: id } : { name: 'reviews' };
     case 'runs': return { name: 'runs' };
     case 'run-detail': return id ? { name: 'run-detail', processId: id } : { name: 'runs' };
+    case 'service-agent': return { name: 'service-agent' };
+    case 'business-data': return { name: 'business-data' };
+    case 'business-data-detail': return id ? { name: 'business-data-detail', customerId: id } : { name: 'business-data' };
+    case 'evaluation': return { name: 'evaluation' };
   }
 }
 
@@ -1314,6 +1494,7 @@ function syncRoute(route: Route): void {
   if (route.name === 'project-detail') selectedProjectId = route.projectId;
   if (route.name === 'review-detail') selectedReviewId = route.caseId;
   if (route.name === 'run-detail') selectedRunId = route.processId;
+  if (route.name === 'business-data-detail') selectedCustomerId = route.customerId;
   if (!appReady) return;
   const navHost = document.getElementById('nav');
   if (navHost) navHost.replaceWith(renderNav());
@@ -1335,6 +1516,10 @@ async function renderContent(): Promise<void> {
     case 'review-detail': node = await viewReviewDetail(selectedReviewId!); break;
     case 'runs': node = await viewRuns(); break;
     case 'run-detail': node = await viewRunDetail(selectedRunId!); break;
+    case 'service-agent': node = await viewServiceAgent(); break;
+    case 'business-data': node = await viewBusinessData(); break;
+    case 'business-data-detail': node = await viewBusinessDataCustomer(); break;
+    case 'evaluation': node = await viewEvaluation(); break;
     default: node = await viewOverview(); break;
   }
   content.replaceChildren(node);

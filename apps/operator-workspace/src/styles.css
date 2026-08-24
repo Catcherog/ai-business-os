@@ -470,3 +470,45 @@ table.trace-tbl td:last-child { font-family: ui-monospace, SFMono-Regular, Menlo
   border-radius: 8px;
   font-size: 13px;
 }
+
+/* ---- R2-BATCH1-CORR-01: product integration surfaces ---- */
+.capability-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.capability-card {
+  display: flex; flex-direction: column; gap: 4px; text-align: left;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 14px 16px; cursor: pointer; box-shadow: var(--shadow);
+}
+.capability-card:hover { border-color: var(--brand); }
+.capability-title { font-weight: 600; color: var(--ink); }
+.capability-desc { font-size: 12px; }
+
+.service-agent-console { display: grid; gap: 14px; }
+.sa-form { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; }
+.sa-form label { grid-column: 1 / -1; }
+.sa-input { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; }
+.sa-markup { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
+.sa-markup h2 { margin-top: 0; }
+.sa-markup dl { display: grid; grid-template-columns: 120px 1fr; gap: 6px 12px; margin: 8px 0; }
+.sa-markup dt { color: var(--muted); font-size: 13px; }
+.sa-markup dd { margin: 0; }
+.sa-markup button { margin-top: 8px; }
+
+.business-data-feature, .evaluation-feature { display: grid; gap: 14px; }
+.business-data-health { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; }
+.business-data-status-ready { background: var(--ok); color: #fff; }
+.business-data-status-blocked { background: var(--warn); color: #fff; }
+.business-data-status-error { background: var(--danger); color: #fff; }
+
+.evaluation-status-success { background: var(--ok); color: #fff; }
+.evaluation-status-hard_gate_failure { background: var(--danger); color: #fff; }
+.evaluation-status-malformed_dataset { background: var(--warn); color: #fff; }
+.evaluation-headline { font-size: 15px; font-weight: 600; }
+.evaluation-counts { display: grid; grid-template-columns: repeat(5, auto); gap: 8px 24px; }
+.evaluation-counts dt { color: var(--muted); font-size: 12px; }
+.evaluation-counts dd { margin: 0; font-size: 18px; font-weight: 600; }
+.evaluation-issues, .evaluation-gate-breaches { margin: 6px 0; padding-left: 18px; color: var(--danger); font-size: 13px; }
+.tbl { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.tbl th, .tbl td { border-bottom: 1px solid var(--line); padding: 8px 10px; text-align: left; font-size: 13px; }
+.tbl th { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
+.detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+.btn-back { background: transparent; border: 1px solid var(--line); color: var(--muted); border-radius: 8px; padding: 6px 10px; cursor: pointer; }

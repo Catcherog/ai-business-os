@@ -34,6 +34,36 @@ describe('workspace router', () => {
     expect(parseRoute('#/projects/%E0%A4%A')).toEqual({ name: 'overview' });
   });
 
+  it('parses and serializes the new product-integration surfaces (AC-R01..R05)', () => {
+    expect(parseRoute('#/service-agent')).toEqual({ name: 'service-agent' });
+    expect(parseRoute('#/business-data')).toEqual({ name: 'business-data' });
+    expect(parseRoute('#/business-data/cust_001')).toEqual({
+      name: 'business-data-detail',
+      customerId: 'cust_001',
+    });
+    expect(parseRoute('#/evaluation')).toEqual({ name: 'evaluation' });
+
+    expect(serializeRoute({ name: 'service-agent' })).toBe('#/service-agent');
+    expect(serializeRoute({ name: 'business-data' })).toBe('#/business-data');
+    expect(serializeRoute({ name: 'business-data-detail', customerId: 'cust_001' })).toBe(
+      '#/business-data/cust_001',
+    );
+    expect(serializeRoute({ name: 'evaluation' })).toBe('#/evaluation');
+
+    // round-trip
+    expect(parseRoute(serializeRoute({ name: 'business-data-detail', customerId: 'cust_001' }))).toEqual({
+      name: 'business-data-detail',
+      customerId: 'cust_001',
+    });
+
+    // detail keeps the business-data nav item active (explicit suffix rule)
+    const detail = { name: 'business-data-detail' as const, customerId: 'cust_001' };
+    expect(isNavigationActive(detail, 'business-data')).toBe(true);
+    expect(isNavigationActive(detail, 'service-agent')).toBe(false);
+    expect(isNavigationActive({ name: 'service-agent' }, 'service-agent')).toBe(true);
+    expect(isNavigationActive({ name: 'evaluation' }, 'evaluation')).toBe(true);
+  });
+
   it('serializes routes and keeps the parent navigation item active in details', () => {
     const route = { name: 'run-detail' as const, processId: 'proc_001' };
     expect(serializeRoute(route)).toBe('#/runs/proc_001');
@@ -44,6 +74,9 @@ describe('workspace router', () => {
       'projects',
       'reviews',
       'runs',
+      'service-agent',
+      'business-data',
+      'evaluation',
     ]);
   });
 

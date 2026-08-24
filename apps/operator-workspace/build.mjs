@@ -37,7 +37,7 @@ function computeBuildSha() {
   return 'unknown';
 }
 const BUILD_SHA = computeBuildSha();
-const RELEASE = 'BUSOS-R2-X01';
+const RELEASE = 'BUSOS-R2-BATCH1-CORR-01';
 const BUILD_MODE = 'DEMO';
 const buildDefine = {
   'process.env.NODE_ENV': '"production"',
@@ -60,6 +60,7 @@ const alias = {
   '@busos/creative-production': resolve(repoRoot, 'packages/creative-production/src/index.ts'),
   '@busos/lumen-adapter': resolve(repoRoot, 'packages/lumen-adapter/src/index.ts'),
   '@busos/service-agent-candidate': resolve(repoRoot, 'packages/service-agent-candidate/src/index.ts'),
+  '@busos/evaluation': resolve(repoRoot, 'packages/evaluation/src/index.ts'),
   'node:crypto': resolve(__dirname, 'shims/node-crypto.mjs'),
 };
 
