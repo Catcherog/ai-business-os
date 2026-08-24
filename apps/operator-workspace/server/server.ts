@@ -18,7 +18,7 @@ import { createConnectedWorkspaceApi } from './workspace-api.js';
 import { workspaceError } from '../src/workspace-data-source.js';
 import { ServiceAgentRuntime, createServiceAgentEndpoint } from './features/service-agent/service-agent-runtime.js';
 import { createEvaluationServerFeature } from './features/evaluation/evaluation-api.js';
-import { InMemoryServiceAgentConversationStore, type ServiceAgentPort } from '@busos/service-agent-port';
+import { InMemoryServiceAgentConversationStore, type ServiceAgentPort, type ServiceAgentRunInput } from '@busos/service-agent-port';
 import { InMemoryProcessRegistry } from '@busos/orchestrator';
 import { createConnectedFeishuDataSource } from './features/feishu/connected-data-source.js';
 
@@ -55,15 +55,21 @@ const workspaceApi = createConnectedWorkspaceApi();
 // explicit fail-closed stub (no production SCS binding), the Business Data read
 // is read-only and BLOCKED until real configuration is supplied, and the
 // Evaluation surface runs the real deterministic Golden Set harness.
+// Fail-closed Service Agent port for the CONNECTED server boundary: no
+// production SCS binding is authorized, so every consultation is rejected with
+// a typed SERVICE_AGENT_NOT_CONFIGURED error. The adapter is explicitly typed
+// as `ServiceAgentPort` — no unsafe cast (OWNER-REVIEW-FIX-01).
+const failClosedServiceAgent: ServiceAgentPort = {
+  async run(_input: ServiceAgentRunInput): Promise<never> {
+    throw Object.assign(new Error('Service Agent is not configured on this server boundary.'), {
+      code: 'SERVICE_AGENT_NOT_CONFIGURED',
+    });
+  },
+};
+
 const saEndpoint = createServiceAgentEndpoint(
   new ServiceAgentRuntime({
-    serviceAgent: {
-      async run(): Promise<never> {
-        throw Object.assign(new Error('Service Agent is not configured on this server boundary.'), {
-          code: 'SERVICE_AGENT_NOT_CONFIGURED',
-        });
-      },
-    } as unknown as ServiceAgentPort,
+    serviceAgent: failClosedServiceAgent,
     conversationStore: new InMemoryServiceAgentConversationStore(),
     processRegistry: new InMemoryProcessRegistry(),
   }),

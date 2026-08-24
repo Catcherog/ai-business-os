@@ -1,5 +1,6 @@
 /**
- * Business Data — browser DEMO data channel (BUSOS-R2-BATCH1-PRODUCT-INTEGRATION-CORR-01).
+ * Business Data — browser DEMO data channel (BUSOS-R2-BATCH1-PRODUCT-INTEGRATION-CORR-01;
+ * identity corrected in OWNER-REVIEW-FIX-01).
  *
  * The server-side CONNECTED boundary (real Feishu) is read-only and requires
  * server-side configuration this batch is not authorized to bind. To make the
@@ -7,9 +8,13 @@
  * mode, this module projects the deterministic seeded demo dataset (customers /
  * leads / projects — the SAME data the Projects/Reviews/Runs surfaces already
  * render) into the exact `BusinessDataEnvelope` contract the existing
- * `createBusinessDataFeature` view consumes. Nothing here mutates storage or
- * carries provider credentials; the envelope keeps `mode: CONNECTED` per the
- * client contract and reports an honest "read-only demo" health posture.
+ * `createBusinessDataFeature` view consumes.
+ *
+ * Runtime identity (OWNER-REVIEW-FIX-01): seeded in-memory data is HONESTLY
+ * `DEMO / READY` with `health.connected: false` — it never claims a real
+ * Feishu connection. No configured resources, no successful external read
+ * timestamps, no provider connectivity are fabricated. The real server seam
+ * stays `CONNECTED / BLOCKED` until a connected Feishu configuration exists.
  */
 import type { Customer, Lead, Project } from '@busos/contracts';
 import {
@@ -22,33 +27,35 @@ import {
 import { getSeedData } from '../api.js';
 import { buildSha } from '../build-info.js';
 
-const CONNECTED_MODE = 'CONNECTED' as const;
+const DEMO_MODE = 'DEMO' as const;
 
+/** Honest DEMO health: no fabricated provider resources, reads or connectivity. */
 function health(connected: boolean): BusinessDataHealthView {
   return {
-    mode: CONNECTED_MODE,
+    mode: DEMO_MODE,
     connected,
-    configuredResourceCount: 8,
-    lastSuccessfulReadAt: new Date('2026-08-24T00:00:00Z').toISOString(),
+    configuredResourceCount: 0,
+    lastSuccessfulReadAt: null,
     lastSuccessfulWriteAt: null,
     lastReadbackStatus: 'NOT_RUN',
+    // DEMO presentation only — in-memory latency, not a measured provider value.
     latencyBucket: 'FAST',
   };
 }
 
 function ready<T>(data: T): BusinessDataEnvelope<T> {
   return {
-    mode: CONNECTED_MODE,
+    mode: DEMO_MODE,
     buildSha,
     status: 'READY',
     data,
-    health: health(true),
+    health: health(false),
   };
 }
 
 function blocked<T>(code: string, message: string): BusinessDataEnvelope<T> {
   return {
-    mode: CONNECTED_MODE,
+    mode: DEMO_MODE,
     buildSha,
     status: 'BLOCKED',
     error: { code, message },

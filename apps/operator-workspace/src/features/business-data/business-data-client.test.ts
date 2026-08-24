@@ -144,4 +144,36 @@ describe('business data client', () => {
       error: { code: 'BUSINESS_DATA_TRANSPORT_ERROR' },
     });
   });
+
+  it('fails closed when the Connected transport receives a DEMO envelope (no Connected→DEMO fallback)', async () => {
+    // A structurally complete DEMO envelope must NEVER be accepted by the real
+    // Connected client: expanding the presentation contract to allow DEMO does
+    // NOT expand the transport contract (OWNER-REVIEW-FIX-01).
+    const demoEnvelope = {
+      mode: 'DEMO',
+      buildSha: 'demo',
+      status: 'READY',
+      data: [] as unknown[],
+      health: {
+        mode: 'DEMO',
+        connected: false,
+        configuredResourceCount: 0,
+        lastSuccessfulReadAt: null,
+        lastSuccessfulWriteAt: null,
+        lastReadbackStatus: 'NOT_RUN',
+        latencyBucket: 'FAST',
+      },
+    };
+    const client = createBusinessDataClient({
+      fetchImpl: async () => response(demoEnvelope),
+    });
+
+    const result = await client.listCustomers();
+    expect(result).toMatchObject({
+      mode: 'CONNECTED',
+      status: 'ERROR',
+      error: { code: 'BUSINESS_DATA_INVALID_ENVELOPE' },
+    });
+    expect(result).not.toHaveProperty('data');
+  });
 });

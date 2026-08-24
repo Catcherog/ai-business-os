@@ -1408,7 +1408,7 @@ async function viewBusinessData(): Promise<HTMLElement> {
   wrap.append(
     h('div', { class: 'view-head' }, [
       h('h1', {}, ['Business Data']),
-      h('p', {}, ['客户 / Lead / 项目 连接态数据 · DEMO 投影（只读，未连接生产 Feishu）']),
+      h('p', {}, ['客户 / Lead / 项目 · DEMO 数据（seeded in-memory，只读；未连接生产 Feishu）']),
     ]),
   );
   const host = h('div', { class: 'business-data-host' });
@@ -1433,7 +1433,7 @@ async function viewBusinessDataCustomer(): Promise<HTMLElement> {
   wrap.append(
     h('div', { class: 'view-head' }, [
       h('h1', {}, ['Business Data · Customer']),
-      h('p', {}, ['客户详情 · Leads / Projects（只读）']),
+      h('p', {}, ['客户详情 · Leads / Projects（DEMO seeded 数据，只读）']),
     ]),
     host,
   );

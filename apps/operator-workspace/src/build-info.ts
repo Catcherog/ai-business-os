@@ -12,6 +12,10 @@ declare const __BUILD_SHA__: string;
 declare const __RELEASE__: string;
 declare const __BUILD_MODE__: string;
 
-export const buildSha: string = __BUILD_SHA__;
-export const release: string = __RELEASE__;
-export const buildMode: string = __BUILD_MODE__;
+// esbuild `define` injects the identifiers above at bundle time. Under plain
+// vitest (no define) they are undefined identifiers, so guard with `typeof` and
+// fall back to a stable test-friendly identity instead of a ReferenceError —
+// bundle output is unchanged because `define` still replaces the identifier.
+export const buildSha: string = typeof __BUILD_SHA__ !== 'undefined' ? __BUILD_SHA__ : 'unknown';
+export const release: string = typeof __RELEASE__ !== 'undefined' ? __RELEASE__ : 'unknown';
+export const buildMode: string = typeof __BUILD_MODE__ !== 'undefined' ? __BUILD_MODE__ : 'unknown';

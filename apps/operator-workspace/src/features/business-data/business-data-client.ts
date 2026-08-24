@@ -10,11 +10,20 @@ export type BusinessDataReadbackStatus = 'VERIFIED' | 'FAILED' | 'NOT_RUN';
 export type BusinessDataLatencyBucket = 'UNKNOWN' | 'FAST' | 'MEDIUM' | 'SLOW';
 
 /**
+ * Runtime identity of a Business Data envelope. `DEMO` is the honest identity
+ * of in-memory seeded data (OWNER-REVIEW-FIX-01); `CONNECTED` is the identity
+ * of the real server/Feishu boundary. The real Connected transport still
+ * REQUIRES `CONNECTED` envelopes and never accepts `DEMO` (see
+ * `isBusinessDataEnvelope`).
+ */
+export type BusinessDataMode = 'DEMO' | 'CONNECTED';
+
+/**
  * Browser-safe health information. Provider identifiers and credentials are
  * intentionally not part of this contract.
  */
 export interface BusinessDataHealthView {
-  mode: typeof CONNECTED_MODE;
+  mode: BusinessDataMode;
   connected: boolean;
   configuredResourceCount: number;
   lastSuccessfulReadAt: string | null;
@@ -218,7 +227,7 @@ function isHealth(value: unknown): value is BusinessDataHealthView {
     'error',
   ])) return false;
   const error = value.error;
-  return value.mode === CONNECTED_MODE
+  return (value.mode === 'DEMO' || value.mode === CONNECTED_MODE)
     && typeof value.connected === 'boolean'
     && typeof value.configuredResourceCount === 'number'
     && Number.isInteger(value.configuredResourceCount)

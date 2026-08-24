@@ -230,6 +230,20 @@ await go('#/business-data', 'Customers', 'Journey C — Business Data');
   }, 'Business Data customer list');
   if (listOk) pass('Business Data list: seeded customers 林晚晴 / 陈思远 rendered (DEMO projection)');
 
+  // OWNER-REVIEW-FIX-01 — runtime identity closure. The seeded DEMO surface
+  // must show DEMO · READY and must NOT claim CONNECTED · READY.
+  const idOk = await waitFor(() => content().text().includes('DEMO · READY'), 'Business Data DEMO identity');
+  if (idOk) {
+    pass('Browser Business Data identity: DEMO · READY (honest seeded demo, connected=false)');
+    if (content().text().includes('CONNECTED · READY')) {
+      fail('Browser Business Data must NOT show CONNECTED · READY for seeded demo data');
+    } else {
+      pass('Browser Business Data identity: CONNECTED · READY absent in DEMO UI');
+    }
+  } else {
+    fail('Browser Business Data identity: DEMO · READY not rendered');
+  }
+
   const custBtn = content().findByText('button', '林晚晴');
   if (!custBtn) { fail('Business Data customer row button not found'); }
   else {
