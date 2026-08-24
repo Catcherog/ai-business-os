@@ -14,7 +14,7 @@ environment.
 
 - Frozen baseline preserved at `origin/main@729108d8059e3e143194a05f43e510af3587d385`.
 - Coordinator branch: `codex/busos-feishu-v3`.
-- Latest implementation checkpoint: `b410bce`.
+- Latest coordinator checkpoint: `792d51d`.
 - Business repository reads are server-only and identify the source as
   `FEISHU_NEW_BASE` when connected.
 - Operator routes `#/business-data` and `#/scheduling` never seed demo data;
@@ -24,6 +24,10 @@ environment.
 - Outreach drafts are text-only and copyable; there is no send action.
 - Browser artifact scan passed via `SMOKE_FEISHU_V3_OK` with no Feishu
   credentials, access token, or OpenAPI URL in the bundle.
+- Root verification passed with `PYTHONUTF8=1`: all package typechecks,
+  tests, operator build, product integration smoke, and Feishu v3 smoke.
+- Product integration smoke covers the new Business Data and Scheduling
+  routes and verifies they fail closed without server configuration.
 - Local server checks returned HTTP 200 for the static app and `mode: BLOCKED`
   for Business Data and Scheduling without credentials.
 
