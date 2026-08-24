@@ -34,9 +34,10 @@ authorized.
 ## FEISHU-V3 Planning Note (added by FEISHU-V3-TASK-1, 2026-08-24)
 
 The Feishu v3 migration Goal uses `https://open.feishu.cn` as the recorded target
-Base API URL only. The configured NEW test Base app token and table IDs are live
-environment inputs and must not be written into Git, manifests, fixtures,
-reports, or logs.
+Base API endpoint only. The deployment-specific NEW test Base identifier is
+provided by `FEISHU_TARGET_BASE_TOKEN` at live migration time; the repository has
+no instance URL to record or guess. Table IDs are live environment inputs and
+must not be written into Git, manifests, fixtures, reports, or logs.
 
 During this Goal, the old Base, eight source spreadsheets, Drive, and Wiki stay
 read-only. The NEW test Base is the only permitted future write target, and only

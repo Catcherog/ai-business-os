@@ -29,9 +29,12 @@ mode must eventually read only from that NEW test Base and honestly present
 
 ## Target Base API and Secret Handling
 
-- Target Base API URL: `https://open.feishu.cn`.
-- The configured NEW test Base app token and table IDs are supplied only at live
-  migration time via environment variables.
+- Target Base API endpoint: `https://open.feishu.cn`.
+- The deployment-specific NEW test Base identifier is supplied only at live
+  migration time via `FEISHU_TARGET_BASE_TOKEN`; the repository contains no
+  non-secret instance URL to record, so no Base instance is guessed here.
+- The configured NEW test Base table IDs are supplied only at live migration
+  time via environment variables.
 - No app token, table ID, credential, access token, or personal raw payload is
   recorded in Git, manifests, tests, reports, or logs.
 

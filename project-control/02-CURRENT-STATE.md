@@ -20,9 +20,11 @@ FEISHU-V3-TASK-1 — Clean Baseline and Control Packet
 - Scope packet: `project-control/FEISHU-V3-GOAL.md` defines the Feishu v3 migration
   Goal, source inventory scope, lane ownership, write authority, canary rule, and
   STOP conditions for the new Base migration + OS cutover.
-- Target Base API URL: `https://open.feishu.cn`. The configured NEW test Base app
-  token and table IDs are provided only at live migration time through environment
-  variables and are never recorded in Git, reports, manifests, tests, or logs.
+- Target Base API endpoint: `https://open.feishu.cn`. The deployment-specific NEW
+  test Base identifier is provided only at live migration time through
+  `FEISHU_TARGET_BASE_TOKEN`; no instance URL is present in the repository to
+  record or guess. Table IDs are likewise environment-only and are never recorded
+  in Git, reports, manifests, tests, or logs.
 - Safety boundary: old Base, source spreadsheets, Drive, and Wiki stay read-only.
   No delete/move/rename of source systems or destructive conversion/deletion in the
   new Base is authorized. No real message sending, permission changes, or production
