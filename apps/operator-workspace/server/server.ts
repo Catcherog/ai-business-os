@@ -17,8 +17,10 @@ import { runConnectedGenerateVisualReference } from './workspace-action.js';
 import { createConnectedWorkspaceApi } from './workspace-api.js';
 import { workspaceError } from '../src/workspace-data-source.js';
 import { ServiceAgentRuntime, createServiceAgentEndpoint } from './features/service-agent/service-agent-runtime.js';
+import { loadServiceAgentProductionConfig } from './features/service-agent/service-agent-production-config.js';
+import { resolveServiceAgentPort } from './features/service-agent/service-agent-production-binding.js';
 import { createEvaluationServerFeature } from './features/evaluation/evaluation-api.js';
-import { InMemoryServiceAgentConversationStore, type ServiceAgentPort, type ServiceAgentRunInput } from '@busos/service-agent-port';
+import { InMemoryServiceAgentConversationStore } from '@busos/service-agent-port';
 import { InMemoryProcessRegistry } from '@busos/orchestrator';
 import { createConnectedFeishuDataSource } from './features/feishu/connected-data-source.js';
 
@@ -51,25 +53,21 @@ const workspaceApi = createConnectedWorkspaceApi();
 // BUSOS-R2-BATCH1-PRODUCT-INTEGRATION-CORR-01 — register the three product
 // surfaces on the SAME route strings the browser bundle calls, so the contract
 // is `browser path === server route === feature contract`. The CONNECTED server
-// boundary fails closed without authorization: the Service Agent port is an
-// explicit fail-closed stub (no production SCS binding), the Business Data read
-// is read-only and BLOCKED until real configuration is supplied, and the
-// Evaluation surface runs the real deterministic Golden Set harness.
-// Fail-closed Service Agent port for the CONNECTED server boundary: no
-// production SCS binding is authorized, so every consultation is rejected with
-// a typed SERVICE_AGENT_NOT_CONFIGURED error. The adapter is explicitly typed
-// as `ServiceAgentPort` — no unsafe cast (OWNER-REVIEW-FIX-01).
-const failClosedServiceAgent: ServiceAgentPort = {
-  async run(_input: ServiceAgentRunInput): Promise<never> {
-    throw Object.assign(new Error('Service Agent is not configured on this server boundary.'), {
-      code: 'SERVICE_AGENT_NOT_CONFIGURED',
-    });
-  },
-};
+// boundary fails closed without authorization: the Service Agent port is
+// fail-closed UNLESS a valid production SCS configuration is supplied (no DEMO
+// fallback), the Business Data read is read-only and BLOCKED until real
+// configuration is supplied, and the Evaluation surface runs the real
+// deterministic Golden Set harness.
+// BUSOS-R2-BATCH2-SCS-PRODUCTION-CONNECT-01 — bind the Service Agent port
+// behind the existing ServiceAgentProductionAdapter only when a valid
+// production SCS configuration is present. No config (or invalid config) keeps
+// the CONNECTED server boundary fail-closed; a production error also fails
+// closed through the adapter. No DEMO fallback is ever returned (OWNER-REVIEW).
+const serviceAgentPort = resolveServiceAgentPort(loadServiceAgentProductionConfig());
 
 const saEndpoint = createServiceAgentEndpoint(
   new ServiceAgentRuntime({
-    serviceAgent: failClosedServiceAgent,
+    serviceAgent: serviceAgentPort,
     conversationStore: new InMemoryServiceAgentConversationStore(),
     processRegistry: new InMemoryProcessRegistry(),
   }),
