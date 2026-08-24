@@ -8,6 +8,17 @@ type CanonicalValue =
   | CanonicalValue[]
   | { [key: string]: CanonicalValue };
 
+function compareCodeUnits(left: string, right: string): number {
+  const limit = Math.min(left.length, right.length);
+  for (let index = 0; index < limit; index += 1) {
+    const diff = left.charCodeAt(index) - right.charCodeAt(index);
+    if (diff !== 0) {
+      return diff;
+    }
+  }
+  return left.length - right.length;
+}
+
 function toCanonicalValue(
   value: unknown,
   seen: WeakSet<object>,
@@ -37,9 +48,16 @@ function toCanonicalValue(
   }
 
   if (Array.isArray(value)) {
-    return value.map((entry, index) =>
+    if (seen.has(value)) {
+      throw new TypeError(`stableHash does not support cyclic values at ${path}`);
+    }
+
+    seen.add(value);
+    const canonical = value.map((entry, index) =>
       toCanonicalValue(entry, seen, `${path}[${index}]`),
     );
+    seen.delete(value);
+    return canonical;
   }
 
   if (typeof value === 'object') {
@@ -49,7 +67,7 @@ function toCanonicalValue(
 
     seen.add(value);
     const entries = Object.entries(value as Record<string, unknown>).sort(
-      ([left], [right]) => left.localeCompare(right),
+      ([left], [right]) => compareCodeUnits(left, right),
     );
     const canonical: Record<string, CanonicalValue> = {};
     for (const [key, entry] of entries) {

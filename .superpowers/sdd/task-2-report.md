@@ -103,3 +103,52 @@ Results:
 
 - `redactForLog` covers `key=value` string logs and structured objects, but it does not attempt broader free-form secret detection beyond sensitive key names.
 - The migration execution commands are present as manifest contracts only; actual migration planning/apply/live-verify behavior remains future work by design.
+
+## Review Fixes
+
+### Findings addressed
+
+- Expanded `MigrationDecision<T>.decision` to include `NEEDS_REVIEW` and added a focused typed test case for changed `source_payload_hash` handling.
+- Replaced the package-specific migration ignore path with the required root `.artifacts/` ignore convention.
+- Strengthened `redactForLog` to redact:
+  - `=` and `:` separated sensitive key/value pairs
+  - API key names
+  - `Authorization: Bearer ...` values while preserving the bearer prefix
+  - nested structured object values under sensitive keys
+- Strengthened `stableHash` to:
+  - use a host-independent code-unit key comparator instead of `localeCompare`
+  - reject unsupported function and symbol values with explicit errors
+  - detect cyclic arrays instead of overflowing the stack
+
+### Review TDD record
+
+Added failing tests first, then verified the failures before changing production code.
+
+RED commands and results:
+
+```bash
+npm test --workspace=@busos/feishu-migration
+npm run typecheck --workspace=@busos/feishu-migration
+```
+
+- `npm test --workspace=@busos/feishu-migration`: FAIL (`4` failed, `4` passed)
+  - code-unit ordering hash mismatch
+  - cyclic array caused `Maximum call stack size exceeded`
+  - colon/bearer redaction missing
+  - structured object API key redaction missing
+- `npm run typecheck --workspace=@busos/feishu-migration`: FAIL
+  - `Type '"NEEDS_REVIEW"' is not assignable to type '"CREATE" | "UPDATE" | "SKIP"'`
+
+An intermediate rerun after the first code change left one expected failure in bearer redaction; that was corrected with a negative lookahead on the generic authorization value pass.
+
+GREEN commands and results:
+
+```bash
+npm test --workspace=@busos/feishu-migration
+npm run typecheck --workspace=@busos/feishu-migration
+git diff --check
+```
+
+- `npm test --workspace=@busos/feishu-migration`: PASS (`8` tests)
+- `npm run typecheck --workspace=@busos/feishu-migration`: PASS
+- `git diff --check`: no diff-format errors; emitted only CRLF normalization warnings for the modified text files in this lane

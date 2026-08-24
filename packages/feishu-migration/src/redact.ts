@@ -1,7 +1,11 @@
 const REDACTED = '[REDACTED]';
-const SENSITIVE_KEY = /(secret|token|password|authorization)/i;
-const KEY_VALUE_PATTERN =
-  /\b([A-Za-z0-9_.-]*(?:secret|token|password|authorization)[A-Za-z0-9_.-]*)=([^\s]+)/gi;
+const SENSITIVE_KEY = /(secret|token|password|authorization|api[-_]?key)/i;
+const GENERIC_SENSITIVE_KEY =
+  /\b([A-Za-z0-9_.-]*(?:secret|token|password|api[-_]?key)[A-Za-z0-9_.-]*)(\s*[:=]\s*)([^\s,;]+)/gi;
+const AUTHORIZATION_BEARER =
+  /\b(Authorization)(\s*:\s*)(Bearer)(\s+)([^\s,;]+)/gi;
+const AUTHORIZATION_VALUE =
+  /\b(Authorization)(\s*[:=]\s*)(?!Bearer\b)([^\s,;]+)/gi;
 
 function redactObject(value: unknown): unknown {
   if (Array.isArray(value)) {
@@ -22,9 +26,22 @@ function redactObject(value: unknown): unknown {
 
 export function redactForLog(value: unknown): string {
   if (typeof value === 'string') {
-    return value.replace(KEY_VALUE_PATTERN, (_match, key: string) => {
-      return `${key}=${REDACTED}`;
-    });
+    return value
+      .replace(
+        AUTHORIZATION_BEARER,
+        (_match, key: string, separator: string, scheme: string, gap: string) =>
+          `${key}${separator}${scheme}${gap}${REDACTED}`,
+      )
+      .replace(
+        AUTHORIZATION_VALUE,
+        (_match, key: string, separator: string) =>
+          `${key}${separator}${REDACTED}`,
+      )
+      .replace(
+        GENERIC_SENSITIVE_KEY,
+        (_match, key: string, separator: string) =>
+          `${key}${separator}${REDACTED}`,
+      );
   }
 
   return JSON.stringify(redactObject(value));

@@ -6,7 +6,7 @@ export interface SourceRecord {
 
 export interface MigrationDecision<T> {
   source: SourceRecord;
-  decision: 'CREATE' | 'UPDATE' | 'SKIP';
+  decision: 'CREATE' | 'UPDATE' | 'SKIP' | 'NEEDS_REVIEW';
   canonical_target: T;
   migration_key: string;
   reason: string;
