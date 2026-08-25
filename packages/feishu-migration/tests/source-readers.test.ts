@@ -322,6 +322,80 @@ describe('FeishuClient read-only transport', () => {
     expect(client.getRequestStats()).toEqual({ http_total: 3, reads: 2, writes: 0 });
   });
 
+  it('uses the supported table-create body and field-update endpoint', async () => {
+    const requests: Array<{ method: string; url: URL; body?: unknown }> = [];
+    const fetchImpl: typeof fetch = async (input, init) => {
+      const url = new URL(requestUrl(input));
+      const method = (init?.method ?? 'GET').toUpperCase();
+      const body = typeof init?.body === 'string' ? JSON.parse(init.body) : undefined;
+      requests.push({ method, url, body });
+      if (url.pathname.endsWith('/auth/v3/tenant_access_token/internal')) {
+        return json({ code: 0, tenant_access_token: 'memory-token', expire: 7200 });
+      }
+      if (method === 'POST' && url.pathname.endsWith('/tables')) {
+        return json({ code: 0, data: { table: { table_id: 'tbl-created', name: 'Resources' } } });
+      }
+      if (method === 'POST' && url.pathname.endsWith('/fields')) {
+        return json({
+          code: 0,
+          data: {
+            field: {
+              field_id: 'fld-created',
+              field_name: 'Resource Key',
+              type: 1,
+            },
+          },
+        });
+      }
+      if (method === 'PUT' && url.pathname.endsWith('/fields/fld-source-channel')) {
+        return json({
+          code: 0,
+          data: {
+            field: {
+              field_id: 'fld-source-channel',
+              field_name: 'Source Channel',
+              type: 3,
+              property: { options: [{ name: 'BASE' }, { name: 'OTHER' }] },
+            },
+          },
+        });
+      }
+      return json({ code: 404 }, 404);
+    };
+
+    const client = makeClient(fetchImpl);
+    await client.createTable('base-target', {
+      name: 'Resources',
+      default_view_name: 'Resource Key',
+      description: 'description is applied outside table creation',
+      fields: [{ field_name: 'Resource Key', type: 1 }],
+    });
+    await client.createField('base-target', 'tbl-target', {
+      field_name: 'Resource Key',
+      type: 1,
+      description: 'resource key',
+    });
+    await client.updateField('base-target', 'tbl-target', 'fld-source-channel', {
+      field_name: 'Source Channel',
+      type: 3,
+      property: { options: [{ name: 'BASE' }, { name: 'OTHER' }] },
+    });
+
+    expect(requests[1]).toMatchObject({
+      method: 'POST',
+      body: { table: { name: 'Resources' } },
+    });
+    expect(requests[2]).toMatchObject({
+      method: 'POST',
+      body: { field_name: 'Resource Key', type: 1, description: { text: 'resource key' } },
+    });
+    expect(requests[3]).toMatchObject({
+      method: 'PUT',
+      url: expect.objectContaining({ pathname: '/open-apis/bitable/v1/apps/base-target/tables/tbl-target/fields/fld-source-channel' }),
+    });
+    expect(client.getRequestStats()).toEqual({ http_total: 4, reads: 0, writes: 3 });
+  });
+
   it('classifies Drive permission denial without exposing the response body', async () => {
     const fetchImpl: typeof fetch = async (input) => {
       const url = new URL(requestUrl(input));

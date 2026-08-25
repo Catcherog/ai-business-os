@@ -21,17 +21,52 @@ export interface SchemaBootstrapClient {
     tableId: string,
     input: CreateFieldInput,
   ): Promise<BaseField>;
+  updateField(
+    appToken: string,
+    tableId: string,
+    fieldId: string,
+    input: CreateFieldInput,
+  ): Promise<BaseField>;
 }
 
-export type SchemaDiffStatus = 'NOOP' | 'CREATED' | 'UPDATED' | 'SCHEMA_CONFLICT';
+export type SchemaDiffStatus =
+  | 'NOOP'
+  | 'CREATED'
+  | 'UPDATED'
+  | 'SCHEMA_PATCH_REQUIRED'
+  | 'SCHEMA_CONFLICT';
+
+export type SchemaOptionClassification =
+  | 'SEMANTIC_SUBSET_PASS'
+  | 'MISSING_EXPECTED_OPTIONS'
+  | 'STRICT_EXACT_MISMATCH'
+  | 'AMBIGUOUS_NORMALIZED_NAME'
+  | 'OPTIONS_UNREADABLE';
+
+export interface SchemaOptionDiff {
+  table: string;
+  field: string;
+  expected_options: string[];
+  actual_options: string[];
+  missing_options: string[];
+  extra_options: string[];
+  classification: SchemaOptionClassification;
+  action: 'NONE' | 'ADD_MISSING_OPTIONS' | 'BLOCK';
+}
 
 export interface SchemaConflict {
   table: string;
   field?: string;
-  reason: 'MISSING_EXISTING_TABLE' | 'DUPLICATE_TABLE' | 'FIELD_TYPE_MISMATCH' | 'FIELD_OPTIONS_MISMATCH';
+  reason:
+    | 'MISSING_EXISTING_TABLE'
+    | 'DUPLICATE_TABLE'
+    | 'FIELD_TYPE_MISMATCH'
+    | 'FIELD_OPTIONS_MISMATCH'
+    | 'FIELD_OPTIONS_AMBIGUOUS';
   expected_type?: number;
   actual_type?: number;
   message: string;
+  option_diff?: SchemaOptionDiff;
 }
 
 export interface AddedSchemaField {
@@ -40,13 +75,25 @@ export interface AddedSchemaField {
   type: number;
 }
 
+export interface AddedSchemaOptions {
+  table: string;
+  field: string;
+  options: string[];
+}
+
 export interface SchemaDiffResult {
   status: SchemaDiffStatus;
   created_tables: string[];
   added_fields: AddedSchemaField[];
+  added_options: AddedSchemaOptions[];
+  option_diffs: SchemaOptionDiff[];
   conflicts: SchemaConflict[];
   writes: number;
   schema_fingerprint: string;
+}
+
+export interface BootstrapTargetSchemaOptions {
+  dry_run?: boolean;
 }
 
 interface TableState {
@@ -60,26 +107,117 @@ interface PlannedField {
   field: SchemaFieldDefinition;
 }
 
+interface PlannedOptionPatch {
+  table: TableState;
+  field: BaseField;
+  expected: SchemaFieldDefinition;
+  missing_options: string[];
+}
+
+interface FieldValidation {
+  plannedFields: PlannedField[];
+  optionPatches: PlannedOptionPatch[];
+  optionDiffs: SchemaOptionDiff[];
+}
+
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
-function fieldOptions(field: BaseField): string[] | undefined {
+interface OptionInspection {
+  names: string[];
+  rawOptions: unknown[];
+  unreadable: boolean;
+  duplicateNormalizedNames: string[];
+}
+
+function normalizeOptionName(value: string): string {
+  return value.normalize('NFKC').trim();
+}
+
+function sortedUnique(values: readonly string[]): string[] {
+  return [...new Set(values)].sort(compareText);
+}
+
+function inspectOptions(field: BaseField): OptionInspection {
   const property = field.property;
-  if (!property || typeof property !== 'object') return undefined;
+  if (!property || typeof property !== 'object') {
+    return { names: [], rawOptions: [], unreadable: true, duplicateNormalizedNames: [] };
+  }
   const options = (property as Record<string, unknown>).options;
-  if (!Array.isArray(options)) return undefined;
-  const names = options.flatMap((option) => {
-    if (typeof option === 'string') return [option];
-    if (!option || typeof option !== 'object') return [];
-    const name = (option as Record<string, unknown>).name;
-    return typeof name === 'string' ? [name] : [];
-  });
-  return names.length > 0 ? names.sort(compareText) : undefined;
+  if (!Array.isArray(options)) {
+    return { names: [], rawOptions: [], unreadable: true, duplicateNormalizedNames: [] };
+  }
+  const names: string[] = [];
+  let unreadable = false;
+  for (const option of options) {
+    const name = typeof option === 'string'
+      ? option
+      : option && typeof option === 'object'
+        ? (option as Record<string, unknown>).name
+        : undefined;
+    if (typeof name !== 'string') {
+      unreadable = true;
+      continue;
+    }
+    names.push(name);
+    if (normalizeOptionName(name) === '') unreadable = true;
+  }
+  const normalizedNames = names.map(normalizeOptionName);
+  const duplicateNormalizedNames = sortedUnique(
+    normalizedNames.filter((name, index, all) => all.indexOf(name) !== index),
+  );
+  return {
+    names,
+    rawOptions: [...options],
+    unreadable,
+    duplicateNormalizedNames,
+  };
+}
+
+function fieldOptions(field: BaseField): string[] | undefined {
+  const inspection = inspectOptions(field);
+  if (inspection.unreadable || inspection.duplicateNormalizedNames.length > 0) return undefined;
+  return inspection.names.length > 0 ? inspection.names.sort(compareText) : undefined;
 }
 
 function sameOptions(expected: readonly string[], actual: readonly string[]): boolean {
   return [...expected].sort(compareText).join('\u0000') === [...actual].sort(compareText).join('\u0000');
+}
+
+function isSourceChannelField(
+  table: SchemaTableDefinition,
+  field: SchemaFieldDefinition,
+): boolean {
+  return table.name === 'Customers' && field.field_name === 'Source Channel';
+}
+
+function sourceChannelOptions(field: BaseField): OptionInspection {
+  return inspectOptions(field);
+}
+
+function optionDiff(
+  table: string,
+  field: string,
+  expectedOptions: readonly string[],
+  actualOptions: readonly string[],
+  classification: SchemaOptionClassification,
+  action: SchemaOptionDiff['action'],
+): SchemaOptionDiff {
+  const expected = sortedUnique(expectedOptions.map(normalizeOptionName));
+  const actual = actualOptions.map(normalizeOptionName).sort(compareText);
+  const expectedSet = new Set(expected);
+  const actualSet = new Set(actual);
+  return {
+    table,
+    field,
+    expected_options: expected,
+    actual_options: actual,
+    missing_options: expected.filter((name) => !actualSet.has(name)),
+    extra_options: [...actualSet].filter((name) => !expectedSet.has(name)).sort(compareText),
+    classification,
+    action,
+  };
 }
 
 function expectedField(definition: SchemaTableDefinition, fieldName: string): SchemaFieldDefinition | undefined {
@@ -95,7 +233,9 @@ function schemaFingerprint(
         name: table.name,
         fields: fields
           .map((field) => {
-            const options = fieldOptions(field);
+            const options = field.field_name === 'Source Channel' && table.name === 'Customers'
+              ? sourceChannelOptions(field).names.map(normalizeOptionName).sort(compareText)
+              : fieldOptions(field);
             return {
               field_name: field.field_name,
               type: field.type,
@@ -112,11 +252,14 @@ function emptyResult(
   status: SchemaDiffStatus,
   conflicts: SchemaConflict[],
   fingerprint: string,
+  optionDiffs: SchemaOptionDiff[] = [],
 ): SchemaDiffResult {
   return {
     status,
     created_tables: [],
     added_fields: [],
+    added_options: [],
+    option_diffs: optionDiffs,
     conflicts,
     writes: 0,
     schema_fingerprint: fingerprint,
@@ -168,8 +311,10 @@ async function readTableStates(
   return { states, conflicts, fingerprint };
 }
 
-function validateFields(states: TableState[], conflicts: SchemaConflict[]): PlannedField[] {
+function validateFields(states: TableState[], conflicts: SchemaConflict[]): FieldValidation {
   const plannedFields: PlannedField[] = [];
+  const optionPatches: PlannedOptionPatch[] = [];
+  const optionDiffs: SchemaOptionDiff[] = [];
   for (const state of states) {
     if (!state.table) continue;
     const fieldsByName = new Map<string, BaseField[]>();
@@ -206,21 +351,136 @@ function validateFields(states: TableState[], conflicts: SchemaConflict[]): Plan
         continue;
       }
       if (expected.options) {
-        const actualOptions = fieldOptions(actual);
-        if (!actualOptions || !sameOptions(expected.options, actualOptions)) {
-          conflicts.push({
-            table: state.definition.name,
-            field: expected.field_name,
-            reason: 'FIELD_OPTIONS_MISMATCH',
-            expected_type: expected.type,
-            actual_type: actual.type,
-            message: `Existing select options for ${expected.field_name} differ from the target contract`,
-          });
+        if (isSourceChannelField(state.definition, expected)) {
+          const inspection = sourceChannelOptions(actual);
+          const diff = optionDiff(
+            state.definition.name,
+            expected.field_name,
+            expected.options,
+            inspection.names,
+            inspection.unreadable
+              ? 'OPTIONS_UNREADABLE'
+              : inspection.duplicateNormalizedNames.length > 0
+                ? 'AMBIGUOUS_NORMALIZED_NAME'
+                : 'SEMANTIC_SUBSET_PASS',
+            inspection.unreadable || inspection.duplicateNormalizedNames.length > 0
+              ? 'BLOCK'
+              : 'NONE',
+          );
+          if (inspection.unreadable) {
+            conflicts.push({
+              table: state.definition.name,
+              field: expected.field_name,
+              reason: 'FIELD_OPTIONS_MISMATCH',
+              expected_type: expected.type,
+              actual_type: actual.type,
+              message: `Existing select options for ${expected.field_name} could not be read`,
+              option_diff: diff,
+            });
+          } else if (inspection.duplicateNormalizedNames.length > 0) {
+            conflicts.push({
+              table: state.definition.name,
+              field: expected.field_name,
+              reason: 'FIELD_OPTIONS_AMBIGUOUS',
+              expected_type: expected.type,
+              actual_type: actual.type,
+              message: `Existing select options for ${expected.field_name} contain duplicate normalized names`,
+              option_diff: diff,
+            });
+          } else {
+            const expectedNames = sortedUnique(expected.options.map(normalizeOptionName));
+            const actualNames = inspection.names.map(normalizeOptionName);
+            const actualSet = new Set(actualNames);
+            const missingOptions = expectedNames.filter((name) => !actualSet.has(name));
+            if (missingOptions.length > 0) {
+              optionPatches.push({
+                table: state,
+                field: actual,
+                expected,
+                missing_options: missingOptions,
+              });
+              optionDiffs.push({
+                ...diff,
+                classification: 'MISSING_EXPECTED_OPTIONS',
+                action: 'ADD_MISSING_OPTIONS',
+              });
+            } else {
+              optionDiffs.push(diff);
+            }
+          }
+        } else {
+          const actualOptions = fieldOptions(actual);
+          if (!actualOptions || !sameOptions(expected.options, actualOptions)) {
+            const strictDiff = optionDiff(
+              state.definition.name,
+              expected.field_name,
+              expected.options,
+              actualOptions ?? inspectOptions(actual).names,
+              'STRICT_EXACT_MISMATCH',
+              'BLOCK',
+            );
+            optionDiffs.push(strictDiff);
+            conflicts.push({
+              table: state.definition.name,
+              field: expected.field_name,
+              reason: 'FIELD_OPTIONS_MISMATCH',
+              expected_type: expected.type,
+              actual_type: actual.type,
+              message: `Existing select options for ${expected.field_name} differ from the target contract`,
+              option_diff: strictDiff,
+            });
+          }
         }
       }
     }
   }
-  return plannedFields;
+  return { plannedFields, optionPatches, optionDiffs };
+}
+
+function optionPatchConflicts(
+  patches: PlannedOptionPatch[],
+): SchemaConflict[] {
+  return patches.map((patch) => {
+    const diff = optionDiff(
+      patch.table.definition.name,
+      patch.expected.field_name,
+      patch.expected.options ?? [],
+      inspectOptions(patch.field).names,
+      'MISSING_EXPECTED_OPTIONS',
+      'ADD_MISSING_OPTIONS',
+    );
+    return {
+      table: patch.table.definition.name,
+      field: patch.expected.field_name,
+      reason: 'FIELD_OPTIONS_MISMATCH',
+      expected_type: patch.expected.type,
+      actual_type: patch.field.type,
+      message: `Schema option patch readback is still missing expected options for ${patch.expected.field_name}`,
+      option_diff: diff,
+    };
+  });
+}
+
+function optionPatchInput(
+  field: BaseField,
+  missingOptions: readonly string[],
+): CreateFieldInput {
+  const property = field.property && typeof field.property === 'object'
+    ? field.property as Record<string, unknown>
+    : {};
+  const existingOptions = Array.isArray(property.options) ? [...property.options] : [];
+  return {
+    field_name: field.field_name,
+    type: field.type,
+    property: {
+      ...property,
+      options: [
+        ...existingOptions,
+        ...missingOptions.map((name) => ({ name })),
+      ],
+    },
+    ...(typeof field.description === 'string' ? { description: field.description } : {}),
+  };
 }
 
 async function resolveCreatedTable(
@@ -241,18 +501,41 @@ async function resolveCreatedTable(
 export async function bootstrapTargetSchema(
   client: SchemaBootstrapClient,
   targetToken: string,
+  options: BootstrapTargetSchemaOptions = {},
 ): Promise<SchemaDiffResult> {
   if (!targetToken.trim()) throw new Error('bootstrapTargetSchema requires targetToken');
 
   const before = await readTableStates(client, targetToken);
-  const plannedFields = validateFields(before.states, before.conflicts);
+  const validation = validateFields(before.states, before.conflicts);
   if (before.conflicts.length > 0) {
-    return emptyResult('SCHEMA_CONFLICT', before.conflicts, before.fingerprint);
+    return emptyResult(
+      'SCHEMA_CONFLICT',
+      before.conflicts,
+      before.fingerprint,
+      validation.optionDiffs,
+    );
   }
 
   const missingTables = before.states.filter((state) => !state.table && !state.definition.existing);
+  if (
+    options.dry_run &&
+    (missingTables.length > 0 || validation.plannedFields.length > 0 || validation.optionPatches.length > 0)
+  ) {
+    return {
+      status: 'SCHEMA_PATCH_REQUIRED',
+      created_tables: [],
+      added_fields: [],
+      added_options: [],
+      option_diffs: validation.optionDiffs,
+      conflicts: [],
+      writes: 0,
+      schema_fingerprint: before.fingerprint,
+    };
+  }
+
   const createdTables: string[] = [];
   const addedFields: AddedSchemaField[] = [];
+  const addedOptions: AddedSchemaOptions[] = [];
   let writes = 0;
 
   for (const state of missingTables) {
@@ -279,7 +562,7 @@ export async function bootstrapTargetSchema(
   }
 
   const fieldsToAdd = [
-    ...plannedFields,
+    ...validation.plannedFields,
     ...missingTables.flatMap((state) => {
       const existingNames = new Set(state.fields.map((field) => field.field_name));
       return state.definition.fields
@@ -306,13 +589,36 @@ export async function bootstrapTargetSchema(
     writes += 1;
   }
 
+  for (const patch of validation.optionPatches) {
+    if (!patch.table.table) continue;
+    await client.updateField(
+      targetToken,
+      patch.table.table.table_id,
+      patch.field.field_id,
+      optionPatchInput(patch.field, patch.missing_options),
+    );
+    addedOptions.push({
+      table: patch.table.definition.name,
+      field: patch.expected.field_name,
+      options: [...patch.missing_options],
+    });
+    writes += 1;
+  }
+
   const after = await readTableStates(client, targetToken);
-  if (after.conflicts.length > 0) {
+  const afterValidation = validateFields(after.states, after.conflicts);
+  const readbackConflicts = [
+    ...after.conflicts,
+    ...optionPatchConflicts(afterValidation.optionPatches),
+  ];
+  if (readbackConflicts.length > 0) {
     return {
       status: 'SCHEMA_CONFLICT',
       created_tables: createdTables,
       added_fields: addedFields,
-      conflicts: after.conflicts,
+      added_options: addedOptions,
+      option_diffs: afterValidation.optionDiffs,
+      conflicts: readbackConflicts,
       writes,
       schema_fingerprint: after.fingerprint,
     };
@@ -320,9 +626,15 @@ export async function bootstrapTargetSchema(
 
   return {
     status:
-      createdTables.length > 0 ? 'CREATED' : addedFields.length > 0 ? 'UPDATED' : 'NOOP',
+      createdTables.length > 0 || addedFields.length > 0 || addedOptions.length > 0
+        ? createdTables.length > 0
+          ? 'CREATED'
+          : 'UPDATED'
+        : 'NOOP',
     created_tables: createdTables,
     added_fields: addedFields,
+    added_options: addedOptions,
+    option_diffs: afterValidation.optionDiffs,
     conflicts: [],
     writes,
     schema_fingerprint: after.fingerprint,
@@ -334,9 +646,14 @@ export async function getTargetSchemaFingerprint(
   targetToken: string,
 ): Promise<string> {
   const result = await readTableStates(client, targetToken);
-  if (result.conflicts.length > 0) {
+  const validation = validateFields(result.states, result.conflicts);
+  if (result.conflicts.length > 0 || validation.optionPatches.length > 0) {
+    const conflicts = [
+      ...result.conflicts,
+      ...optionPatchConflicts(validation.optionPatches),
+    ];
     throw new Error(
-      `SCHEMA_CONFLICT: ${result.conflicts.map((conflict) => conflict.message).join('; ')}`,
+      `SCHEMA_CONFLICT: ${conflicts.map((conflict) => conflict.message).join('; ')}`,
     );
   }
   return result.fingerprint;

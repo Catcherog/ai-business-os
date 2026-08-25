@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { applyMigration, type ApplyReport } from './apply.js';
+import { applyMigration, selectCanaryDecisions, type ApplyReport } from './apply.js';
 import { bootstrapTargetSchema, getTargetSchemaFingerprint } from './bootstrap.js';
 import { loadFeishuMigrationConfig } from './config.js';
 import {
@@ -19,7 +19,7 @@ import {
   type ResolvedFeishuMigrationConfig,
 } from './drive-inventory.js';
 import { discoverSourceInventory } from './inventory.js';
-import { createMigrationManifest, type MigrationManifest } from './plan.js';
+import { createMigrationManifest, targetTableName, type MigrationManifest } from './plan.js';
 import { redactForLog } from './redact.js';
 import { verifyMigration, type LiveVerificationReport } from './verify-live.js';
 import type { TargetSnapshot } from './types.js';
@@ -48,13 +48,14 @@ export interface ParsedCliArgs {
   output_dir?: string;
   canary: boolean;
   schema_only: boolean;
+  dry_run: boolean;
   scope?: MigrationVerifyScope;
 }
 
 export function parseCliArgs(args: string[]): ParsedCliArgs {
   const rawCommand = args[0];
   if (!rawCommand || args.some((argument) => argument === '--help' || argument === '-h')) {
-    return { command: 'help', canary: false, schema_only: false };
+    return { command: 'help', canary: false, schema_only: false, dry_run: false };
   }
   const command = rawCommand as MigrationCliCommand;
   if (!['inventory', 'plan', 'bootstrap', 'apply', 'verify', 'config'].includes(command)) {
@@ -66,6 +67,7 @@ export function parseCliArgs(args: string[]): ParsedCliArgs {
   let output_dir: string | undefined;
   let canary = false;
   let schema_only = false;
+  let dry_run = false;
   let scope: MigrationVerifyScope | undefined;
   for (let index = 1; index < args.length; index += 1) {
     const argument = args[index];
@@ -87,6 +89,10 @@ export function parseCliArgs(args: string[]): ParsedCliArgs {
       schema_only = true;
       continue;
     }
+    if (argument === '--dry-run') {
+      dry_run = true;
+      continue;
+    }
     if (argument === '--scope') {
       const value = args[index + 1]?.trim();
       if (value !== 'canary' && value !== 'full') {
@@ -100,6 +106,13 @@ export function parseCliArgs(args: string[]): ParsedCliArgs {
   }
   if (schema_only && command !== 'apply') {
     throw new Error('--schema-only is only valid for apply');
+  }
+  if (
+    dry_run &&
+    command !== 'bootstrap' &&
+    !(command === 'apply' && (schema_only || canary))
+  ) {
+    throw new Error('--dry-run is only valid for bootstrap, canary, or schema-only apply');
   }
   if (canary && command !== 'apply') {
     throw new Error('--canary is only valid for apply');
@@ -115,6 +128,7 @@ export function parseCliArgs(args: string[]): ParsedCliArgs {
     output_dir,
     canary,
     schema_only,
+    dry_run,
     scope,
   };
 }
@@ -127,6 +141,8 @@ function usage(): string {
     '  npm run migrate:inventory -- --output .artifacts/feishu-migration',
     '  npm run migrate:config -- --config-file <local-path>',
     '  npm run migrate:apply -- --schema-only --run-id <run_id>',
+    '  npm run migrate:bootstrap -- --dry-run',
+    '  npm run migrate:apply -- --canary --dry-run --run-id <run_id>',
     '  npm run migrate:apply -- --canary --run-id <run_id>',
     '  npm run migrate:verify -- --run-id <run_id> --scope canary',
     '  npm run migrate:apply -- --run-id <run_id>',
@@ -159,10 +175,18 @@ async function readOptionalJson<T>(path: string): Promise<T | undefined> {
   }
 }
 
+export function parseCanaryArtifact(value: unknown): RedactedCanaryArtifact {
+  const candidate = value && typeof value === 'object' &&
+    (value as { artifact_type?: unknown }).artifact_type === 'feishu-migration-apply-report'
+    ? (value as { canary?: unknown }).canary
+    : value;
+  return parseRedactedCanaryArtifact(candidate);
+}
+
 async function loadCanaryArtifact(args: ParsedCliArgs): Promise<RedactedCanaryArtifact | undefined> {
   const raw = await readOptionalJson<unknown>(join(outputDirectory(args), 'canary.json'));
   if (raw === undefined) return undefined;
-  const report = parseRedactedCanaryArtifact(raw);
+  const report = parseCanaryArtifact(raw);
   if (args.run_id && report.run_id !== args.run_id) {
     throw new Error('canary report run_id does not match requested run_id');
   }
@@ -454,9 +478,26 @@ async function runSchemaOnly(args: ParsedCliArgs): Promise<number> {
   const client = new FeishuClient({ appId: runtimeConfig.appId, appSecret: runtimeConfig.appSecret });
   const preflight = await runSourceTargetPreflight(runtimeConfig, client);
   const config = preflight.config;
-  const result = await bootstrapTargetSchema(client, config.targetBaseToken);
+  const dryRun = await bootstrapTargetSchema(client, config.targetBaseToken, { dry_run: true });
+  const dryRunPath = join(outputDirectory(args), 'schema-dry-run.json');
+  await writeJsonArtifact(dryRunPath, { run_id: runId(args), ...dryRun });
+  process.stdout.write(`${JSON.stringify({
+    phase: 'SCHEMA_DRY_RUN',
+    ...dryRun,
+    artifact_path: dryRunPath,
+    ...requestStatsFields(client.getRequestStats()),
+  }, null, 2)}\n`);
+  if (dryRun.status === 'SCHEMA_CONFLICT') {
+    const path = join(outputDirectory(args), 'schema.json');
+    await writeJsonArtifact(path, { run_id: runId(args), dry_run: dryRun, ...dryRun });
+    return 1;
+  }
+  if (args.dry_run) return 0;
+  const result = dryRun.status === 'SCHEMA_PATCH_REQUIRED'
+    ? await bootstrapTargetSchema(client, config.targetBaseToken)
+    : dryRun;
   const path = join(outputDirectory(args), 'schema.json');
-  await writeJsonArtifact(path, { run_id: runId(args), ...result });
+  await writeJsonArtifact(path, { run_id: runId(args), dry_run: dryRun, ...result });
   process.stdout.write(`${JSON.stringify({
     ...result,
     ...requestStatsFields(client.getRequestStats()),
@@ -482,6 +523,34 @@ async function runApply(args: ParsedCliArgs): Promise<number> {
     throw new Error('apply --run-id does not match manifest run_id');
   }
   const currentFingerprint = await getTargetSchemaFingerprint(client, config.targetBaseToken);
+  if (args.canary) {
+    const selected = selectCanaryDecisions(manifest);
+    const decision_counts = selected.reduce<Record<string, number>>((counts, decision) => {
+      counts[decision.decision] = (counts[decision.decision] ?? 0) + 1;
+      return counts;
+    }, {});
+    const canaryDryRun = {
+      phase: 'CANARY_DRY_RUN',
+      run_id: manifest.run_id,
+      selected_count: selected.length,
+      decision_counts,
+      target_tables: [...new Set(selected.map((decision) => targetTableName(decision)))].sort(),
+      write_candidates: selected.filter((decision) =>
+        decision.decision === 'CREATE' || decision.decision === 'UPDATE',
+      ).length,
+      non_write_review_or_skip: selected.filter((decision) =>
+        decision.decision === 'NEEDS_REVIEW' || decision.decision === 'SKIP',
+      ).length,
+    };
+    const dryRunPath = join(outputDirectory(args), 'canary-dry-run.json');
+    await writeJsonArtifact(dryRunPath, canaryDryRun);
+    process.stdout.write(`${JSON.stringify({
+      ...canaryDryRun,
+      artifact_path: dryRunPath,
+      ...requestStatsFields(client.getRequestStats()),
+    }, null, 2)}\n`);
+    if (args.dry_run) return 0;
+  }
   const canaryArtifact = args.canary ? undefined : await loadCanaryArtifact({
     ...args,
     run_id: args.run_id ?? manifest.run_id,

@@ -1,6 +1,51 @@
 # Feishu v3 Migration Closure
 
-## Verdict
+## Authoritative post-resume closure — 2026-08-25
+
+`MIGRATION_PASS`
+
+This is the authoritative closure for `BUSOS-FEISHU-V3-SCHEMA-RESUME-03`.
+Read-only inventory, target identity/allowlist, schema, canary, canary
+readback, full migration, full readback, and same-batch idempotency all
+passed. The 562 `NEEDS_REVIEW` decisions remain traceable and were not
+silently written.
+
+- Branch: `codex/busos-feishu-v3`.
+- PRE / expected remote SHA: `a19bbcc66105c2b53f5c7165535f09d3a3fdafef`.
+- POST commit SHA: `POST_COMMIT_SHA_FILLED_AFTER_COMMIT`.
+- Remote feature SHA: `REMOTE_FEATURE_SHA_FILLED_AFTER_PUSH`.
+- Main before/after: `729108d8059e3e143194a05f43e510af3587d385`.
+- Main merge: `NO`; deployment: `NO`.
+- Inventory: `INVENTORY_PASS`; 388 resources, 54 folders, one legacy Base,
+  eight source workbooks; target allowlist `PASS`, 17 tables.
+- Plan: 903 source records, 661 decisions, 99 executable creates, 562 review.
+- Source Channel: type `3`; expected option names are a semantic subset of
+  actual names; four missing names were added, target extras preserved, no
+  option deleted or renamed; schema readback `PASS`.
+- Seven required existing target table preflights: all `PASS` — 数据表,
+  Customers, Projects, Business Events, Tasks, Evidence, BUSOS Asset.
+- Canary: 21 selected; net 20 created, 0 updated, 7 final skips, 1 review,
+  0 failed; readback `PASS`.
+- Full: 79 applied, 20 skips, 562 review, 0 failed; 79 business and 79
+  registry writes.
+- Idempotency: 0 applied, 99 skips, 562 review, 0 failed, 0 writes.
+- Final full readback: `PASS`; applied `99`, mismatches `0`, dangling
+  canonical IDs `0`.
+- Final target counts: Content Research 21, Customers 71, Projects 7,
+  Resources 9.
+- Recorded cumulative counters through closure: `2753 HTTP / 2301 reads /
+  442 writes`; one interrupted dry-run had no writes and no persisted counter.
+- Migration package tests: `83/83 PASS`; typecheck, build, smoke, product
+  integration smoke, and browser bundle secret scan: `PASS`.
+- Repository-wide test command still has exactly two pre-existing mojibake
+  assertion failures in `packages/service-agent-candidate/tests/service-agent-bridge.test.ts`;
+  that file was not changed.
+
+Source Drive, legacy Base, and source workbooks remained read-only. No
+credential, token, URL, record ID, or raw personal payload was persisted in
+the tracked closure.
+
+## Historical pre-resume verdict
 
 `SCHEMA_BLOCKED`
 

@@ -7,6 +7,7 @@ import {
   type NormalizedMigrationRecord,
 } from '../src/dedupe.js';
 import { parseAvailability } from '../src/normalize/resources.js';
+import { normalizeCustomer } from '../src/normalize/customers.js';
 import type { SourceInventory } from '../src/inventory.js';
 import type { SourceRecord } from '../src/types.js';
 
@@ -81,6 +82,29 @@ describe('canonical business keys', () => {
     expect(normalizeProjectCode('cthrn')).toBe('cthrn');
     expect(normalizeProjectCode('XM-1')).toBe('XM1');
     expect(normalizeProjectCode('XM20260610001')).toBe('XM20260610001');
+  });
+
+  it('maps Source Channel by normalized exact name and reviews unknown values', () => {
+    const matched = normalizeCustomer(sourceRecord('customer-1', {
+      entity_type: 'customer',
+      customer_id: 'C-1',
+      'Source Channel': '  ＢＡＳＥ  ',
+    }));
+    expect(matched).toMatchObject({
+      confidence: 'HIGH',
+      canonical_target: { source_channel: 'BASE' },
+    });
+
+    const unknown = normalizeCustomer(sourceRecord('customer-2', {
+      entity_type: 'customer',
+      customer_id: 'C-2',
+      'Source Channel': 'base-ish',
+    }));
+    expect(unknown).toMatchObject({
+      confidence: 'LOW',
+      reason: 'Source Channel value did not exactly match an expected option',
+    });
+    expect(unknown.canonical_target).not.toHaveProperty('source_channel');
   });
 });
 

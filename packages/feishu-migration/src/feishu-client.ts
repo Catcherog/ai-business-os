@@ -133,6 +133,29 @@ const PAGE_SIZE = 500;
 const DRIVE_PAGE_SIZE = 200;
 const RETRY_CODE = 1_254_291;
 
+function safeOperation(path: string, method: string): string {
+  const normalized = path.split('?')[0];
+  if (normalized.endsWith('/tables') && method === 'POST') return 'bitable.createTable';
+  if (normalized.endsWith('/fields') && method === 'GET') return 'bitable.listFields';
+  if (normalized.endsWith('/fields') && method === 'POST') return 'bitable.createField';
+  if (normalized.includes('/fields/') && method === 'PUT') return 'bitable.updateField';
+  if (normalized.endsWith('/tables') && method === 'GET') return 'bitable.listTables';
+  if (normalized.includes('/records/') && method === 'PUT') return 'bitable.updateRecord';
+  if (normalized.endsWith('/records') && method === 'POST') return 'bitable.createRecord';
+  if (normalized.includes('/records') && method === 'GET') return 'bitable.listRecords';
+  if (normalized.startsWith('/open-apis/drive/') && method === 'GET') return 'drive.read';
+  if (normalized.startsWith('/open-apis/sheets/') && method === 'GET') return 'sheets.read';
+  return `${method} api.request`;
+}
+
+function fieldRequestBody(input: CreateFieldInput): Record<string, unknown> {
+  const { description, ...field } = input;
+  return {
+    ...field,
+    ...(description ? { description: { text: description } } : {}),
+  };
+}
+
 export class FeishuClient {
   private readonly appId: string;
   private readonly appSecret: string;
@@ -247,9 +270,6 @@ export class FeishuClient {
         body: JSON.stringify({
           table: {
             name: input.name,
-            default_view_name: input.default_view_name,
-            fields: input.fields,
-            description: input.description,
           },
         }),
       },
@@ -274,13 +294,39 @@ export class FeishuClient {
           Authorization: `Bearer ${await this.getTenantAccessToken()}`,
           'Content-Type': 'application/json; charset=utf-8',
         },
-        body: JSON.stringify(input),
+        body: JSON.stringify(fieldRequestBody(input)),
       },
     );
     const field = response.data?.field ?? response.data;
     if (!field || typeof field !== 'object') {
       throw new Error(
         `Feishu field creation returned no field (table=${tableId}, field=${input.field_name})`,
+      );
+    }
+    return field as BaseField;
+  }
+
+  async updateField(
+    appToken: string,
+    tableId: string,
+    fieldId: string,
+    input: CreateFieldInput,
+  ): Promise<BaseField> {
+    const response = await this.request(
+      `/open-apis/bitable/v1/apps/${encodeURIComponent(appToken)}/tables/${encodeURIComponent(tableId)}/fields/${encodeURIComponent(fieldId)}`,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${await this.getTenantAccessToken()}`,
+          'Content-Type': 'application/json; charset=utf-8',
+        },
+        body: JSON.stringify(fieldRequestBody(input)),
+      },
+    );
+    const field = response.data?.field ?? response.data;
+    if (!field || typeof field !== 'object') {
+      throw new Error(
+        `Feishu field update returned no field (table=${tableId}, field=${fieldId})`,
       );
     }
     return field as BaseField;
@@ -434,7 +480,7 @@ export class FeishuClient {
         }
         const prefix = credentialFailure ? 'Feishu credential request failed' : 'Feishu read failed';
         throw new Error(
-          `${prefix} (status=${response.status}, code=${payload.code ?? 'unknown'})`,
+          `${prefix} (operation=${safeOperation(path, method)}, status=${response.status}, code=${payload.code ?? 'unknown'})`,
         );
       }
       return payload;

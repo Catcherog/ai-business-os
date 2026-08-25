@@ -64,7 +64,7 @@ const canonicalTable = (
   description: string,
 ): SchemaTableDefinition => ({ name, fields, description, existing: false });
 
-const SOURCE_CHANNELS = ['BASE', 'SHEET', 'DOCUMENT', 'COLLATOR', 'OTHER'] as const;
+export const SOURCE_CHANNELS = ['BASE', 'SHEET', 'DOCUMENT', 'COLLATOR', 'OTHER'] as const;
 const RESOURCE_TYPES = [
   'MODEL',
   'MAKEUP',

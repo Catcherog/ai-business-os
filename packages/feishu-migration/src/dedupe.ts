@@ -153,6 +153,9 @@ function decisionForGroup(
   const tiedHighest = sortedSources.filter((source) => sourcePriority(source) === highestPriority);
   const lowConfidence = candidates.some(({ normalized }) => normalized.confidence === 'LOW');
   const ambiguous = lowConfidence || (conflicts.length > 0 && tiedHighest.length > 1);
+  const lowConfidenceReason = candidates.find(
+    ({ normalized }) => normalized.confidence === 'LOW',
+  )?.normalized.reason;
   const decision: NormalizedMigrationRecord['decision'] = ambiguous ? 'NEEDS_REVIEW' : 'CREATE';
   return {
     source: sortedSources[0],
@@ -161,7 +164,7 @@ function decisionForGroup(
     migration_key: key,
     reason: ambiguous
       ? lowConfidence
-        ? 'identity or normalization confidence is low'
+        ? lowConfidenceReason ?? 'identity or normalization confidence is low'
         : 'same-priority sources contain conflicting values'
       : 'new high-confidence canonical record',
     confidence: ambiguous ? 'LOW' : 'HIGH',

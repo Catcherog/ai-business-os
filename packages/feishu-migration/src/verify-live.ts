@@ -1,7 +1,8 @@
-import type { BaseRecord, BaseTable } from './feishu-client.js';
+import type { BaseField, BaseRecord, BaseTable } from './feishu-client.js';
 import { manifestDecisions, targetTableName, type MigrationManifest } from './plan.js';
 import type { VerificationReport } from './types.js';
 import type { MigrationWriteClient } from './apply.js';
+import { projectRecordFields } from './record-fields.js';
 
 export interface VerificationMismatch {
   migration_key: string;
@@ -83,6 +84,17 @@ export async function verifyMigration(
   );
   const expectedTables = new Set(decisions.filter((decision) => decision.decision !== 'NEEDS_REVIEW').map(targetTableName));
   expectedTables.add('Migration Registry');
+  const fieldsByTable = new Map<string, BaseField[]>();
+  if (client.listAllFields) {
+    try {
+      for (const tableName of [...expectedTables].sort()) {
+        const tableId = tableIds.get(tableName);
+        if (tableId) fieldsByTable.set(tableName, await client.listAllFields(options.target_token, tableId));
+      }
+    } catch {
+      addMismatch(mismatches, '__schema__', 'target field schema read failed');
+    }
+  }
   const recordsByTable = new Map<string, BaseRecord[]>();
   for (const tableName of [...expectedTables].sort()) {
     const tableId = tableIds.get(tableName);
@@ -135,16 +147,25 @@ export async function verifyMigration(
       addMismatch(mismatches, decision.migration_key, `expected one target record, found ${matches.length}`);
       continue;
     }
-    const expected =
+    const expected = projectRecordFields(
+      tableName,
       decision.canonical_target && typeof decision.canonical_target === 'object'
         ? { ...(decision.canonical_target as Record<string, unknown>), 'Migration Key': decision.migration_key }
-        : { 'Migration Key': decision.migration_key };
+        : { 'Migration Key': decision.migration_key },
+      fieldsByTable.get(tableName),
+    ).fields;
     if (!matchesExpected(matches[0], expected)) {
       addMismatch(mismatches, decision.migration_key, 'target payload differs from manifest canonical payload');
     }
     const required = options.required_fields?.[tableName] ?? Object.keys(expected);
     for (const field of required) {
-      if (fieldValue(matches[0].fields ?? {}, field) === undefined) {
+      const projectedRequired = projectRecordFields(
+        tableName,
+        { [field]: true },
+        fieldsByTable.get(tableName),
+      ).fields;
+      const requiredField = Object.keys(projectedRequired)[0] ?? field;
+      if (fieldValue(matches[0].fields ?? {}, requiredField) === undefined) {
         requiredFieldsVerified = false;
         addMismatch(mismatches, decision.migration_key, `required field ${field} is missing`);
       }

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { parseCliArgs } from '../src/cli.js';
+import { parseCanaryArtifact, parseCliArgs } from '../src/cli.js';
+import { redactApplyReport } from '../src/artifact.js';
+import type { ApplyReport } from '../src/apply.js';
 
 describe('migration CLI contract', () => {
   it('accepts help after the command when invoked through an npm script', () => {
@@ -22,6 +24,13 @@ describe('migration CLI contract', () => {
       command: 'apply',
       schema_only: true,
       run_id: 'run-20260825',
+    });
+  });
+
+  it('accepts a read-only schema dry-run before bootstrap writes', () => {
+    expect(parseCliArgs(['bootstrap', '--dry-run'])).toMatchObject({
+      command: 'bootstrap',
+      dry_run: true,
     });
   });
 
@@ -55,5 +64,34 @@ describe('migration CLI contract', () => {
         canary: false,
         schema_only: false,
       });
+  });
+
+  it('loads the nested canary artifact persisted inside canary.json apply reports', () => {
+    const persisted = redactApplyReport({
+      run_id: 'run-canary',
+      mode: 'canary',
+      status: 'PASS',
+      results: [],
+      field_mismatches: [],
+      untracked_writes: 0,
+      schema_conflicts: [],
+      business_writes: 0,
+      registry_writes: 0,
+      canary_report: {
+        run_id: 'run-canary',
+        status: 'PASS',
+        selected_keys: ['project:FZ1'],
+        field_mismatches: [],
+        untracked_writes: 0,
+        schema_conflicts: [],
+        results: [],
+      },
+    } satisfies ApplyReport);
+
+    expect(parseCanaryArtifact(persisted)).toMatchObject({
+      artifact_type: 'feishu-migration-canary-report',
+      run_id: 'run-canary',
+      status: 'PASS',
+    });
   });
 });

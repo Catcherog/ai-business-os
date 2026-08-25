@@ -4,7 +4,7 @@ import {
   createMigrationManifest,
   type MigrationManifest,
 } from '../src/plan.js';
-import type { BaseRecord, BaseTable, RecordWriteInput } from '../src/feishu-client.js';
+import type { BaseField, BaseRecord, BaseTable, RecordWriteInput } from '../src/feishu-client.js';
 import type { SourceInventory } from '../src/inventory.js';
 
 const FINGERPRINT = 'schema-fingerprint-v1';
@@ -15,6 +15,33 @@ class FakeMigrationClient implements MigrationWriteClient {
     { table_id: 'registry', name: 'Migration Registry' },
   ];
   records = new Map<string, BaseRecord[]>();
+  fields = new Map<string, BaseField[]>([
+    ['projects', [
+      { field_id: 'project-id', field_name: 'Project ID', type: 1 },
+      { field_id: 'project-name', field_name: 'Project Name', type: 1 },
+      { field_id: 'migration-key', field_name: 'Migration Key', type: 1 },
+    ]],
+    ['registry', [
+      { field_id: 'migration-id', field_name: 'Migration ID', type: 1 },
+      { field_id: 'run-id', field_name: 'Run ID', type: 1 },
+      { field_id: 'source-type', field_name: 'Source Type', type: 3 },
+      { field_id: 'source-token-hash', field_name: 'Source Token Hash', type: 1 },
+      { field_id: 'source-table', field_name: 'Source Table', type: 1 },
+      { field_id: 'source-record-id', field_name: 'Source Record ID', type: 1 },
+      { field_id: 'source-business-key', field_name: 'Source Business Key', type: 1 },
+      { field_id: 'source-payload-hash', field_name: 'Source Payload Hash', type: 1 },
+      { field_id: 'target-table', field_name: 'Target Table', type: 1 },
+      { field_id: 'target-record-id', field_name: 'Target Record ID', type: 1 },
+      { field_id: 'decision', field_name: 'Decision', type: 3 },
+      { field_id: 'confidence', field_name: 'Confidence', type: 3 },
+      { field_id: 'duplicate-of', field_name: 'Duplicate Of', type: 1 },
+      { field_id: 'conflict-json', field_name: 'Conflict JSON', type: 1 },
+      { field_id: 'status', field_name: 'Status', type: 3 },
+      { field_id: 'error-code', field_name: 'Error Code', type: 1 },
+      { field_id: 'error-summary', field_name: 'Error Summary', type: 1 },
+      { field_id: 'migrated-at', field_name: 'Migrated At', type: 5 },
+    ]],
+  ]);
   calls: string[] = [];
   failRegistryWrites = 0;
   private nextId = 1;
@@ -30,6 +57,10 @@ class FakeMigrationClient implements MigrationWriteClient {
 
   listAllTables(_token: string): Promise<BaseTable[]> {
     return Promise.resolve(this.tables.map((table) => ({ ...table })));
+  }
+
+  listAllFields(_token: string, tableId: string): Promise<BaseField[]> {
+    return Promise.resolve(structuredClone(this.fields.get(tableId) ?? []));
   }
 
   listAllRecords(_token: string, tableId: string): Promise<BaseRecord[]> {
@@ -182,5 +213,85 @@ describe('applyMigration', () => {
     expect(report.business_writes).toBe(1);
     expect(report.registry_writes).toBe(1);
     expect(client.calls.filter((call) => call === 'create:Projects')).toHaveLength(1);
+  });
+
+  it('projects canonical fields onto live display field names before write and readback', async () => {
+    const client = new FakeMigrationClient();
+    const report = await applyMigration(client, manifestFor(1), {
+      target_token: 'target-test-token',
+      mode: 'canary',
+    });
+
+    expect(report.status).toBe('PASS');
+    const businessRecord = client.records.get('projects')![0];
+    expect(businessRecord.fields).toMatchObject({
+      'Project ID': 'FZ1',
+      'Project Name': 'Project 1',
+      'Migration Key': 'project:FZ1',
+    });
+    expect(businessRecord.fields).not.toHaveProperty('project_code');
+    expect(businessRecord.fields).not.toHaveProperty('project_name');
+    expect(client.records.get('registry')![0].fields['Migrated At']).toEqual(expect.any(Number));
+  });
+
+  it('recovers a business record left behind when the registry write failed', async () => {
+    const client = new FakeMigrationClient();
+    client.records.set('projects', [{
+      record_id: 'rec-partial-business',
+      fields: {
+        'Project ID': 'FZ1',
+        'Project Name': 'Project 1',
+        'Migration Key': 'project:FZ1',
+      },
+    }]);
+
+    const report = await applyMigration(client, manifestFor(1), {
+      target_token: 'target-test-token',
+      mode: 'canary',
+    });
+
+    expect(report.status).toBe('PASS');
+    expect(report.business_writes).toBe(0);
+    expect(report.registry_writes).toBe(1);
+    expect(client.records.get('projects')).toHaveLength(1);
+  });
+
+  it('covers REVIEW and SKIP in canary without issuing business writes', async () => {
+    const reviewClient = new FakeMigrationClient();
+    const review = structuredClone(manifestFor(1));
+    review.plan.decisions[0] = {
+      ...review.plan.decisions[0],
+      decision: 'NEEDS_REVIEW',
+      confidence: 'LOW',
+      reason: 'Source Channel value did not exactly match an expected option',
+    };
+    const reviewReport = await applyMigration(reviewClient, review, {
+      target_token: 'target-test-token',
+      mode: 'canary',
+    });
+    expect(reviewReport.status).toBe('PASS');
+    expect(reviewReport.canary_report?.selected_keys).toHaveLength(1);
+    expect(reviewReport.results[0]).toMatchObject({
+      status: 'NEEDS_REVIEW',
+      reason: 'Source Channel value did not exactly match an expected option',
+    });
+    expect(reviewReport.business_writes).toBe(0);
+    expect(reviewClient.calls).toEqual([]);
+
+    const skipClient = new FakeMigrationClient();
+    const skip = structuredClone(manifestFor(1));
+    skip.plan.decisions[0] = {
+      ...skip.plan.decisions[0],
+      decision: 'SKIP',
+      reason: 'target has the same canonical payload',
+    };
+    const skipReport = await applyMigration(skipClient, skip, {
+      target_token: 'target-test-token',
+      mode: 'canary',
+    });
+    expect(skipReport.status).toBe('PASS');
+    expect(skipReport.results[0]).toMatchObject({ status: 'SKIP' });
+    expect(skipReport.business_writes).toBe(0);
+    expect(skipClient.calls).toEqual([]);
   });
 });

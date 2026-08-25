@@ -2,6 +2,199 @@
 
 Runbook: `BUSOS-FEISHU-V3-MIGRATION-RESUME-02`
 
+## Authoritative post-resume closure — 2026-08-25
+
+This addendum is the authoritative result for `BUSOS-FEISHU-V3-SCHEMA-RESUME-03`.
+The pre-resume report below is retained as historical evidence; its earlier
+`SCHEMA_BLOCKED` verdict is superseded by this closure.
+
+### Final verdict
+
+`MIGRATION_PASS`
+
+Inventory, target identity/allowlist, schema, canary, canary readback, full
+migration, full readback, and same-batch idempotency all passed. The 562
+`NEEDS_REVIEW` decisions were retained with redacted reasons and were not
+silently written. Legacy/source resources remained read-only; all writes were
+confined to the allowlisted target Base.
+
+### Authority and boundary
+
+- Branch: `codex/busos-feishu-v3`
+- PRE / expected remote SHA: `a19bbcc66105c2b53f5c7165535f09d3a3fdafef`
+- POST commit SHA: `POST_COMMIT_SHA_FILLED_AFTER_COMMIT`
+- Remote feature SHA: `REMOTE_FEATURE_SHA_FILLED_AFTER_PUSH`
+- Main before/after: `729108d8059e3e143194a05f43e510af3587d385`
+- Main merged: `NO`; deployed: `NO`
+- Initial dirty user worktree was preserved; implementation ran in the
+  isolated coordinator lane.
+- No force push, reset, checkout, merge, deployment, or Git repack repair was
+  performed. The shared `bad tree object` / geometric-repack warning remains
+  an environment warning.
+
+### Configuration and discovery
+
+- Credential verdict: `CREDENTIAL_VALID`; authorized local runtime values were
+  consumed in memory only and no App Secret was persisted or printed.
+- Runtime accepts `FEISHU_SOURCE_DRIVE_FOLDER_TOKEN` and
+  `FEISHU_TARGET_BASE_TOKEN`.
+- Explicit source token configuration remains an optional override.
+- Inventory: `INVENTORY_PASS`; resources `388`, folders `54`, exactly one
+  legacy Base candidate, exactly eight source workbooks.
+- Target allowlist: `PASS`; target identity verified; target table count `17`.
+
+| Candidate/workbook | Type |
+| --- | --- |
+| 泽怀影像全流程业务管理中台 | `shortcut` legacy Base candidate |
+| 成品发布情况表 | `sheet` |
+| 项目统计表 | `sheet` |
+| 化妆资源 | `sheet` |
+| 客户资源库 | `sheet` |
+| 模特资源 | `sheet` |
+| 场地资源 | `sheet` |
+| 道具资源 | `sheet` |
+| 服装资源 | `sheet` |
+
+### Plan and schema
+
+- Run ID: `busos-v3-schema-resume-03`.
+- Planned source records: `903`; decisions: `661`.
+- Expected decisions: `CREATE 99`, `UPDATE 0`, `SKIP 0`, `NEEDS_REVIEW 562`.
+- Target-before record count: `21`.
+- Final schema fingerprint:
+  `44796e74f99b9eaea4e9daa4858c164264b5c48c31671b444bcf5ff9d8941066`.
+- Global schema status: `UPDATED`; schema verdict: `PASS`; created tables: `0`.
+- Schema writes: `179` (`178` field additions plus one additive option
+  update); no field/table delete, rename, overwrite, or reorder.
+
+`Customers.Source Channel` readback:
+
+- Feishu type: `3`.
+- Expected names: `BASE`, `COLLATOR`, `DOCUMENT`, `OTHER`, `SHEET`.
+- Actual names: `BASE`, `COLLATOR`, `DOCUMENT`, `FEISHU`, `OTHER`, `SHEET`,
+  `WEB`, `WECHAT`.
+- Missing expected names: none; preserved extras: `FEISHU`, `WEB`, `WECHAT`.
+- Classification: `SEMANTIC_SUBSET_PASS`.
+- Additive options: `BASE`, `COLLATOR`, `DOCUMENT`, `SHEET`.
+- Immediate schema readback: `PASS`.
+
+Required existing target table preflights:
+
+| Table | Verdict |
+| --- | --- |
+| 数据表 | `PASS` |
+| Customers | `PASS` |
+| Projects | `PASS` |
+| Business Events | `PASS` |
+| Tasks | `PASS` |
+| Evidence | `PASS` |
+| BUSOS Asset | `PASS` |
+
+Unknown or ambiguous Source Channel values were routed to review; no unknown
+source value created a target option.
+
+### Canary and readback
+
+Canary dry-run selected `21` records: `CREATE 20`, `REVIEW 1`.
+
+| Metric | Count |
+| --- | ---: |
+| Attempted manifest records | 21 |
+| Net business records created | 20 |
+| Updated | 0 |
+| Final apply skips | 7 |
+| Review | 1 |
+| Failed at closure | 0 |
+| Business writes | 20 |
+| Registry writes | 20 |
+
+The final resume process was `APPLIED 13 / SKIP 7 / NEEDS_REVIEW 1 /
+FAILED 0`; skips were existing migration-key-fenced records. Two earlier
+canary attempts stopped fail-closed on live display-name projection and date
+type issues; the partial state was reconciled by readback before continuation.
+No records were deleted.
+
+Canary readback: `PASS`; planned `21`, applied `20`, unique keys true, payload
+hashes/required fields/schema fingerprint verified, field mismatches `0`,
+dangling canonical IDs `0`.
+
+### Full migration, readback, and idempotency
+
+First full apply:
+
+| Metric | Count |
+| --- | ---: |
+| Applied | 79 |
+| Updated | 0 |
+| Skipped | 20 |
+| Needs review | 562 |
+| Failed | 0 |
+| Business writes | 79 |
+| Registry writes | 79 |
+| Untracked writes | 0 |
+| Schema conflicts | 0 |
+
+Full readback: `PASS`; `99` applied records verified (20 canary + 79 full).
+Final target counts: Content Research `21`, Customers `71`, Projects `7`,
+Resources `9`. Unique migration keys, payload hashes, required fields, and
+schema fingerprint passed; mismatches and dangling canonical IDs were `0`.
+
+Same-input/same-run-id idempotency: `PASS` — `APPLIED 0`, `SKIP 99`,
+`NEEDS_REVIEW 562`, `FAILED 0`, business writes `0`, registry writes `0`,
+Feishu writes `0`. Final readback remained `PASS` and counts were stable.
+
+### Request counters
+
+Each row is the redacted counter emitted by one live CLI process. HTTP includes
+the credential-token request; reads exclude it; writes count attempted
+non-credential mutations, including fail-closed attempts.
+
+| Scope | HTTP | Reads | Writes |
+| --- | ---: | ---: | ---: |
+| Authority baseline supplied before this run | 258 | 255 | 0 |
+| Recorded cumulative before canary | 970 | 780 | 191 |
+| Canary dry-run before first attempt | 138 | 137 | 0 |
+| Canary fail-closed attempt 1 | 160 | 139 | 20 |
+| Canary fail-closed attempt 2 | 225 | 164 | 60 |
+| Resume canary dry-run | 138 | 137 | 0 |
+| Final canary apply | 162 | 148 | 13 |
+| Canary readback | 149 | 148 | 0 |
+| First full apply | 307 | 148 | 158 |
+| Full readback | 149 | 148 | 0 |
+| Idempotency rerun | 149 | 148 | 0 |
+| Final full readback | 149 | 148 | 0 |
+| Post-full inventory | 57 | 56 | 0 |
+| Recorded cumulative through closure | **2753** | **2301** | **442** |
+
+One interrupted pre-resume dry-run had no write request and no persisted
+counter; the cumulative row is therefore the exact sum of emitted/retained
+process counters and conservative for HTTP/read requests. It does not affect
+the zero-write idempotency or final verdict.
+
+### Verification and artifacts
+
+- Feishu migration package: `83/83 PASS` across `10` test files.
+- Repository typecheck, build, smoke, and product integration smoke: `PASS`.
+- Browser bundle secret scan: `PASS` (`X01-C`, product-integration boundary,
+  `SMOKE_FEISHU_V3_OK`). Changed-file secret/resource scan: `PASS`, zero
+  unclassified credentials.
+- Repository-wide test command: exit `1` only on the two pre-existing mojibake
+  assertions in `packages/service-agent-candidate/tests/service-agent-bridge.test.ts`;
+  those files were not changed. No migration or operator test failed.
+- Report: `project-control/FEISHU-V3-MIGRATION-REPORT.md`.
+- Closure: `project-control/FEISHU-V3-CLOSURE.md`.
+- Redacted manifest: `.artifacts/feishu-v3-migration-resume/manifest.json`.
+- First full report: `.artifacts/feishu-v3-migration-resume/full-first.json`.
+- Idempotency report: `.artifacts/feishu-v3-migration-resume/full.json`.
+- Final readback: `.artifacts/feishu-v3-migration-resume/verify-full.json`.
+- Schema report: `.artifacts/feishu-v3-schema-resume-3/schema.json`.
+- Post-full inventory: `.artifacts/feishu-v3-post-full-inventory/source-inventory.json`.
+
+All tracked evidence is redacted; no credential, token, URL, record ID, or raw
+personal payload is stored.
+
+## Historical pre-resume record
+
 This report records the authorized local-credential run on 2026-08-25.
 Credentials, resource URLs, tokens, raw Feishu responses, record IDs, and
 personal payloads are intentionally omitted.

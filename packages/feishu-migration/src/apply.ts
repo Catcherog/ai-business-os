@@ -1,13 +1,15 @@
-import type { BaseRecord, BaseTable, RecordWriteInput } from './feishu-client.js';
+import type { BaseField, BaseRecord, BaseTable, RecordWriteInput } from './feishu-client.js';
 import {
   manifestDecisions,
   targetTableName,
   type MigrationManifest,
 } from './plan.js';
 import type { MigrationDecision } from './types.js';
+import { projectRecordFields } from './record-fields.js';
 
 export interface MigrationWriteClient {
   listAllTables(appToken: string): Promise<BaseTable[]>;
+  listAllFields?(appToken: string, tableId: string): Promise<BaseField[]>;
   listAllRecords(appToken: string, tableId: string): Promise<BaseRecord[]>;
   createRecord(
     appToken: string,
@@ -100,8 +102,13 @@ function expectedFields(decision: MigrationDecision<unknown>): Record<string, un
 function compareReadback(
   decision: MigrationDecision<unknown>,
   record: BaseRecord,
+  targetFields?: readonly BaseField[],
 ): ApplyFieldMismatch[] {
-  const expected = expectedFields(decision);
+  const expected = projectRecordFields(
+    targetTableName(decision),
+    expectedFields(decision),
+    targetFields,
+  ).fields;
   const mismatches: ApplyFieldMismatch[] = [];
   for (const [field, value] of Object.entries(expected)) {
     if (value === undefined) continue;
@@ -148,7 +155,7 @@ function registryFields(
     Confidence: decision.confidence ?? 'LOW',
     Status: status,
     'Conflict JSON': decision.conflicts ? JSON.stringify(decision.conflicts) : '',
-    'Migrated At': new Date().toISOString(),
+    'Migrated At': Date.now(),
   };
 }
 
@@ -172,19 +179,37 @@ function compareText(left: string, right: string): number {
 export function selectCanaryDecisions(
   manifest: MigrationManifest,
 ): MigrationDecision<unknown>[] {
+  const decisions = manifestDecisions(manifest);
   const groups = new Map<string, MigrationDecision<unknown>[]>();
-  for (const decision of manifestDecisions(manifest)) {
+  for (const decision of decisions) {
     if (!executable(decision) || decision.confidence !== 'HIGH') continue;
     const key = targetTableName(decision);
     const current = groups.get(key) ?? [];
     current.push(decision);
     groups.set(key, current);
   }
-  return [...groups.entries()]
+  const selected = [...groups.entries()]
     .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
     .flatMap(([, decisions]) => decisions.sort((left, right) =>
       left.migration_key < right.migration_key ? -1 : left.migration_key > right.migration_key ? 1 : 0,
     ).slice(0, 5));
+  const selectedKeys = new Set(selected.map((decision) => decision.migration_key));
+  const gateCoverage = decisions
+    .filter((decision) => !selectedKeys.has(decision.migration_key))
+    .filter((decision) => ['UPDATE', 'SKIP', 'NEEDS_REVIEW'].includes(decision.decision))
+    .sort((left, right) => {
+      const leftRank = left.decision === 'UPDATE' ? 0 : left.decision === 'SKIP' ? 1 : 2;
+      const rightRank = right.decision === 'UPDATE' ? 0 : right.decision === 'SKIP' ? 1 : 2;
+      const leftReviewRank = left.reason.includes('Source Channel') ? 0 : 1;
+      const rightReviewRank = right.reason.includes('Source Channel') ? 0 : 1;
+      return leftRank - rightRank || leftReviewRank - rightReviewRank ||
+        compareText(left.migration_key, right.migration_key);
+    });
+  for (const decision of gateCoverage) {
+    if (selected.some((candidate) => candidate.decision === decision.decision)) continue;
+    selected.push(decision);
+  }
+  return selected;
 }
 
 function blockedReport(
@@ -236,7 +261,7 @@ export async function applyMigration(
 
   const decisions = options.mode === 'canary'
     ? selectCanaryDecisions(manifest)
-    : manifestDecisions(manifest).filter(executable);
+    : manifestDecisions(manifest);
   const tables = await client.listAllTables(options.target_token);
   const tableIds = new Map(tables.map((table) => [table.name, table.table_id]));
   const targetTables = new Set(decisions.map(targetTableName));
@@ -263,6 +288,54 @@ export async function applyMigration(
     return blockedReport(manifest, options.mode, 'DUPLICATE_MIGRATION_REGISTRY_ID');
   }
 
+  const fieldsByTable = new Map<string, BaseField[]>();
+  if (client.listAllFields) {
+    try {
+      for (const tableName of [...targetTables].sort()) {
+        const tableId = tableIds.get(tableName)!;
+        fieldsByTable.set(tableName, await client.listAllFields(options.target_token, tableId));
+      }
+    } catch {
+      return blockedReport(manifest, options.mode, 'TARGET_FIELD_SCHEMA_READ_FAILED');
+    }
+    const fieldConflicts = new Set<string>();
+    for (const decision of decisions.filter(executable)) {
+      const targetName = targetTableName(decision);
+      const targetProjection = projectRecordFields(
+        targetName,
+        expectedFields(decision),
+        fieldsByTable.get(targetName),
+      );
+      for (const field of targetProjection.ambiguous_fields) {
+        fieldConflicts.add(`${targetName}:${field}`);
+      }
+      const registryProjection = projectRecordFields(
+        'Migration Registry',
+        registryFields(manifest, decision, targetName, undefined, 'APPLIED'),
+        fieldsByTable.get('Migration Registry'),
+      );
+      for (const field of registryProjection.ambiguous_fields) {
+        fieldConflicts.add(`Migration Registry:${field}`);
+      }
+    }
+    if (fieldConflicts.size > 0) {
+      return {
+        ...blockedReport(manifest, options.mode, 'AMBIGUOUS_TARGET_FIELD_NAME'),
+        schema_conflicts: [...fieldConflicts].sort(),
+      };
+    }
+  }
+
+  const targetRecordsByTable = new Map<string, BaseRecord[]>();
+  targetRecordsByTable.set('Migration Registry', registryRecords);
+  for (const tableName of [...targetTables].sort()) {
+    if (tableName === 'Migration Registry') continue;
+    targetRecordsByTable.set(
+      tableName,
+      await client.listAllRecords(options.target_token, tableIds.get(tableName)!),
+    );
+  }
+
   const results: ApplyRecordResult[] = [];
   const field_mismatches: ApplyFieldMismatch[] = [];
   let untracked_writes = 0;
@@ -277,6 +350,26 @@ export async function applyMigration(
     const targetTable = targetTableName(decision);
     const targetTableId = tableIds.get(targetTable)!;
     const payloadHash = manifest.source_payload_hashes[decision.migration_key];
+
+    if (decision.decision === 'NEEDS_REVIEW') {
+      results.push({
+        migration_key: decision.migration_key,
+        target_table: targetTable,
+        status: 'NEEDS_REVIEW',
+        reason: decision.reason,
+      });
+      continue;
+    }
+    if (decision.decision === 'SKIP') {
+      results.push({
+        migration_key: decision.migration_key,
+        target_table: targetTable,
+        status: 'SKIP',
+        reason: decision.reason,
+      });
+      continue;
+    }
+
     const existingRegistry = registry.get(decision.migration_key);
     if (existingRegistry) {
       const existingHash = fieldValue(existingRegistry.fields ?? {}, 'Source Payload Hash');
@@ -298,12 +391,29 @@ export async function applyMigration(
       continue;
     }
 
-    const input: RecordWriteInput = { fields: expectedFields(decision) };
+    const projected = projectRecordFields(
+      targetTable,
+      expectedFields(decision),
+      fieldsByTable.get(targetTable),
+    );
+    if (projected.invalid_type_fields.length > 0) {
+      results.push({
+        migration_key: decision.migration_key,
+        target_table: targetTable,
+        status: 'NEEDS_REVIEW',
+        reason: 'target datetime field requires an unambiguous timestamp',
+      });
+      continue;
+    }
+
+    const input: RecordWriteInput = {
+      fields: projected.fields,
+    };
     let written: BaseRecord;
+    let businessWritePerformed = false;
     try {
       if (decision.decision === 'UPDATE') {
-        const currentRecords = await client.listAllRecords(options.target_token, targetTableId);
-        const matches = currentRecords.filter(
+        const matches = (targetRecordsByTable.get(targetTable) ?? []).filter(
           (record) => migrationKeyFromRecord(record) === decision.migration_key,
         );
         if (matches.length !== 1) {
@@ -321,10 +431,42 @@ export async function applyMigration(
           matches[0].record_id,
           input,
         );
+        businessWritePerformed = true;
       } else {
-        written = await client.createRecord(options.target_token, targetTableId, input);
+        const matches = (targetRecordsByTable.get(targetTable) ?? []).filter(
+          (record) => migrationKeyFromRecord(record) === decision.migration_key,
+        );
+        if (matches.length > 1) {
+          results.push({
+            migration_key: decision.migration_key,
+            target_table: targetTable,
+            status: 'NEEDS_REVIEW',
+            reason: `CREATE found ${matches.length} existing target records for the migration key`,
+          });
+          continue;
+        }
+        if (matches.length === 1) {
+          const existingMismatches = compareReadback(
+            decision,
+            matches[0],
+            fieldsByTable.get(targetTable),
+          );
+          if (existingMismatches.length > 0) {
+            results.push({
+              migration_key: decision.migration_key,
+              target_table: targetTable,
+              status: 'NEEDS_REVIEW',
+              reason: 'existing target record differs from planned payload',
+            });
+            continue;
+          }
+          written = matches[0];
+        } else {
+          written = await client.createRecord(options.target_token, targetTableId, input);
+          businessWritePerformed = true;
+        }
       }
-      business_writes += 1;
+      if (businessWritePerformed) business_writes += 1;
     } catch (error) {
       results.push({
         migration_key: decision.migration_key,
@@ -335,7 +477,13 @@ export async function applyMigration(
       continue;
     }
 
-    const mismatches = compareReadback(decision, written);
+    const targetRecords = targetRecordsByTable.get(targetTable) ?? [];
+    const existingIndex = targetRecords.findIndex((record) => record.record_id === written.record_id);
+    if (existingIndex >= 0) targetRecords[existingIndex] = written;
+    else targetRecords.push(written);
+    targetRecordsByTable.set(targetTable, targetRecords);
+
+    const mismatches = compareReadback(decision, written, fieldsByTable.get(targetTable));
     field_mismatches.push(...mismatches);
     if (mismatches.length > 0) {
       untracked_writes += 1;
@@ -350,7 +498,11 @@ export async function applyMigration(
     }
 
     const registryInput: RecordWriteInput = {
-      fields: registryFields(manifest, decision, targetTable, written.record_id, 'APPLIED'),
+      fields: projectRecordFields(
+        'Migration Registry',
+        registryFields(manifest, decision, targetTable, written.record_id, 'APPLIED'),
+        fieldsByTable.get('Migration Registry'),
+      ).fields,
     };
     try {
       const registryRecord = await client.createRecord(
