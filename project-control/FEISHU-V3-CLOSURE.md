@@ -15,6 +15,7 @@ condition was honored before Feishu client construction.
 - frozen baseline and current main: `729108d8059e3e143194a05f43e510af3587d385`
 - branch pre-live: `5c9b565b4caeaa9703ba9514f3f01b00745ebcc1`
 - implementation checkpoint: `32fad4cc4d5d7f42c1a79d73e49c08a84405923c`
+- redacted report checkpoint: `125747c4cf3160c8434d69bd8d2ec74dbba22fd8`
 - main was not merged; production was not deployed.
 
 ## Completed local evidence

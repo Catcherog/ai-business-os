@@ -17,7 +17,7 @@ attempted.
 - `CURRENT_MAIN_SHA`: `729108d8059e3e143194a05f43e510af3587d385`
 - `BRANCH_PRE_LIVE_SHA`: `5c9b565b4caeaa9703ba9514f3f01b00745ebcc1`
 - `LIVE_IMPLEMENTATION_SHA`: `32fad4cc4d5d7f42c1a79d73e49c08a84405923c`
-- `REPORT_SHA`: `32fad4cc4d5d7f42c1a79d73e49c08a84405923c` (implementation evidence checkpoint; report commit SHA is recorded in the final handoff)
+- `REPORT_SHA`: `125747c4cf3160c8434d69bd8d2ec74dbba22fd8` (redacted report checkpoint; this metadata amendment is a follow-on report-only commit)
 - parent of implementation checkpoint: `5c9b565b4caeaa9703ba9514f3f01b00745ebcc1`
 - `origin/codex/busos-feishu-v3` before report update: `5c9b565b4caeaa9703ba9514f3f01b00745ebcc1`
 - `origin/main`: unchanged at `729108d8059e3e143194a05f43e510af3587d385`
