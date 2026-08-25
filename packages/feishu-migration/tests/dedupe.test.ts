@@ -241,6 +241,46 @@ describe('deduplication and migration planning', () => {
     });
   });
 
+  it('does not hash an absent chosen field when a lower-priority source supplies it', () => {
+    const deduped = deduplicateRecords([
+      sourceRecord('sheet-project', {
+        entity_type: 'project',
+        project_code: 'FZ001',
+        project_name: 'Spreadsheet name',
+      }),
+      sourceRecord('sheet-project-2', {
+        entity_type: 'project',
+        project_code: 'FZ001',
+        project_name: 'Second spreadsheet name',
+      }),
+      sourceRecord('base-project', {
+        entity_type: 'project',
+        project_code: 'FZ-1',
+      }, 'base:Projects'),
+    ]);
+
+    expect(deduped[0]).toMatchObject({
+      migration_key: 'project:FZ1',
+      decision: 'CREATE',
+    });
+    expect(() => buildMigrationPlan(inventoryOf([
+      sourceRecord('sheet-project', {
+        entity_type: 'project',
+        project_code: 'FZ001',
+        project_name: 'Spreadsheet name',
+      }),
+      sourceRecord('sheet-project-2', {
+        entity_type: 'project',
+        project_code: 'FZ001',
+        project_name: 'Second spreadsheet name',
+      }),
+      sourceRecord('base-project', {
+        entity_type: 'project',
+        project_code: 'FZ-1',
+      }, 'base:Projects'),
+    ]), { records: [] })).not.toThrow();
+  });
+
   it('is deterministic when input order changes', () => {
     const records = [
       sourceRecord('b', { entity_type: 'customer', customer_id: 'C-1', name: 'Beta' }),

@@ -84,6 +84,24 @@ describe('Drive-backed source inventory', () => {
     expect(reportText).not.toContain('https://');
   });
 
+  it('excludes the allowlisted target Base from legacy candidates using its canonical URL token', async () => {
+    const pages = baseAndEightWorkbookPages();
+    pages['folder-source|'].files.unshift({
+      token: 'target-shortcut',
+      type: 'shortcut',
+      name: 'New Target Base',
+      url: 'https://tenant.feishu.cn/base/base-target?table=tbl-target',
+    });
+
+    const result = await discoverDriveSourceInventory({
+      client: clientFromPages(pages),
+      config: config({ targetBaseToken: 'base-target' }),
+    });
+
+    expect(result.legacyBase.token).toBe('base-legacy');
+    expect(result.report.legacy_base_candidates).toMatchObject({ count: 1 });
+  });
+
   it('preserves eight explicit Sheet override keys after discovery', async () => {
     const sourceSheets = Array.from({ length: 8 }, (_, index) => ({
       key: `OVERRIDE_${index + 1}`,

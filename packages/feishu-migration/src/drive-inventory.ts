@@ -114,6 +114,21 @@ function normalizedResourceKind(file: DriveFile): 'folder' | 'base' | 'workbook'
   return 'other';
 }
 
+function canonicalBaseToken(file: DriveFile): string {
+  if (file.url) {
+    try {
+      return normalizeFeishuResourceToken(file.url, 'base', 'Drive Base URL');
+    } catch {
+      // Fall back to the API token for resources without a canonical Base URL.
+    }
+  }
+  return file.token;
+}
+
+function isTargetBaseCandidate(file: DriveFile, targetBaseToken: string): boolean {
+  return file.token === targetBaseToken || canonicalBaseToken(file) === targetBaseToken;
+}
+
 function emptyReport(): DriveInventoryReport {
   return {
     verdict: 'BLOCKED',
@@ -270,7 +285,9 @@ export async function discoverDriveSourceInventory(
     options.config.sourceDriveFolderToken,
     options.maxPaginationRetries ?? 3,
   );
-  const baseCandidates = collected.resources.filter((file) => normalizedResourceKind(file) === 'base');
+  const baseCandidates = collected.resources
+    .filter((file) => normalizedResourceKind(file) === 'base')
+    .filter((file) => !isTargetBaseCandidate(file, options.config.targetBaseToken));
   const workbookCandidates = collected.resources.filter((file) => normalizedResourceKind(file) === 'workbook');
   const report = reportFor(collected.resources, collected.folders, baseCandidates, workbookCandidates);
 
@@ -282,7 +299,8 @@ export async function discoverDriveSourceInventory(
   }
 
   const legacyBase = baseCandidates[0];
-  if (options.config.sourceBaseToken && options.config.sourceBaseToken !== legacyBase.token) {
+  const legacyBaseToken = canonicalBaseToken(legacyBase);
+  if (options.config.sourceBaseToken && options.config.sourceBaseToken !== legacyBaseToken) {
     throw blocker('SOURCE_OVERRIDE_MISMATCH', report);
   }
 
@@ -305,7 +323,7 @@ export async function discoverDriveSourceInventory(
   report.verdict = 'PASS';
   report.resolved_source_workbooks = sourceSheets.length;
   return {
-    config: resolvedConfig(options.config, legacyBase.token, sourceSheets),
+    config: resolvedConfig(options.config, legacyBaseToken, sourceSheets),
     sourceResources: collected.resources,
     legacyBase,
     sourceSheets,

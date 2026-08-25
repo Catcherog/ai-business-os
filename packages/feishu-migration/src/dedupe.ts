@@ -65,7 +65,7 @@ function normalizedRecord(record: SourceRecord): NormalizedEntity {
 }
 
 function valueHash(value: unknown): string {
-  return stableHash(value);
+  return value === undefined ? 'undefined:' : `value:${stableHash(value)}`;
 }
 
 function displayValue(value: unknown): string {
@@ -74,6 +74,10 @@ function displayValue(value: unknown): string {
   if (value === null) return 'null';
   const serialized = JSON.stringify(value);
   return serialized === undefined ? String(value) : serialized;
+}
+
+function manifestConflictValue(value: unknown): unknown {
+  return value === undefined ? null : value;
 }
 
 function valuesEqual(left: unknown, right: unknown): boolean {
@@ -103,8 +107,7 @@ function conflictsFor(
       .map(({ source, normalized }) => ({
         source,
         value: normalized.canonical_target[field],
-      }))
-      .filter(({ value }) => value !== undefined);
+      }));
     const unique = new Map<string, { value: unknown; source_ids: string[] }>();
     for (const item of values) {
       const hash = valueHash(item.value);
@@ -127,8 +130,8 @@ function conflictsFor(
       field,
       values: orderedValues.map(displayValue),
       chosenSource: chosenEntry.source_ids[0],
-      chosen: chosenEntry.value,
-      alternatives,
+      chosen: manifestConflictValue(chosenEntry.value),
+      alternatives: alternatives.map(manifestConflictValue),
       source_ids: values.map(({ source }) => source.source_id),
     });
   }
