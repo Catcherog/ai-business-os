@@ -38,6 +38,7 @@ import { serviceAgentConversationMarkup, createCandidateReviewAction } from './f
 import { createDemoServiceAgentClient } from './demo/service-agent-demo.js';
 import { createBusinessDataFeature } from './features/business-data/index.js';
 import { createDemoBusinessDataClient } from './demo/business-data-demo.js';
+import { createOperationsFeature, createDemoOperationsClient } from './features/operations/index.js';
 import { renderBusinessDataView } from './business-data-view.js';
 import { renderSchedulingView } from './scheduling-view.js';
 import { createEvaluationFeature } from './features/evaluation/evaluation-view.js';
@@ -52,6 +53,7 @@ let selectedProjectId: string | null = null;
 let selectedReviewId: string | null = null;
 let selectedRunId: string | null = null;
 let selectedCustomerId: string | null = null;
+let selectedOrderId: string | null = null;
 
 // BUSOS-R2-BATCH1-PRODUCT-INTEGRATION-CORR-01 — lazy feature holders. Constructed
 // on first use (after initWorkspace resolves) so the DEMO data channels can
@@ -67,6 +69,14 @@ function businessDataFeature(): ReturnType<typeof createBusinessDataFeature> {
 let evaluationFeatureRef: ReturnType<typeof createEvaluationFeature> | null = null;
 function evaluationFeature(): ReturnType<typeof createEvaluationFeature> {
   return (evaluationFeatureRef ??= createEvaluationFeature(createDemoEvaluationReportClient()));
+}
+let operationsFeatureRef: ReturnType<typeof createOperationsFeature> | null = null;
+function operationsFeature(): ReturnType<typeof createOperationsFeature> {
+  // Default DEMO channel (in-memory, deterministic) for a populated, clickable
+  // preview. The CONNECTED client (createOperationsClient) is the production path
+  // and is exercised by the server-side endpoint tests; the UI default mirrors
+  // the other surfaces (business-data/evaluation/service-agent) in this app.
+  return (operationsFeatureRef ??= createOperationsFeature(createDemoOperationsClient().client));
 }
 let appReady = false;
 const router = createRouter();
@@ -1461,6 +1471,47 @@ async function viewEvaluation(): Promise<HTMLElement> {
   return wrap;
 }
 
+/* ----------------- Operations (V3 Feishu product integration) ------------ */
+
+async function viewOperations(): Promise<HTMLElement> {
+  return operationsFeature().renderDashboard({
+    onCustomers: () => navigate('customers'),
+    onOrders: () => navigate('orders'),
+    onReviews: () => navigate('review-queue'),
+  });
+}
+
+async function viewCustomers(): Promise<HTMLElement> {
+  return operationsFeature().renderCustomers((id) => navigate('customer-detail', id));
+}
+
+async function viewCustomer(customerId: string): Promise<HTMLElement> {
+  return operationsFeature().renderCustomer(customerId, () => navigate('customers'));
+}
+
+async function viewOrders(): Promise<HTMLElement> {
+  return operationsFeature().renderOrders((id) => navigate('order-detail', id));
+}
+
+async function viewOrder(orderId: string): Promise<HTMLElement> {
+  return operationsFeature().renderOrder(
+    orderId,
+    () => navigate('orders'),
+    (customerId) => navigate('customer-detail', customerId),
+  );
+}
+
+async function viewReviewQueue(): Promise<HTMLElement> {
+  return operationsFeature().renderReviewQueue((id) => navigate('review-queue-detail', id));
+}
+
+async function viewReviewQueueDetail(reviewId: string): Promise<HTMLElement> {
+  return operationsFeature().renderReviewDetail(reviewId, {
+    onBack: () => navigate('review-queue'),
+    onDecided: () => navigate('review-queue'),
+  });
+}
+
 /* ------------------------------- router ---------------------------------- */
 function routeForView(view: View, id?: string): Route {
   switch (view) {
@@ -1476,6 +1527,13 @@ function routeForView(view: View, id?: string): Route {
     case 'business-data-detail': return id ? { name: 'business-data-detail', customerId: id } : { name: 'business-data' };
     case 'scheduling': return { name: 'scheduling' };
     case 'evaluation': return { name: 'evaluation' };
+    case 'business': return { name: 'business' };
+    case 'customers': return { name: 'customers' };
+    case 'customer-detail': return id ? { name: 'customer-detail', customerId: id } : { name: 'customers' };
+    case 'orders': return { name: 'orders' };
+    case 'order-detail': return id ? { name: 'order-detail', orderId: id } : { name: 'orders' };
+    case 'review-queue': return { name: 'review-queue' };
+    case 'review-queue-detail': return id ? { name: 'review-queue-detail', reviewId: id } : { name: 'review-queue' };
   }
 }
 
@@ -1486,6 +1544,9 @@ function syncRoute(route: Route): void {
   if (route.name === 'review-detail') selectedReviewId = route.caseId;
   if (route.name === 'run-detail') selectedRunId = route.processId;
   if (route.name === 'business-data-detail') selectedCustomerId = route.customerId;
+  if (route.name === 'customer-detail') selectedCustomerId = route.customerId;
+  if (route.name === 'order-detail') selectedOrderId = route.orderId;
+  if (route.name === 'review-queue-detail') selectedReviewId = route.reviewId;
   if (!appReady) return;
   const navHost = document.getElementById('nav');
   if (navHost) navHost.replaceWith(renderNav());
@@ -1512,6 +1573,13 @@ async function renderContent(): Promise<void> {
     case 'business-data-detail': node = await viewBusinessDataCustomer(); break;
     case 'scheduling': node = await viewScheduling(); break;
     case 'evaluation': node = await viewEvaluation(); break;
+    case 'business': node = await viewOperations(); break;
+    case 'customers': node = await viewCustomers(); break;
+    case 'customer-detail': node = await viewCustomer(selectedCustomerId!); break;
+    case 'orders': node = await viewOrders(); break;
+    case 'order-detail': node = await viewOrder(selectedOrderId!); break;
+    case 'review-queue': node = await viewReviewQueue(); break;
+    case 'review-queue-detail': node = await viewReviewQueueDetail(selectedReviewId!); break;
     default: node = await viewOverview(); break;
   }
   content.replaceChildren(node);

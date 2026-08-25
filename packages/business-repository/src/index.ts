@@ -95,5 +95,36 @@ export type {
   OperationsTableIds,
   OperationsTableName,
   OperationsFilters,
+  BusinessPatchResult,
 } from './operations-types.js';
 export { OPERATIONS_TABLE_NAMES, OperationsAdapterError } from './operations-types.js';
+
+// V3 product-integration surface (Customers / Orders / Dashboard / Review Queue).
+// `mapCustomerRecord` (OperationsCustomer) is exported here from operations-customer.js.
+export {
+  type OperationsCustomer,
+  type OperationsOrder,
+  mapCustomerRecord,
+  mapOrderFromProject,
+} from './operations-customer.js';
+export { type OperationsDashboard, buildDashboard } from './operations-dashboard.js';
+export {
+  ReviewQueueStore,
+  createReviewQueueStore,
+  REVIEW_DECISIONS,
+  REVIEW_EDITABLE_FIELDS,
+  ReviewAlreadyDecidedError,
+  ReviewInvalidDecisionError,
+  ReviewNotFoundError,
+} from './operations-review-queue.js';
+export type {
+  ReviewDecision,
+  ReviewStatus,
+  OperationsAuditEvent,
+  OperationsReviewCase,
+  OperationsReviewSummary,
+  ReviewDecideOptions,
+  ReviewQueueListFilter,
+  ReviewQueueListResult,
+  ReviewQueueStoreOptions,
+} from './operations-review-queue.js';

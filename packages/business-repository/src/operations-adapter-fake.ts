@@ -8,6 +8,7 @@ import type {
   Resource,
 } from '@busos/contracts';
 import { OperationsAdapterError, type OperationsAdapter } from './operations-types.js';
+import type { OperationsCustomer } from './operations-customer.js';
 
 export interface FakeOperationsAdapterOptions {
   projects?: Project[];
@@ -17,6 +18,7 @@ export interface FakeOperationsAdapterOptions {
   assignments?: ProjectAssignment[];
   scripts?: CommunicationScript[];
   knowledge?: KnowledgeItem[];
+  customers?: OperationsCustomer[];
 }
 
 function limitValue(limit: number | undefined): number | undefined {
@@ -46,6 +48,7 @@ export class FakeOperationsAdapter implements OperationsAdapter {
       assignments: options.assignments ?? [],
       scripts: options.scripts ?? [],
       knowledge: options.knowledge ?? [],
+      customers: options.customers ?? [],
     };
   }
 
@@ -117,6 +120,22 @@ export class FakeOperationsAdapter implements OperationsAdapter {
       .slice()
       .sort((left, right) => left.knowledge_id.localeCompare(right.knowledge_id));
     return limit === undefined ? result : result.slice(0, limit);
+  }
+
+  async listCustomers(filter?: { limit?: number; status?: string }): Promise<OperationsCustomer[]> {
+    const limit = limitValue(filter?.limit);
+    const status = filter?.status?.toUpperCase();
+    const result = this.data.customers
+      .filter((customer) => !status || customer.status === status)
+      .slice()
+      .sort((left, right) => left.customer_id.localeCompare(right.customer_id));
+    return limit === undefined ? result : result.slice(0, limit);
+  }
+
+  async getCustomer(customerId: string): Promise<OperationsCustomer | null> {
+    const id = customerId.trim();
+    if (!id) throw new OperationsAdapterError('Customer id is required');
+    return this.data.customers.find((customer) => customer.customer_id === id) ?? null;
   }
 }
 

@@ -56,7 +56,7 @@ function value(fields: Record<string, unknown>, ...names: string[]): unknown {
   return undefined;
 }
 
-function textValue(fields: Record<string, unknown>, ...names: string[]): string | null {
+export function textValue(fields: Record<string, unknown>, ...names: string[]): string | null {
   const raw = value(fields, ...names);
   if (raw === undefined || raw === null || raw === '') return null;
   if (typeof raw === 'string') return raw.trim() || null;
@@ -64,13 +64,13 @@ function textValue(fields: Record<string, unknown>, ...names: string[]): string 
   return null;
 }
 
-function requiredText(fields: Record<string, unknown>, label: string, ...names: string[]): string {
+export function requiredText(fields: Record<string, unknown>, label: string, ...names: string[]): string {
   const text = textValue(fields, ...names);
   if (!text) throw new MappingFieldError(label);
   return text;
 }
 
-function numberValue(fields: Record<string, unknown>, label: string, ...names: string[]): number | null {
+export function numberValue(fields: Record<string, unknown>, label: string, ...names: string[]): number | null {
   const raw = value(fields, ...names);
   if (raw === undefined || raw === null || raw === '') return null;
   const number = typeof raw === 'number' ? raw : Number(raw);
@@ -78,13 +78,13 @@ function numberValue(fields: Record<string, unknown>, label: string, ...names: s
   return number;
 }
 
-function requiredNumber(fields: Record<string, unknown>, label: string, ...names: string[]): number {
+export function requiredNumber(fields: Record<string, unknown>, label: string, ...names: string[]): number {
   const number = numberValue(fields, label, ...names);
   if (number === null) throw new MappingFieldError(label);
   return number;
 }
 
-function dateValue(fields: Record<string, unknown>, label: string, ...names: string[]): string | null {
+export function dateValue(fields: Record<string, unknown>, label: string, ...names: string[]): string | null {
   const raw = value(fields, ...names);
   if (raw === undefined || raw === null || raw === '') return null;
   const date = typeof raw === 'number' ? new Date(raw) : new Date(String(raw));
@@ -92,13 +92,13 @@ function dateValue(fields: Record<string, unknown>, label: string, ...names: str
   return date.toISOString();
 }
 
-function requiredDate(fields: Record<string, unknown>, label: string, ...names: string[]): string {
+export function requiredDate(fields: Record<string, unknown>, label: string, ...names: string[]): string {
   const date = dateValue(fields, label, ...names);
   if (!date) throw new MappingFieldError(label);
   return date;
 }
 
-function enumValue<T extends string>(
+export function enumValue<T extends string>(
   fields: Record<string, unknown>,
   label: string,
   allowed: readonly T[],
@@ -110,7 +110,7 @@ function enumValue<T extends string>(
   return normalized as T;
 }
 
-function nullableEnumValue<T extends string>(
+export function nullableEnumValue<T extends string>(
   fields: Record<string, unknown>,
   label: string,
   allowed: readonly T[],
@@ -139,7 +139,7 @@ function businessKey(record: FeishuBaseRecord, idField: string): string {
   );
 }
 
-function safeMap<T>(
+export function safeMap<T>(
   table: string,
   record: FeishuBaseRecord,
   idField: string,

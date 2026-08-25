@@ -28,7 +28,7 @@ describe('workspace router', () => {
 
   it('fails closed to Overview for malformed or unsupported paths', () => {
     expect(parseRoute('')).toEqual({ name: 'overview' });
-    expect(parseRoute('#/customers')).toEqual({ name: 'overview' });
+    expect(parseRoute('#/unknown-surface')).toEqual({ name: 'overview' });
     expect(parseRoute('#/projects/')).toEqual({ name: 'overview' });
     expect(parseRoute('#/runs/a/b')).toEqual({ name: 'overview' });
     expect(parseRoute('#/projects/%E0%A4%A')).toEqual({ name: 'overview' });
@@ -64,6 +64,50 @@ describe('workspace router', () => {
     expect(isNavigationActive({ name: 'evaluation' }, 'evaluation')).toBe(true);
   });
 
+  it('parses and serializes the V3 operations surfaces (Operations/Customers/Orders/Review Queue)', () => {
+    expect(parseRoute('#/business')).toEqual({ name: 'business' });
+    expect(parseRoute('#/customers')).toEqual({ name: 'customers' });
+    expect(parseRoute('#/customers/cust_001')).toEqual({
+      name: 'customer-detail',
+      customerId: 'cust_001',
+    });
+    expect(parseRoute('#/orders')).toEqual({ name: 'orders' });
+    expect(parseRoute('#/orders/ord_001')).toEqual({
+      name: 'order-detail',
+      orderId: 'ord_001',
+    });
+    expect(parseRoute('#/review-queue')).toEqual({ name: 'review-queue' });
+    expect(parseRoute('#/review-queue/rev_001')).toEqual({
+      name: 'review-queue-detail',
+      reviewId: 'rev_001',
+    });
+
+    expect(serializeRoute({ name: 'business' })).toBe('#/business');
+    expect(serializeRoute({ name: 'customers' })).toBe('#/customers');
+    expect(serializeRoute({ name: 'customer-detail', customerId: 'cust_001' })).toBe('#/customers/cust_001');
+    expect(serializeRoute({ name: 'orders' })).toBe('#/orders');
+    expect(serializeRoute({ name: 'order-detail', orderId: 'ord_001' })).toBe('#/orders/ord_001');
+    expect(serializeRoute({ name: 'review-queue' })).toBe('#/review-queue');
+    expect(serializeRoute({ name: 'review-queue-detail', reviewId: 'rev_001' })).toBe('#/review-queue/rev_001');
+
+    // round-trips
+    expect(parseRoute(serializeRoute({ name: 'customer-detail', customerId: 'cust_001' }))).toEqual({
+      name: 'customer-detail',
+      customerId: 'cust_001',
+    });
+    expect(parseRoute(serializeRoute({ name: 'review-queue-detail', reviewId: 'rev_001' }))).toEqual({
+      name: 'review-queue-detail',
+      reviewId: 'rev_001',
+    });
+
+    // detail keeps the parent nav item active (explicit + suffix rules)
+    expect(isNavigationActive({ name: 'customer-detail', customerId: 'cust_001' }, 'customers')).toBe(true);
+    expect(isNavigationActive({ name: 'order-detail', orderId: 'ord_001' }, 'orders')).toBe(true);
+    expect(isNavigationActive({ name: 'review-queue-detail', reviewId: 'rev_001' }, 'review-queue')).toBe(true);
+    expect(isNavigationActive({ name: 'business' }, 'business')).toBe(true);
+    expect(isNavigationActive({ name: 'orders' }, 'customers')).toBe(false);
+  });
+
   it('serializes routes and keeps the parent navigation item active in details', () => {
     const route = { name: 'run-detail' as const, processId: 'proc_001' };
     expect(serializeRoute(route)).toBe('#/runs/proc_001');
@@ -78,6 +122,10 @@ describe('workspace router', () => {
       'business-data',
       'scheduling',
       'evaluation',
+      'business',
+      'customers',
+      'orders',
+      'review-queue',
     ]);
   });
 

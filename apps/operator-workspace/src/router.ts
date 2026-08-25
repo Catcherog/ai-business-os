@@ -6,7 +6,7 @@
  * top-level shape without adding a second state machine.
  */
 
-export type NavigationId = 'overview' | 'projects' | 'reviews' | 'runs' | 'service-agent' | 'business-data' | 'scheduling' | 'evaluation';
+export type NavigationId = 'overview' | 'projects' | 'reviews' | 'runs' | 'service-agent' | 'business-data' | 'scheduling' | 'evaluation' | 'business' | 'customers' | 'orders' | 'review-queue';
 
 export type Route =
   | { name: 'overview' }
@@ -20,7 +20,14 @@ export type Route =
   | { name: 'business-data' }
   | { name: 'business-data-detail'; customerId: string }
   | { name: 'scheduling' }
-  | { name: 'evaluation' };
+  | { name: 'evaluation' }
+  | { name: 'business' }
+  | { name: 'customers' }
+  | { name: 'customer-detail'; customerId: string }
+  | { name: 'orders' }
+  | { name: 'order-detail'; orderId: string }
+  | { name: 'review-queue' }
+  | { name: 'review-queue-detail'; reviewId: string };
 
 export const NAVIGATION: readonly { id: NavigationId; label: string; tag?: string }[] = [
   { id: 'overview', label: 'Overview' },
@@ -31,6 +38,10 @@ export const NAVIGATION: readonly { id: NavigationId; label: string; tag?: strin
   { id: 'business-data', label: 'Business Data', tag: 'CONNECTED' },
   { id: 'scheduling', label: 'Scheduling', tag: 'CONNECTED' },
   { id: 'evaluation', label: 'Evaluation', tag: 'DEMO' },
+  { id: 'business', label: 'Operations', tag: 'CONNECTED' },
+  { id: 'customers', label: 'Customers', tag: 'CONNECTED' },
+  { id: 'orders', label: 'Orders', tag: 'CONNECTED' },
+  { id: 'review-queue', label: 'Review Queue', tag: 'CONNECTED' },
 ] as const;
 
 const DETAIL_ID = /^[A-Za-z0-9_-]+$/;
@@ -74,6 +85,19 @@ export function parseRoute(hash: string): Route {
   }
   if (parts.length === 1 && parts[0] === 'scheduling') return { name: 'scheduling' };
   if (parts.length === 1 && parts[0] === 'evaluation') return { name: 'evaluation' };
+  if (parts.length === 1 && parts[0] === 'business') return { name: 'business' };
+  if (parts.length === 1 && parts[0] === 'customers') return { name: 'customers' };
+  if (parts.length === 2 && parts[0] === 'customers' && validId(parts[1])) {
+    return { name: 'customer-detail', customerId: parts[1] };
+  }
+  if (parts.length === 1 && parts[0] === 'orders') return { name: 'orders' };
+  if (parts.length === 2 && parts[0] === 'orders' && validId(parts[1])) {
+    return { name: 'order-detail', orderId: parts[1] };
+  }
+  if (parts.length === 1 && parts[0] === 'review-queue') return { name: 'review-queue' };
+  if (parts.length === 2 && parts[0] === 'review-queue' && validId(parts[1])) {
+    return { name: 'review-queue-detail', reviewId: parts[1] };
+  }
   return { name: 'overview' };
 }
 
@@ -95,6 +119,13 @@ export function serializeRoute(route: Route): string {
     case 'business-data-detail': return `#/business-data/${encodeId(route.customerId)}`;
     case 'scheduling': return '#/scheduling';
     case 'evaluation': return '#/evaluation';
+    case 'business': return '#/business';
+    case 'customers': return '#/customers';
+    case 'customer-detail': return `#/customers/${encodeId(route.customerId)}`;
+    case 'orders': return '#/orders';
+    case 'order-detail': return `#/orders/${encodeId(route.orderId)}`;
+    case 'review-queue': return '#/review-queue';
+    case 'review-queue-detail': return `#/review-queue/${encodeId(route.reviewId)}`;
   }
 }
 
@@ -102,6 +133,9 @@ export function isNavigationActive(route: Route, navigationId: NavigationId): bo
   if (navigationId === 'overview') return route.name === 'overview';
   if (navigationId === 'business-data') {
     return route.name === 'business-data' || route.name === 'business-data-detail';
+  }
+  if (navigationId === 'review-queue') {
+    return route.name === 'review-queue' || route.name === 'review-queue-detail';
   }
   return route.name === navigationId || route.name === `${navigationId.slice(0, -1)}-detail`;
 }
