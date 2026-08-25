@@ -12,8 +12,9 @@ silently written.
 
 - Branch: `codex/busos-feishu-v3`.
 - PRE / expected remote SHA: `a19bbcc66105c2b53f5c7165535f09d3a3fdafef`.
-- POST commit SHA: `POST_COMMIT_SHA_FILLED_AFTER_COMMIT`.
-- Remote feature SHA: `REMOTE_FEATURE_SHA_FILLED_AFTER_PUSH`.
+- POST implementation commit SHA before closure-metadata commit:
+  `fb449e29f9c009188454e52a22e6034eaa2d4011`.
+- Final remote feature SHA: recorded in the final handoff after push.
 - Main before/after: `729108d8059e3e143194a05f43e510af3587d385`.
 - Main merge: `NO`; deployment: `NO`.
 - Inventory: `INVENTORY_PASS`; 388 resources, 54 folders, one legacy Base,
