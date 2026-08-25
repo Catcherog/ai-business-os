@@ -1,5 +1,8 @@
 import { createHash } from 'node:crypto';
-import type { FeishuMigrationConfig } from './config.js';
+import {
+  normalizeFeishuResourceToken,
+  type FeishuMigrationConfig,
+} from './config.js';
 
 export type ConfigPresence = 'PRESENT' | 'MISSING';
 
@@ -43,8 +46,10 @@ export class FeishuConfigDocumentError extends Error {
 type ConfigSemantic =
   | 'FEISHU_APP_ID'
   | 'FEISHU_APP_SECRET'
+  | 'FEISHU_SOURCE_DRIVE_FOLDER_TOKEN'
   | 'FEISHU_SOURCE_BASE_TOKEN'
   | 'FEISHU_TARGET_BASE_TOKEN'
+  | 'FEISHU_TARGET_BASE_URL'
   | { kind: 'source_sheet'; key: string };
 
 interface LabeledEntry {
@@ -112,8 +117,12 @@ function semanticForLabel(label: string): ConfigSemantic | undefined {
     return 'FEISHU_APP_ID';
   }
   if (/^(?:feishu[\s_-]*)?app[\s_-]*secret$/iu.test(normalized) || /^应用[\s_-]*密钥$/iu.test(normalized)) return 'FEISHU_APP_SECRET';
+  if (/(?:source[\s_-]*drive[\s_-]*folder|源[\s_-]*(?:drive|云盘)[\s_-]*文件夹|源[\s_-]*文件夹)/iu.test(normalized)) {
+    return 'FEISHU_SOURCE_DRIVE_FOLDER_TOKEN';
+  }
   if (/(?:source[\s_-]*base|旧[\s_-]*base|源[\s_-]*base)/iu.test(normalized)) return 'FEISHU_SOURCE_BASE_TOKEN';
   if (/(?:target[\s_-]*base|新[\s_-]*base|目标[\s_-]*base)/iu.test(normalized)) return 'FEISHU_TARGET_BASE_TOKEN';
+  if (/(?:target[\s_-]*base[\s_-]*url|目标[\s_-]*base[\s_-]*链接)/iu.test(normalized)) return 'FEISHU_TARGET_BASE_URL';
   const sheetKey = explicitSheetKey(label);
   if (sheetKey) return { kind: 'source_sheet', key: sheetKey };
   return undefined;
@@ -217,10 +226,25 @@ function tokenFromUrl(value: string, kind: 'base' | 'sheet'): string | undefined
 function normalizeCandidateValue(value: string, semantic: ConfigSemantic): string {
   const clean = stripValue(value);
   if (typeof semantic === 'string') {
+    if (semantic === 'FEISHU_SOURCE_DRIVE_FOLDER_TOKEN') {
+      try {
+        return normalizeFeishuResourceToken(clean, 'drive-folder', semantic);
+      } catch {
+        throw new FeishuConfigDocumentError('CONFIG_INVALID', [semantic]);
+      }
+    }
     if (semantic === 'FEISHU_SOURCE_BASE_TOKEN' || semantic === 'FEISHU_TARGET_BASE_TOKEN') {
-      const token = tokenFromUrl(clean, 'base');
-      if (token) return token;
-      if (urlFromValue(clean)) throw new FeishuConfigDocumentError('CONFIG_INVALID', [semantic]);
+      try {
+        return normalizeFeishuResourceToken(clean, 'base', semantic);
+      } catch {
+        throw new FeishuConfigDocumentError('CONFIG_INVALID', [semantic]);
+      }
+    }
+    if (semantic === 'FEISHU_TARGET_BASE_URL') {
+      if (!urlFromValue(clean) || !tokenFromUrl(clean, 'base')) {
+        throw new FeishuConfigDocumentError('CONFIG_INVALID', [semantic]);
+      }
+      return clean;
     }
     return clean;
   }
@@ -270,12 +294,17 @@ function requiredFields(values: Map<string, Candidate>): string[] {
   const required = [
     'FEISHU_APP_ID',
     'FEISHU_APP_SECRET',
-    'FEISHU_SOURCE_BASE_TOKEN',
     'FEISHU_TARGET_BASE_TOKEN',
   ];
   const missing = required.filter((field) => !values.has(field));
+  if (!values.has('FEISHU_SOURCE_DRIVE_FOLDER_TOKEN') && !values.has('FEISHU_SOURCE_BASE_TOKEN')) {
+    missing.push('FEISHU_SOURCE_DRIVE_FOLDER_TOKEN or FEISHU_SOURCE_BASE_TOKEN');
+  }
   const sheetFields = [...values.keys()].filter((field) => /^FEISHU_SOURCE_SHEET_.+_TOKEN$/u.test(field));
-  if (sheetFields.length !== 8) missing.push('FEISHU_SOURCE_SHEET_*_TOKEN');
+  if (sheetFields.length > 0 && sheetFields.length !== 8) missing.push('FEISHU_SOURCE_SHEET_*_TOKEN');
+  if (!values.has('FEISHU_SOURCE_DRIVE_FOLDER_TOKEN') && sheetFields.length !== 8) {
+    missing.push('FEISHU_SOURCE_SHEET_*_TOKEN');
+  }
   return missing;
 }
 
@@ -288,8 +317,10 @@ function diagnosticsFrom(
   const names = [
     'FEISHU_APP_ID',
     'FEISHU_APP_SECRET',
+    'FEISHU_SOURCE_DRIVE_FOLDER_TOKEN',
     'FEISHU_SOURCE_BASE_TOKEN',
     'FEISHU_TARGET_BASE_TOKEN',
+    'FEISHU_TARGET_BASE_URL',
     ...presentSheets,
   ];
   for (const field of names) {
@@ -301,12 +332,17 @@ function diagnosticsFrom(
   for (const field of [
     'FEISHU_APP_ID',
     'FEISHU_APP_SECRET',
+    'FEISHU_SOURCE_DRIVE_FOLDER_TOKEN',
     'FEISHU_SOURCE_BASE_TOKEN',
     'FEISHU_TARGET_BASE_TOKEN',
+    'FEISHU_TARGET_BASE_URL',
   ]) {
     if (!fields[field]) fields[field] = { status: 'MISSING' };
   }
-  if (presentSheets.length !== 8) fields['FEISHU_SOURCE_SHEET_*_TOKEN'] = { status: 'MISSING' };
+  if (presentSheets.length > 0 && presentSheets.length !== 8) fields['FEISHU_SOURCE_SHEET_*_TOKEN'] = { status: 'MISSING' };
+  if (!values.has('FEISHU_SOURCE_DRIVE_FOLDER_TOKEN') && presentSheets.length !== 8) {
+    fields['FEISHU_SOURCE_SHEET_*_TOKEN'] = { status: 'MISSING' };
+  }
   return {
     formats: [...parsed.formats].sort(),
     source_field_names: [...parsed.sourceFieldNames].sort(),
@@ -344,9 +380,9 @@ export function parseFeishuMigrationConfigDocument(text: string): FeishuConfigDo
   if (missing.length > 0) {
     throw new FeishuConfigDocumentError('CONFIG_MISSING', missing, diagnostics);
   }
-  const sourceBaseToken = resolved.values.get('FEISHU_SOURCE_BASE_TOKEN')!.value;
+  const sourceBaseToken = resolved.values.get('FEISHU_SOURCE_BASE_TOKEN')?.value;
   const targetBaseToken = resolved.values.get('FEISHU_TARGET_BASE_TOKEN')!.value;
-  if (sourceBaseToken === targetBaseToken) {
+  if (sourceBaseToken && sourceBaseToken === targetBaseToken) {
     throw new FeishuConfigDocumentError('CONFIG_CONFLICT', ['SOURCE_TARGET_BASE_EQUAL'], diagnostics);
   }
 
@@ -363,6 +399,8 @@ export function parseFeishuMigrationConfigDocument(text: string): FeishuConfigDo
     sourceBaseToken,
     targetBaseToken,
     sourceSheets,
+    sourceDriveFolderToken: resolved.values.get('FEISHU_SOURCE_DRIVE_FOLDER_TOKEN')?.value,
+    targetBaseUrl: resolved.values.get('FEISHU_TARGET_BASE_URL')?.value,
   };
   return {
     config,

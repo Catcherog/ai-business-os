@@ -31,6 +31,9 @@ export async function discoverSourceInventory(
   const client =
     options.client ??
     new FeishuClient({ appId: config.appId, appSecret: config.appSecret });
+  if (!config.sourceBaseToken) {
+    throw new Error('Source inventory requires a resolved source Base token');
+  }
   const base = await readBaseSource(client, config.sourceBaseToken);
   const spreadsheets: NamedSpreadsheetInventory[] = [];
 

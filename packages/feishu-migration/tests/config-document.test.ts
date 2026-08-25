@@ -35,6 +35,21 @@ function diagnosticsOf(result: FeishuConfigDocumentResult): string {
 }
 
 describe('authorized Feishu config document parser', () => {
+  it('accepts a Drive folder and target Base URL without explicit source tokens', () => {
+    const result = parseFeishuMigrationConfigDocument([
+      '应用 ID',
+      'cli_synthetic_app_id',
+      '应用密钥',
+      'synthetic_app_secret',
+      'Source Drive Folder: https://tenant.feishu.cn/drive/folder/folder-source',
+      'Target Base: https://tenant.feishu.cn/base/base-target?table=tbl-target',
+    ].join('\n'));
+
+    expect(result.config.sourceDriveFolderToken).toBe('folder-source');
+    expect(result.config.targetBaseToken).toBe('base-target');
+    expect(result.config.sourceSheets).toEqual([]);
+  });
+
   it('normalizes Chinese labels, next-line values and URL-embedded Base tokens', () => {
     const result = parseFeishuMigrationConfigDocument(keyValueDocument());
 
@@ -82,7 +97,7 @@ describe('authorized Feishu config document parser', () => {
 
   it('reports missing required fields by name only', () => {
     expect(() => parseFeishuMigrationConfigDocument('APP_ID=cli_only_synthetic'))
-      .toThrow('CONFIG_MISSING: FEISHU_APP_SECRET, FEISHU_SOURCE_BASE_TOKEN, FEISHU_TARGET_BASE_TOKEN, FEISHU_SOURCE_SHEET_*_TOKEN');
+      .toThrow('CONFIG_MISSING: FEISHU_APP_SECRET, FEISHU_TARGET_BASE_TOKEN, FEISHU_SOURCE_DRIVE_FOLDER_TOKEN or FEISHU_SOURCE_BASE_TOKEN, FEISHU_SOURCE_SHEET_*_TOKEN');
   });
 
   it('blocks identical source and target Base tokens', () => {

@@ -217,6 +217,29 @@ function makeClient(fetchImpl: typeof fetch, sleep?: FeishuRequest['sleep']) {
 }
 
 describe('migration configuration', () => {
+  it('loads a Drive-backed configuration from resource URLs without explicit source tokens', () => {
+    const config = loadFeishuMigrationConfig({
+      FEISHU_APP_ID: 'app',
+      FEISHU_APP_SECRET: 'rotated-secret-test-fixture',
+      FEISHU_SOURCE_DRIVE_FOLDER_TOKEN: 'https://tenant.feishu.cn/drive/folder/folder-source',
+      FEISHU_TARGET_BASE_TOKEN: 'https://tenant.feishu.cn/base/base-target?table=tbl-target',
+    });
+
+    expect(config.sourceDriveFolderToken).toBe('folder-source');
+    expect(config.targetBaseToken).toBe('base-target');
+    expect(config.sourceSheets).toEqual([]);
+  });
+
+  it('requires all eight explicit Sheet overrides when any override is present', () => {
+    expect(() => loadFeishuMigrationConfig({
+      FEISHU_APP_ID: 'app',
+      FEISHU_APP_SECRET: 'rotated-secret-test-fixture',
+      FEISHU_SOURCE_DRIVE_FOLDER_TOKEN: 'folder-source',
+      FEISHU_TARGET_BASE_TOKEN: 'target-base',
+      FEISHU_SOURCE_SHEET_ONE_TOKEN: 'sheet-one',
+    })).toThrow('Expected exactly eight FEISHU_SOURCE_SHEET_*_TOKEN variables; found 1');
+  });
+
   it('loads exactly eight named source Sheet tokens without reading process.env', () => {
     const env: NodeJS.ProcessEnv = {
       FEISHU_APP_ID: 'app',
@@ -245,8 +268,9 @@ describe('migration configuration', () => {
       loadFeishuMigrationConfig({
         FEISHU_APP_ID: 'private-app-id',
         FEISHU_APP_SECRET: 'private-secret',
+        FEISHU_TARGET_BASE_TOKEN: 'target-base',
       });
-    expect(load).toThrow(/FEISHU_SOURCE_BASE_TOKEN/);
+    expect(load).toThrow(/FEISHU_SOURCE_DRIVE_FOLDER_TOKEN/);
     expect(load).not.toThrow(/private-secret/);
   });
 });
