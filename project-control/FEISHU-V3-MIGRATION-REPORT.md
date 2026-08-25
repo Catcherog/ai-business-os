@@ -27,7 +27,7 @@ E2E was claimed.
 - `MERGE_BASE`: `729108d8059e3e143194a05f43e510af3587d385`
 - `TARGET_BRANCH_POLICY`: current branch only; no main merge and no force push
 - `COORDINATOR_WORKTREE`: `C:\Users\Catcher\AppData\Local\Temp\codex-busos-feishu-v3`
-- `REPORT_CHECKPOINT`: report-only commit follows this implementation checkpoint
+- `REPORT_CHECKPOINT_SHA`: `48f508e78d17b68ecb533e0e58c81e2a9f0f5006` (content checkpoint; a metadata amendment may advance the branch)
 
 Authority was checked with `git ls-remote`, local branch/HEAD, merge-base, and
 worktree status before implementation. The local authorization document was

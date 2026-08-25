@@ -17,6 +17,7 @@ The detailed A–Q evidence is in
 - branch: `codex/busos-feishu-v3`
 - pre-run branch SHA: `d33a4433161b7e1ba5b99f2baea5f5be1bbc079f`
 - implementation SHA: `2740b6f2152ea8c28994b3f30de002bbe4eb5f72`
+- report checkpoint SHA: `48f508e78d17b68ecb533e0e58c81e2a9f0f5006`
 - main SHA: `729108d8059e3e143194a05f43e510af3587d385`
 - merge-base: `729108d8059e3e143194a05f43e510af3587d385`
 - main merge: `NO`
