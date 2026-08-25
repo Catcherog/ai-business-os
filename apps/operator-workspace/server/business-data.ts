@@ -7,13 +7,30 @@ import type {
 } from '@busos/contracts';
 import {
   createOperationsRepositoryFromEnv,
+  createReviewQueueStore,
+  buildDashboard,
+  type BusinessPatchResult,
+  type OperationsAuditEvent,
+  type OperationsCustomer,
+  type OperationsDashboard,
+  type OperationsOrder,
   type OperationsRepositoryPort,
+  type OperationsReviewCase,
+  type ReviewDecision,
+  type ReviewDecideOptions,
+  type ReviewQueueListFilter,
+  type ReviewQueueListResult,
+  type ReviewQueueStore,
+  ReviewAlreadyDecidedError,
+  ReviewInvalidDecisionError,
+  ReviewNotFoundError,
 } from '@busos/business-repository';
 
 const SOURCE = 'FEISHU_NEW_BASE' as const;
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
 const MAX_CURSOR = 1_000;
+const MAX_AGGREGATE = 500;
 
 export interface BusinessDataResponse<T> {
   statusCode: number;
@@ -27,10 +44,30 @@ export type BusinessDataEnvelope<T> =
 
 export interface BusinessDataApi {
   readonly repository: OperationsRepositoryPort | null;
+  readonly reviewQueueAvailable: boolean;
   listProjects(query?: PageQuery): Promise<BusinessDataResponse<Project[]>>;
   listResources(query?: PageQuery & { type?: string; status?: string }): Promise<BusinessDataResponse<Resource[]>>;
   listAvailability(resourceKey: string, query: { start?: string; end?: string; limit?: string | number }): Promise<BusinessDataResponse<AvailabilitySlot[]>>;
   getProjectContext(projectId: string): Promise<BusinessDataResponse<ProjectContext | null>>;
+  getOverview(): Promise<BusinessDataResponse<OperationsDashboard>>;
+  listCustomers(query?: PageQuery & { status?: string }): Promise<BusinessDataResponse<OperationsCustomer[]>>;
+  getCustomer(customerId: string): Promise<BusinessDataResponse<OperationsCustomer | null>>;
+  listOrders(query?: PageQuery & { customerId?: string; status?: string }): Promise<BusinessDataResponse<OperationsOrder[]>>;
+  getOrder(orderId: string): Promise<BusinessDataResponse<OperationsOrder | null>>;
+  listReviewQueue(query?: ReviewQueueListFilter): Promise<BusinessDataResponse<ReviewQueueListResult>>;
+  getReviewQueueItem(reviewId: string): Promise<BusinessDataResponse<OperationsReviewCase | null>>;
+  decideReviewQueueItem(
+    reviewId: string,
+    decision: ReviewDecision,
+    options?: ReviewDecideOptions,
+  ): Promise<BusinessDataResponse<OperationsReviewCase>>;
+  listAuditEvents(limit?: number): Promise<BusinessDataResponse<OperationsAuditEvent[]>>;
+  patchBusinessFields(input: {
+    entityType: string;
+    entityId: string;
+    patch: Record<string, unknown>;
+    idempotencyKey?: string;
+  }): Promise<BusinessDataResponse<BusinessPatchResult>>;
 }
 
 export interface PageQuery {
@@ -48,6 +85,7 @@ export interface ProjectContext {
 export interface BusinessDataApiOptions {
   env?: Record<string, string | undefined>;
   repository?: OperationsRepositoryPort;
+  reviewQueue?: ReviewQueueStore;
 }
 
 class BusinessDataInputError extends Error {
@@ -113,6 +151,13 @@ function normalizeConfigurationError(error: unknown): string {
   return 'Server-side Feishu target Base configuration is unavailable.';
 }
 
+function reviewError(code: string, message: string, statusCode = 422): BusinessDataResponse<never> {
+  return {
+    statusCode,
+    body: { mode: 'CONNECTED', source: SOURCE, error: { code, message } },
+  } as BusinessDataResponse<never>;
+}
+
 export function createBusinessDataApi(options: BusinessDataApiOptions = {}): BusinessDataApi {
   let repository = options.repository ?? null;
   let configurationReason: string | null = null;
@@ -123,6 +168,11 @@ export function createBusinessDataApi(options: BusinessDataApiOptions = {}): Bus
       configurationReason = normalizeConfigurationError(error);
     }
   }
+  // The review queue is a local store (not a Feishu resource), so it is available
+  // even when the server-side Feishu target Base is unconfigured. Its 562 cases
+  // are synthetic/hash-only (the live migration artifact is gated). Feishu-backed
+  // reads below remain BLOCKED without configuration.
+  const reviewQueue = options.reviewQueue ?? createReviewQueueStore({ synthetic: true });
 
   async function read<T>(call: () => Promise<T>): Promise<BusinessDataResponse<T>> {
     if (!repository) return blocked<T>(configurationReason ?? 'Server-side Feishu target Base configuration is unavailable.');
@@ -152,6 +202,7 @@ export function createBusinessDataApi(options: BusinessDataApiOptions = {}): Bus
 
   return {
     repository,
+    reviewQueueAvailable: true,
     listProjects: async (query) => {
       try {
         const { limit, cursor } = pageParams(query);
@@ -219,5 +270,129 @@ export function createBusinessDataApi(options: BusinessDataApiOptions = {}): Bus
         return invalid<ProjectContext | null>(error instanceof Error ? error.message : 'Invalid request');
       }
     },
+    getOverview: async () => {
+      try {
+        return await read(async () => {
+          const [customers, projects, resources, orders, reviews] = await Promise.all([
+            repository!.listCustomers({ limit: MAX_AGGREGATE }),
+            repository!.listProjects({ limit: MAX_AGGREGATE }),
+            repository!.listResources({ limit: MAX_AGGREGATE }),
+            repository!.listOrders({ limit: MAX_AGGREGATE }),
+            repository!.listReviewQueue({ limit: MAX_AGGREGATE }),
+          ]);
+          return buildDashboard({
+            customers,
+            projects,
+            resources,
+            orders,
+            reviews: reviews.data,
+            syntheticReviewData: reviewQueue.synthetic,
+          });
+        });
+      } catch (error) {
+        return invalid<OperationsDashboard>(error instanceof Error ? error.message : 'Invalid request');
+      }
+    },
+    listCustomers: async (query) => {
+      try {
+        const { limit, cursor } = pageParams(query);
+        return readPage(
+          () => repository!.listCustomers({ limit: cursor + limit + 1, status: query?.status }),
+          limit,
+          cursor,
+        );
+      } catch (error) {
+        return invalid<OperationsCustomer[]>(error instanceof Error ? error.message : 'Invalid request');
+      }
+    },
+    getCustomer: async (customerId) => {
+      try {
+        const id = requiredId(customerId, 'customerId');
+        return await read(() => repository!.getCustomer(id));
+      } catch (error) {
+        return invalid<OperationsCustomer | null>(error instanceof Error ? error.message : 'Invalid request');
+      }
+    },
+    listOrders: async (query) => {
+      try {
+        const { limit, cursor } = pageParams(query);
+        return readPage(
+          () => repository!.listOrders({ limit: cursor + limit + 1, customerId: query?.customerId, status: query?.status }),
+          limit,
+          cursor,
+        );
+      } catch (error) {
+        return invalid<OperationsOrder[]>(error instanceof Error ? error.message : 'Invalid request');
+      }
+    },
+    getOrder: async (orderId) => {
+      try {
+        const id = requiredId(orderId, 'orderId');
+        return await read(() => repository!.getOrder(id));
+      } catch (error) {
+        return invalid<OperationsOrder | null>(error instanceof Error ? error.message : 'Invalid request');
+      }
+    },
+    listReviewQueue: async (query) => {
+      try {
+        return { statusCode: 200, body: { mode: 'CONNECTED', source: SOURCE, data: reviewQueue.list(query) } };
+      } catch {
+        return failed<ReviewQueueListResult>();
+      }
+    },
+    getReviewQueueItem: async (reviewId) => {
+      try {
+        const found = reviewQueue.get(reviewId);
+        return {
+          statusCode: 200,
+          body: found
+            ? { mode: 'CONNECTED', source: SOURCE, data: found }
+            : { mode: 'CONNECTED', source: SOURCE, data: null },
+        };
+      } catch {
+        return failed<OperationsReviewCase | null>();
+      }
+    },
+    decideReviewQueueItem: async (reviewId, decision, options) => {
+      try {
+        const updated = reviewQueue.decide(reviewId, decision, options);
+        return { statusCode: 200, body: { mode: 'CONNECTED', source: SOURCE, data: updated } };
+      } catch (error) {
+        if (error instanceof ReviewNotFoundError) return reviewError('REVIEW_NOT_FOUND', error.message, 404);
+        if (error instanceof ReviewAlreadyDecidedError) return reviewError('REVIEW_ALREADY_DECIDED', error.message);
+        if (error instanceof ReviewInvalidDecisionError) return reviewError('REVIEW_INVALID_DECISION', error.message);
+        return failed<OperationsReviewCase>();
+      }
+    },
+    listAuditEvents: async (limit) => {
+      try {
+        const events: OperationsAuditEvent[] = [];
+        const items = reviewQueue.list({ limit: MAX_AGGREGATE }).data;
+        for (const item of items) {
+          const full = reviewQueue.get(item.review_id);
+          if (full) events.push(...full.audit);
+        }
+        events.sort((a, b) => b.at.localeCompare(a.at));
+        const capped = events.slice(0, Math.max(0, limit ?? 200));
+        return { statusCode: 200, body: { mode: 'CONNECTED', source: SOURCE, data: capped } };
+      } catch {
+        return failed<OperationsAuditEvent[]>();
+      }
+    },
+    patchBusinessFields: async (input) => {
+      // Server-only write path. Fails closed without a connected Feishu write
+      // adapter (this batch has none), but validates input allowlists first.
+      if (!repository) {
+        return blocked<BusinessPatchResult>('Server-side Feishu target Base configuration is unavailable.');
+      }
+      try {
+        const result = await repository.patchBusinessFields(input);
+        const statusCode = result.status === 'APPLIED' ? 200 : result.status === 'NOT_FOUND' ? 404 : 422;
+        return { statusCode, body: { mode: 'CONNECTED', source: SOURCE, data: result } };
+      } catch {
+        return failed<BusinessPatchResult>();
+      }
+    },
   };
 }
+

@@ -21,8 +21,9 @@ import { createEvaluationServerFeature } from './features/evaluation/evaluation-
 import { InMemoryServiceAgentConversationStore, type ServiceAgentPort, type ServiceAgentRunInput } from '@busos/service-agent-port';
 import { InMemoryProcessRegistry } from '@busos/orchestrator';
 import { createConnectedFeishuDataSource } from './features/feishu/connected-data-source.js';
-import { createBusinessDataApi } from './business-data.js';
+import { createBusinessDataApi, type BusinessDataResponse } from './business-data.js';
 import { createSchedulingApi } from './scheduling-api.js';
+import type { ReviewDecision, ReviewStatus } from '@busos/business-repository';
 
 const PORT = Number(process.env.PORT ?? 4173);
 
@@ -81,29 +82,70 @@ const businessDataSource = createConnectedFeishuDataSource({ buildSha: 'server' 
 const canonicalBusinessDataApi = createBusinessDataApi({ env: process.env });
 const canonicalSchedulingApi = createSchedulingApi({ repository: canonicalBusinessDataApi.repository });
 
-function businessBlockedCustomersEnvelope() {
+const BUSINESS_BUILD_SHA = 'server';
+
+/**
+ * Translate the server-internal Business Data envelope (`{mode:'BLOCKED',reason}`
+ * / `{mode:'CONNECTED',source,data}` / error) into the canonical browser
+ * `WorkspaceEnvelope + health` shape the CONNECTED transport requires. The real
+ * Feishu reads stay BLOCKED without configuration; the review queue is a local
+ * store and returns READY with an honest (non-fabricated) health view.
+ */
+function translateBusiness<T>(result: BusinessDataResponse<T>): { statusCode: number; body: unknown } {
   const health = businessDataSource.health();
+  const { statusCode } = result;
+  const body = result.body;
+  if (body.mode === 'BLOCKED') {
+    return {
+      statusCode,
+      body: {
+        mode: 'CONNECTED',
+        buildSha: BUSINESS_BUILD_SHA,
+        status: 'BLOCKED',
+        error: { code: 'BUSINESS_DATA_NOT_CONFIGURED', message: body.reason },
+        health,
+      },
+    };
+  }
+  if ('error' in body) {
+    return {
+      statusCode,
+      body: {
+        mode: 'CONNECTED',
+        buildSha: BUSINESS_BUILD_SHA,
+        status: 'ERROR',
+        error: body.error,
+        health,
+      },
+    };
+  }
   return {
-    mode: 'CONNECTED',
-    buildSha: 'server',
-    status: 'BLOCKED',
-    error: { code: 'BUSINESS_DATA_NOT_CONFIGURED', message: 'Business Data read requires a connected Feishu configuration.' },
-    health: {
+    statusCode,
+    body: {
       mode: 'CONNECTED',
-      connected: health.connected,
-      configuredResourceCount: health.configuredResourceCount,
-      lastSuccessfulReadAt: null,
-      lastSuccessfulWriteAt: null,
-      lastReadbackStatus: 'NOT_RUN',
-      latencyBucket: 'UNKNOWN',
+      buildSha: BUSINESS_BUILD_SHA,
+      status: 'READY',
+      data: body.data,
+      health,
     },
   };
 }
 
-function businessBlockedCustomerEnvelope(customerId: string) {
+function sendBusiness<T>(res: http.ServerResponse, result: BusinessDataResponse<T>): void {
+  const { statusCode, body } = translateBusiness(result);
+  sendJson(res, statusCode, body);
+}
+
+function businessErrorEnvelope(code: string, message: string, statusCode = 422): { statusCode: number; body: unknown } {
   return {
-    ...businessBlockedCustomersEnvelope(),
-    error: { code: 'BUSINESS_DATA_NOT_CONFIGURED', message: `Business Data read for ${customerId} requires a connected Feishu configuration.` },
+    statusCode,
+    body: {
+      mode: 'CONNECTED',
+      buildSha: BUSINESS_BUILD_SHA,
+      status: 'ERROR',
+      error: { code, message },
+      health: businessDataSource.health(),
+    },
   };
 }
 
@@ -305,14 +347,138 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, evaluation.statusCode, evaluation.body);
       return;
     }
-    // Business Data — read-only, BLOCKED until a connected configuration exists.
-    if (req.method === 'GET' && pathname === '/api/business-data/customers') {
-      sendJson(res, 200, businessBlockedCustomersEnvelope());
+    // Feishu V3 product-integration surfaces (Business API). All real Feishu reads
+    // fail closed to BLOCKED without a connected configuration; the review queue
+    // is a local store and returns READY. Every response is translated into the
+    // canonical browser WorkspaceEnvelope+health contract.
+    if (req.method === 'GET' && pathname === '/api/business-data/overview') {
+      sendBusiness(res, await canonicalBusinessDataApi.getOverview());
       return;
     }
-    if (req.method === 'GET' && pathname.startsWith('/api/business-data/customers/')) {
-      const id = decodeURIComponent(pathname.split('/')[3] ?? '');
-      sendJson(res, 200, businessBlockedCustomerEnvelope(id));
+    if (req.method === 'GET' && pathname === '/api/business-data/customers') {
+      const query = new URL(url, 'http://localhost').searchParams;
+      sendBusiness(res, await canonicalBusinessDataApi.listCustomers({
+        limit: query.get('limit') ?? undefined,
+        cursor: query.get('cursor') ?? undefined,
+        status: query.get('status') ?? undefined,
+      }));
+      return;
+    }
+    if (
+      req.method === 'GET' && businessPath[0] === 'api' && businessPath[1] === 'business-data' &&
+      businessPath[2] === 'customers' && businessPath.length === 4
+    ) {
+      const customerId = decodeURIComponent(businessPath[3] ?? '');
+      sendBusiness(res, await canonicalBusinessDataApi.getCustomer(customerId));
+      return;
+    }
+    if (req.method === 'GET' && pathname === '/api/business-data/orders') {
+      const query = new URL(url, 'http://localhost').searchParams;
+      sendBusiness(res, await canonicalBusinessDataApi.listOrders({
+        limit: query.get('limit') ?? undefined,
+        cursor: query.get('cursor') ?? undefined,
+        customerId: query.get('customerId') ?? undefined,
+        status: query.get('status') ?? undefined,
+      }));
+      return;
+    }
+    if (
+      req.method === 'GET' && businessPath[0] === 'api' && businessPath[1] === 'business-data' &&
+      businessPath[2] === 'orders' && businessPath.length === 4
+    ) {
+      const orderId = decodeURIComponent(businessPath[3] ?? '');
+      sendBusiness(res, await canonicalBusinessDataApi.getOrder(orderId));
+      return;
+    }
+    if (req.method === 'GET' && pathname === '/api/business-data/reviews') {
+      const query = new URL(url, 'http://localhost').searchParams;
+      const statusParam = query.get('status');
+      const allowedStatuses: ReviewStatus[] = ['PENDING', 'APPROVED', 'SKIPPED', 'KEEP_IN_REVIEW'];
+      const status = statusParam && allowedStatuses.includes(statusParam as ReviewStatus)
+        ? (statusParam as ReviewStatus)
+        : undefined;
+      sendBusiness(res, await canonicalBusinessDataApi.listReviewQueue({
+        limit: query.get('limit') ? Number(query.get('limit')) : undefined,
+        cursor: query.get('cursor') ? Number(query.get('cursor')) : undefined,
+        status,
+        reason: query.get('reason') ?? undefined,
+      }));
+      return;
+    }
+    if (
+      req.method === 'GET' && businessPath[0] === 'api' && businessPath[1] === 'business-data' &&
+      businessPath[2] === 'reviews' && businessPath.length === 4
+    ) {
+      const reviewId = decodeURIComponent(businessPath[3] ?? '');
+      sendBusiness(res, await canonicalBusinessDataApi.getReviewQueueItem(reviewId));
+      return;
+    }
+    if (
+      req.method === 'POST' && businessPath[0] === 'api' && businessPath[1] === 'business-data' &&
+      businessPath[2] === 'reviews' && businessPath[3] !== undefined && businessPath[4] === 'decision' &&
+      businessPath.length === 5
+    ) {
+      const reviewId = decodeURIComponent(businessPath[3]);
+      let body: unknown;
+      try {
+        body = await readJson(req);
+      } catch {
+        const err = businessErrorEnvelope('INVALID_REQUEST', 'Invalid JSON body.');
+        sendJson(res, err.statusCode, err.body);
+        return;
+      }
+      const parsed = body as { decision?: unknown; idempotencyKey?: unknown; actor?: unknown; note?: unknown; patch?: unknown };
+      if (
+        typeof parsed.decision !== 'string' ||
+        !['APPROVE', 'EDIT_AND_APPROVE', 'SKIP', 'KEEP_IN_REVIEW'].includes(parsed.decision)
+      ) {
+        const err = businessErrorEnvelope('REVIEW_INVALID_DECISION', 'A valid review decision is required.', 422);
+        sendJson(res, err.statusCode, err.body);
+        return;
+      }
+      sendBusiness(res, await canonicalBusinessDataApi.decideReviewQueueItem(
+        reviewId,
+        parsed.decision as ReviewDecision,
+        {
+          idempotencyKey: typeof parsed.idempotencyKey === 'string' ? parsed.idempotencyKey : null,
+          actor: typeof parsed.actor === 'string' ? parsed.actor : undefined,
+          note: typeof parsed.note === 'string' ? parsed.note : null,
+          editPatch: parsed.patch && typeof parsed.patch === 'object' ? (parsed.patch as Record<string, unknown>) : null,
+        },
+      ));
+      return;
+    }
+    if (req.method === 'GET' && pathname === '/api/business-data/audit') {
+      const query = new URL(url, 'http://localhost').searchParams;
+      const limit = query.get('limit') ? Number(query.get('limit')) : undefined;
+      sendBusiness(res, await canonicalBusinessDataApi.listAuditEvents(limit));
+      return;
+    }
+    if (req.method === 'PATCH' && pathname === '/api/business-data/fields') {
+      let body: unknown;
+      try {
+        body = await readJson(req);
+      } catch {
+        const err = businessErrorEnvelope('INVALID_REQUEST', 'Invalid JSON body.');
+        sendJson(res, err.statusCode, err.body);
+        return;
+      }
+      const parsed = body as { entityType?: unknown; entityId?: unknown; patch?: unknown; idempotencyKey?: unknown };
+      if (
+        typeof parsed.entityType !== 'string' ||
+        typeof parsed.entityId !== 'string' ||
+        !parsed.patch || typeof parsed.patch !== 'object'
+      ) {
+        const err = businessErrorEnvelope('INVALID_REQUEST', 'entityType, entityId and patch are required.', 400);
+        sendJson(res, err.statusCode, err.body);
+        return;
+      }
+      sendBusiness(res, await canonicalBusinessDataApi.patchBusinessFields({
+        entityType: parsed.entityType,
+        entityId: parsed.entityId,
+        patch: parsed.patch as Record<string, unknown>,
+        idempotencyKey: typeof parsed.idempotencyKey === 'string' ? parsed.idempotencyKey : undefined,
+      }));
       return;
     }
 

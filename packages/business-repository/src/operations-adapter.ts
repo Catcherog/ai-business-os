@@ -20,6 +20,8 @@ import {
   mapProjectRequirementRecord,
   mapResourceRecord,
 } from './operations-mapping.js';
+import { mapCustomerRecord } from './operations-customer.js';
+import type { OperationsCustomer } from './operations-customer.js';
 import {
   OPERATIONS_TABLE_NAMES,
   OperationsAdapterError,
@@ -55,6 +57,7 @@ const TABLE_ENV_NAMES: Readonly<Record<OperationsTableName, readonly string[]>> 
     'FEISHU_TARGET_COMMUNICATION_SCRIPTS_TABLE_ID',
   ],
   knowledge: ['FEISHU_TARGET_TABLE_KNOWLEDGE_ID', 'FEISHU_TARGET_KNOWLEDGE_TABLE_ID'],
+  customers: ['FEISHU_TARGET_TABLE_CUSTOMERS_ID', 'FEISHU_TARGET_CUSTOMERS_TABLE_ID'],
 };
 
 function requiredEnv(env: Record<string, string | undefined>, name: string): string {
@@ -101,7 +104,7 @@ function parseWindow(window: { start: string; end: string }): { start: number; e
   return { start, end };
 }
 
-function sortByKey<T extends { project_id?: string; resource_key?: string; availability_id?: string; requirement_id?: string; assignment_id?: string; script_id?: string; knowledge_id?: string }>(items: T[], key: keyof T): T[] {
+function sortByKey<T>(items: T[], key: keyof T): T[] {
   return items.sort((left, right) => String(left[key] ?? '').localeCompare(String(right[key] ?? '')));
 }
 
@@ -194,6 +197,23 @@ export class ConnectedOperationsAdapter implements OperationsAdapter {
     });
     sortByKey(knowledge, 'knowledge_id');
     return limit === undefined ? knowledge : knowledge.slice(0, limit);
+  }
+
+  async listCustomers(filter?: { limit?: number; status?: string }): Promise<OperationsCustomer[]> {
+    const limit = validateLimit(filter?.limit);
+    const status = filter?.status?.toUpperCase();
+    const customers = (await this.records('customers'))
+      .map(mapCustomerRecord)
+      .filter((customer) => !status || customer.status === status);
+    sortByKey(customers, 'customer_id');
+    return limit === undefined ? customers : customers.slice(0, limit);
+  }
+
+  async getCustomer(customerId: string): Promise<OperationsCustomer | null> {
+    const id = customerId.trim();
+    if (!id) throw new OperationsAdapterError('Customer id is required');
+    const customers = (await this.records('customers')).map(mapCustomerRecord);
+    return customers.find((customer) => customer.customer_id === id) ?? null;
   }
 
   private async records(tableName: OperationsTableName): Promise<FeishuBaseRecord[]> {
