@@ -8,6 +8,18 @@
 
 **Tech Stack:** TypeScript ES2022, Node `fetch`, Vitest, existing `@busos/feishu-migration` package and `vite-node` CLI.
 
+## Execution status — 2026-08-25
+
+- [x] Tasks 1–4 implemented and committed in `a3ca81b5729e586589ee81d207466172411df2c4`.
+- [x] Package tests, package typecheck, build, smoke, redacted inventory blocking, and `git diff --check` completed.
+- [ ] Task 5 live inventory is blocked before HTTP because the current authorized local runtime did not provide the rotated credentials and required resource fields.
+- [ ] Schema bootstrap, per-table canary, readback, full migration, and idempotency remain intentionally unrun.
+
+The current blocker is `CONFIGURATION_BLOCKED`, not an observed
+`AUTHORIZATION_BLOCKED` response. If a future Drive request is denied, preserve
+the exact returned scope and identity requirement and stop without guessing
+tokens.
+
 ## Global Constraints
 
 - Source Drive, legacy Base, and source workbooks are read-only.
@@ -20,7 +32,7 @@
 
 ---
 
-### Task 1: Relax runtime configuration without weakening explicit mode
+### Task 1: Relax runtime configuration without weakening explicit mode — COMPLETE
 
 **Files:**
 - Modify: `packages/feishu-migration/src/config.ts`
@@ -74,7 +86,7 @@ Run: `git add packages/feishu-migration/src/config.ts packages/feishu-migration/
 
 Expected: one task-owned commit; no local config file is staged.
 
-### Task 2: Add server-only, read-only Drive pagination and safe authorization errors
+### Task 2: Add server-only, read-only Drive pagination and safe authorization errors — COMPLETE
 
 **Files:**
 - Modify: `packages/feishu-migration/src/feishu-client.ts`
@@ -112,7 +124,7 @@ Run: `git add packages/feishu-migration/src/feishu-client.ts packages/feishu-mig
 
 Expected: task-owned commit with no raw response fixtures containing real values.
 
-### Task 3: Implement recursive Drive discovery, classification, overrides, and target allowlist
+### Task 3: Implement recursive Drive discovery, classification, overrides, and target allowlist — COMPLETE
 
 **Files:**
 - Create: `packages/feishu-migration/src/drive-inventory.ts`
@@ -163,7 +175,7 @@ Run: `git add packages/feishu-migration/src/drive-inventory.ts packages/feishu-m
 
 Expected: task-owned commit; no resource token is written to code or report fixtures.
 
-### Task 4: Gate the CLI, persist only the redacted inventory report, and keep migration writes behind it
+### Task 4: Gate the CLI, persist only the redacted inventory report, and keep migration writes behind it — COMPLETE
 
 **Files:**
 - Modify: `packages/feishu-migration/src/cli.ts`
@@ -206,7 +218,7 @@ Run: `git add package.json packages/feishu-migration/package.json packages/feish
 
 Expected: task-owned commit with only the redacted artifact path added to the runtime flow.
 
-### Task 5: Execute the authorized read-only inventory and record the handoff
+### Task 5: Execute the authorized read-only inventory and record the handoff — BLOCKED BEFORE HTTP
 
 **Files:**
 - Modify: `project-control/FEISHU-V3-MIGRATION-REPORT.md`

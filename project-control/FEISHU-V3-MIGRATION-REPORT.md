@@ -1,187 +1,193 @@
-# BUSOS Feishu v3 Authorized Config Resume Report
+# BUSOS Feishu v3 Drive Discovery Resume Report
 
 Runbook: `BUSOS-R2-FEISHU-V3-AUTHORIZED-CONFIG-RESUME-01`
 
-This report records only the current controlled run. Configuration values,
-token URLs, raw Feishu responses, record IDs, and personal payloads are not
-recorded.
+This report records the current controlled run. Owner-provided resource URLs,
+tokens, credentials, raw Feishu responses, record IDs, and personal payloads
+are intentionally omitted.
 
 ## A. VERDICT
 
-`AUTHORIZED_CONFIG_BLOCKED`
+`CONFIGURATION_BLOCKED`
 
-The owner-authorized local `feishubase*` document was found and inspected in
-memory. Its App ID and App Secret fields were present, but the required source
-Base token, target Base token, and eight source Sheet tokens were not
-normalized. The fail-closed gate stopped before Feishu client construction.
-No live preflight, migration, readback, connected verification, or browser
-E2E was claimed.
+The migration package now accepts a Drive-folder source configuration and a
+target Base configuration from the runtime process. The standalone
+read-only inventory command was invoked in the current local process, but the
+rotated runtime credentials and required runtime resource fields were not
+present. It stopped before Feishu client construction and before any HTTP
+request.
+
+This is a pre-HTTP configuration blocker, not an observed
+`AUTHORIZATION_BLOCKED` response. The previously exposed App Secret was not
+read or used. No guessed source token or DEMO fallback was used.
 
 ## B. AUTHORITY / SHA CHAIN
 
-- `RUNBOOK`: `BUSOS-R2-FEISHU-V3-AUTHORIZED-CONFIG-RESUME-01`
 - `BRANCH`: `codex/busos-feishu-v3`
-- `PRE_RUN_BRANCH_SHA`: `d33a4433161b7e1ba5b99f2baea5f5be1bbc079f`
-- `IMPLEMENTATION_SHA`: `2740b6f2152ea8c28994b3f30de002bbe4eb5f72`
-- `ORIGIN_MAIN_SHA`: `729108d8059e3e143194a05f43e510af3587d385`
-- `MERGE_BASE`: `729108d8059e3e143194a05f43e510af3587d385`
+- `PRE_RESUME_BRANCH_SHA`: `289a9807f14b66cd3e079d6b1b1bc74f53d47dfc`
+- `IMPLEMENTATION_SHA`: `a3ca81b5729e586589ee81d207466172411df2c4`
 - `TARGET_BRANCH_POLICY`: current branch only; no main merge and no force push
 - `COORDINATOR_WORKTREE`: `C:\Users\Catcher\AppData\Local\Temp\codex-busos-feishu-v3`
-- `REPORT_CHECKPOINT_SHA`: `48f508e78d17b68ecb533e0e58c81e2a9f0f5006` (content checkpoint; a metadata amendment may advance the branch)
+- `MAIN_MERGE`: `NO`
+- `DEPLOYMENT`: `NO`
 
-Authority was checked with `git ls-remote`, local branch/HEAD, merge-base, and
-worktree status before implementation. The local authorization document was
-not copied into this worktree and is not part of the Git chain.
+The implementation started from the requested origin branch baseline. The
+local coordinator worktree was isolated; the initial user worktree remained
+dirty and was not rewritten.
 
-## C. CONFIG SAFETY
+## C. CONFIGURATION SAFETY
 
-- authorized `feishubase*` match count: `1`
-- local file: owner-authorized file in the initial workspace; not copied to the coordinator
-- tracked: `NO`
-- staged: `NO`
-- present in `HEAD`: `NO`
-- matching Git history entry: `NO`
-- local ignore: `YES` via `.git/info/exclude`
-- parser formats observed: `KEY_VALUE`, `LABEL_NEXT_LINE`
-- safe source field names observed: `App ID`, `App Secret`, `多维表格`, `知识库`
+The runtime contract now supports:
 
-Normalized diagnostics, with all configuration-derived values omitted:
+- `FEISHU_SOURCE_DRIVE_FOLDER_TOKEN` as a raw token or Drive-folder resource
+  URL;
+- `FEISHU_TARGET_BASE_TOKEN` as a raw token or Base resource URL;
+- optional explicit `FEISHU_SOURCE_BASE_TOKEN` and exactly eight explicit
+  `FEISHU_SOURCE_SHEET_*_TOKEN` overrides when a Drive folder is configured;
+- value-free configuration diagnostics and bounded, fail-closed errors.
 
-| Field | Status |
+Current process check:
+
+| Runtime field | Status |
 | --- | --- |
-| `FEISHU_APP_ID` | `PRESENT` |
-| `FEISHU_APP_SECRET` | `PRESENT` |
-| `FEISHU_SOURCE_BASE_TOKEN` | `MISSING` |
+| `FEISHU_APP_ID` | `MISSING` |
+| rotated `FEISHU_APP_SECRET` | `MISSING` |
+| `FEISHU_SOURCE_DRIVE_FOLDER_TOKEN` | `MISSING` |
 | `FEISHU_TARGET_BASE_TOKEN` | `MISSING` |
-| `FEISHU_SOURCE_SHEET_*_TOKEN` | `MISSING` |
+| explicit source Base / Sheet overrides | `NOT_REQUIRED_IN_DRIVE_MODE` |
 
-The safe diagnostics command returned exit `1` with
-`CONFIG_MISSING: FEISHU_SOURCE_BASE_TOKEN, FEISHU_TARGET_BASE_TOKEN,
-FEISHU_SOURCE_SHEET_*_TOKEN`. The real-config plan command returned the same
-fail-closed error before constructing a Feishu client. No configuration value,
-fingerprint, or URL was printed, persisted, injected into `.env`, or written to
-this report.
+No local authorization document was copied into this worktree, staged, or
+used as a fallback. No `.env`, credential file, owner URL, raw token, or raw
+response was added to the repository or report.
 
 ## D. SOURCE / TARGET IDENTITY
 
-`NOT VERIFIED`.
+`NOT VERIFIED — CONFIGURATION_BLOCKED BEFORE HTTP`
 
-The document did not provide deterministic source and target Base labels that
-could satisfy the required normalized fields. Therefore source/target token
-equality, target allowlist membership, target identity, and target-before
-snapshot were not evaluated. No Base URL or token is recorded here.
+The live source candidate set was not fetched, so live counts are zero only as
+an unattempted state and are not an inventory result. The implementation and
+synthetic tests cover the required source identity gate: exactly one legacy
+Base, exactly eight source workbooks, recursive folder traversal, returned
+type/token/name/URL classification, explicit override matching, pagination
+failure, and permission denial.
+
+The target allowlist and target Base identity were not checked live. The
+target table metadata endpoint was not called.
 
 ## E. READ-ONLY PREFLIGHT
 
-`NOT RUN` — configuration gate failed before Feishu client construction.
+`BLOCKED` before Feishu client construction.
 
-Feishu HTTP: `0`; source reads: `0`; target reads: `0`.
+The CLI produced a redacted inventory artifact with only safe status/count
+fields and `feishu_writes: 0`. No Drive listing request was made, so no
+authorization response was observed in this run.
 
-## F. DRY-RUN
+## F. DRY-RUN / INVENTORY
 
-`NOT RUN` — the live dry-run requires a valid normalized configuration and
-read-only preflight first.
+Live result: `INVENTORY_BLOCKED` with blocker `CONFIGURATION_BLOCKED`.
 
-## G. CANARY / READBACK
+The standalone command has been added as `npm.cmd run migrate:inventory` and
+uses the same in-memory preflight that now gates plan, schema bootstrap,
+apply, and verify. Its redacted output contains no resource token, URL,
+credential, raw response, or candidate payload.
 
-`NOT RUN` — no schema or canary request was sent, and no readback result exists.
+## G. SCHEMA / CANARY / READBACK
+
+`NOT RUN` — inventory, identity, and target allowlist gates did not pass.
 
 ## H. FULL MIGRATION
 
-`NOT RUN` — no target schema write, record create, record update, or source
-mutation occurred.
+`NOT RUN` — no schema write, record create, record update, or source mutation
+was attempted.
 
 ## I. IDEMPOTENCY
 
 `NOT RUN` — there was no live batch to apply a zero-write second run against.
 
-## J. BUSINESS DATA CONNECTED
+## J. EXACT FEISHU HTTP / READ / WRITE COUNTS
 
-`NOT RUN`.
+| Scope | HTTP total | Reads | Writes |
+| --- | ---: | ---: | ---: |
+| live Feishu API in this run | `0` | `0` | `0` |
+| source Drive / legacy Base / workbooks | `0` | `0` | `0` |
+| target Base | `0` | `0` | `0` |
+| unauthorized target | `0` | `0` | `0` |
 
-The local product smoke path correctly reports Business Data as `BLOCKED`
-without server configuration. This is fail-closed local evidence, not NEW
-test Base connectivity or connected data evidence.
+Synthetic fixtures and mocked client tests are local tests and do not count as
+Feishu HTTP.
 
-## K. SCHEDULING CONNECTED
+## K. VERIFICATION
 
-`NOT RUN`.
-
-The local product smoke path correctly reports Scheduling as `BLOCKED`
-without server configuration. No connected proposal count or live Feishu
-readback is claimed.
-
-## L. BROWSER E2E
-
-`BROWSER_E2E_NOT_EVIDENCED` for live Feishu migration and connected product
-surfaces. Local UI/product smoke passed its blocked-state contracts only.
-
-## M. TESTS / VERIFICATION
-
-- `npm.cmd run test --workspace=@busos/feishu-migration`: exit `0`; 9 files, 58 passed, 0 failed.
+- `npm.cmd run test --workspace=@busos/feishu-migration`: exit `0`; 10 test
+  files, 72 passed, 0 failed.
 - `npm.cmd run typecheck --workspace=@busos/feishu-migration`: exit `0`.
-- `$env:PYTHONUTF8='1'; npm.cmd run verify`: exit `0` with elevated read access for the isolated worktree; workspace typechecks/tests, build, and smoke completed.
-- root build identity: `2740b6f` with `DEMO` / `BUSOS-R2-BATCH1-CORR-01`.
-- local config diagnostics: exit `1`, expected `CONFIG_MISSING` stop.
-- real-config plan: exit `1`, expected `CONFIG_MISSING` stop; no client construction.
-- bundle secret scan: `PASS`.
-- product smoke: `SMOKE_PRODUCT_INTEGRATION_OK` and `SMOKE_FEISHU_V3_OK`; both are local contract evidence, not live connectivity.
+- `npm.cmd run build`: exit `0`.
+- `npm.cmd run smoke`: exit `0`; local smoke emitted
+  `SMOKE_FEISHU_V3_OK`.
+- `npm.cmd run migrate:inventory` without runtime credentials: exit `1`, safe
+  `INVENTORY_BLOCKED`, `feishu_writes: 0`.
+- `git diff --check`: pass before implementation commit.
 
-The first root verification attempt was blocked by sandbox access to the
-isolated worktree's parent path; the same verification passed when rerun with
-the narrowly scoped verification permission. This environment detail does not
-change the migration verdict.
+The repository-wide `npm.cmd run verify` was retried with the required
+isolated-worktree read permission. Typechecks passed and the migration package
+passed; the overall command stopped on two unrelated existing
+`service-agent-candidate` integration assertions receiving mojibake instead of
+the canonical Chinese fixture. This migration change did not modify that
+workspace. Build and smoke were run separately and passed.
 
-## N. SECRET / FILE SAFETY SCANS
+## L. SECRET / FILE SAFETY
 
-- staged authorization-value comparison: `PASS`.
-- staged file policy: `PASS`; the local authorization file was not staged.
-- bundle secret/credential scan: `PASS`.
-- no `.env`, credential file, raw token URL, raw Feishu response, or personal
-  payload was added by this run.
+- previously exposed App Secret: `NOT USED`;
+- rotated secret: `NOT PRESENT IN CURRENT PROCESS`;
+- owner-provided resource values: runtime-only, not persisted or printed;
+- candidate reports: names sanitized, types/counts only;
+- raw Feishu response bodies and personal payloads: not persisted;
+- source/legacy resources: read-only path only;
+- target writes before all gates: `0`.
 
-## O. CHANGED FILES
+## M. CHANGED FILES
 
-Implementation checkpoint:
+Implementation commit `a3ca81b5729e586589ee81d207466172411df2c4` contains only
+the requested migration package, tests, and CLI wiring:
 
 - `package.json`
 - `packages/feishu-migration/package.json`
 - `packages/feishu-migration/src/cli.ts`
 - `packages/feishu-migration/src/config-document.ts`
+- `packages/feishu-migration/src/drive-inventory.ts`
+- `packages/feishu-migration/src/feishu-client.ts`
 - `packages/feishu-migration/src/types.ts`
 - `packages/feishu-migration/tests/cli.test.ts`
 - `packages/feishu-migration/tests/config-document.test.ts`
+- `packages/feishu-migration/tests/source-readers.test.ts`
 
-Report update:
+This report and the closure are separate handoff documentation. No local
+authorization file is in Git.
 
-- `project-control/FEISHU-V3-MIGRATION-REPORT.md`
-- `project-control/FEISHU-V3-CLOSURE.md`
+## N. AUTHORIZATION HANDOFF
 
-The owner-authorized local configuration and `.git/info/exclude` remain outside
-the committed file set.
+If the next authorized run reaches Drive and the bot cannot access the owner
+folder, the required honest result is `AUTHORIZATION_BLOCKED` with the exact
+returned missing scope, the `bot-tenant-access-token` identity, and the
+required sharing/identity change. The implementation does not guess tokens or
+fall back to explicit overrides after that failure.
 
-## P. EXACT FEISHU HTTP / READ / WRITE COUNTS
+The known Drive metadata requirement is
+`drive:drive.metadata:readonly`; it is reported only when the live API returns
+the permission denial or when the safe client fallback is exercised.
 
-| Scope | HTTP total | Reads | Writes |
-| --- | ---: | ---: | ---: |
-| Feishu API in this run | `0` | `0` | `0` |
-| old/source Base | `0` | `0` | `0` |
-| target Base | `0` | `0` | `0` |
-| unauthorized target | `0` | `0` | `0` |
-
-Local parser tests and mocked client tests do not count as Feishu HTTP and did
-not touch either Base.
-
-## Q. DEPLOYMENT / HANDOFF
+## O. DEPLOYMENT / HANDOFF
 
 - `main` merged: `NO`
 - production deployed: `NO`
 - real messages sent: `NO`
 - old Feishu Base modified: `NO`
-- current branch push: authorized for this run; no force push
+- Feishu writes: `0`
 - Owner Review: `PENDING`
 
-The next live attempt requires the owner-authorized document to contain all
-required normalized fields in an unambiguous supported format. Until then the
-correct state remains `AUTHORIZED_CONFIG_BLOCKED`; no DEMO fallback is used for
-the migration path.
+Next authorized action: inject the rotated App ID/Secret and the two runtime
+resource fields only through the approved local runtime process, rerun the
+read-only inventory, and stop with the exact authorization requirement if the
+Drive folder is not visible to the bot identity. Only after inventory,
+source/target identity, and target allowlist pass may the existing schema,
+per-table canary, readback, full migration, and idempotency gates resume.
