@@ -10,21 +10,29 @@
 
 ## Execution status — 2026-08-25
 
-- [x] Tasks 1–4 implemented and committed in `a3ca81b5729e586589ee81d207466172411df2c4`.
-- [x] Package tests, package typecheck, build, smoke, redacted inventory blocking, and `git diff --check` completed.
-- [ ] Task 5 live inventory is blocked before HTTP because the current authorized local runtime did not provide the rotated credentials and required resource fields.
-- [ ] Schema bootstrap, per-table canary, readback, full migration, and idempotency remain intentionally unrun.
+- [x] Tasks 1–4 implemented and committed; the request-count instrumentation
+  and regression fixes are on `c151300d73380f5662e78791899366dd9dfc8e79`.
+- [x] Authorized local credentials authenticated successfully; live Drive
+  inventory passed with 388 resources, 54 folders, one legacy Base, and eight
+  source workbooks.
+- [x] Read-only plan passed with 903 source records and a stable target schema
+  fingerprint; live totals were 258 HTTP / 255 reads / 0 writes across the
+  fresh inventory, plan, and schema processes.
+- [x] Schema bootstrap was attempted as the next gate and stopped without
+  writes on `Customers.Source Channel` / `FIELD_OPTIONS_MISMATCH`.
+- [ ] Per-table canary, readback, full migration, and idempotency remain
+  intentionally unrun because the schema gate is blocked.
 
-The current blocker is `CONFIGURATION_BLOCKED`, not an observed
-`AUTHORIZATION_BLOCKED` response. If a future Drive request is denied, preserve
-the exact returned scope and identity requirement and stop without guessing
-tokens.
+The current blocker is `SCHEMA_BLOCKED`, not a credential or authorization
+failure. The existing target select options need an owner-approved contract
+decision before any schema correction or migration write. Credential rotation
+is not required.
 
 ## Global Constraints
 
 - Source Drive, legacy Base, and source workbooks are read-only.
 - Target Base is the only permitted write target, and target writes remain `0` until discovery, source identity, and target allowlist checks pass.
-- Accept `FEISHU_SOURCE_DRIVE_FOLDER_TOKEN` and `FEISHU_TARGET_BASE_TOKEN`; `FEISHU_APP_ID` and rotated `FEISHU_APP_SECRET` remain runtime-only.
+- Accept `FEISHU_SOURCE_DRIVE_FOLDER_TOKEN` and `FEISHU_TARGET_BASE_TOKEN`; `FEISHU_APP_ID` and the authorized local `FEISHU_APP_SECRET` remain runtime-only.
 - Explicit `FEISHU_SOURCE_BASE_TOKEN` and exactly eight `FEISHU_SOURCE_SHEET_*_TOKEN` variables are optional overrides when a Drive folder is configured; they must match discovered resources and cannot bypass zero/multiple-candidate or permission/pagination blockers.
 - Stop on zero or multiple legacy Base candidates, any workbook count other than eight, missing pagination continuation, permission denial, credential failure, source/target identity mismatch, or target allowlist mismatch.
 - Logs and artifacts may contain only redacted candidate names, resource types, counts, statuses, safe error codes, and required scope/identity names; never tokens, URLs containing tokens, credentials, raw responses, record IDs, or personal payloads.
@@ -218,41 +226,56 @@ Run: `git add package.json packages/feishu-migration/package.json packages/feish
 
 Expected: task-owned commit with only the redacted artifact path added to the runtime flow.
 
-### Task 5: Execute the authorized read-only inventory and record the handoff — BLOCKED BEFORE HTTP
+### Task 5: Execute the authorized read-only inventory and record the handoff — BLOCKED AT SCHEMA GATE
 
 **Files:**
 - Modify: `project-control/FEISHU-V3-MIGRATION-REPORT.md`
 - Modify: `project-control/FEISHU-V3-CLOSURE.md`
 
 **Interfaces:**
-- Runtime-only inputs are `FEISHU_APP_ID`, rotated `FEISHU_APP_SECRET`, `FEISHU_SOURCE_DRIVE_FOLDER_TOKEN`, and `FEISHU_TARGET_BASE_TOKEN`; no exposed prior secret is read.
+- Runtime-only inputs are `FEISHU_APP_ID`, the authorized local `FEISHU_APP_SECRET`, `FEISHU_SOURCE_DRIVE_FOLDER_TOKEN`, and `FEISHU_TARGET_BASE_TOKEN`; no credential value is printed or persisted.
 - The report records verdict, candidate counts/types/names in redacted form, target identity/allowlist status, exact read/write counts, and blocker scope/identity without tokens.
 
-- [ ] **Step 1: Run the standalone read-only inventory**
+- [x] **Step 1: Run the standalone read-only inventory**
 
-Run from the coordinator worktree with rotated credentials injected only by the authorized local runtime process:
+Run from the coordinator worktree with the existing authorized credential
+injected only by the local runtime process:
 
 ```powershell
 npm.cmd run migrate:inventory -- --output .artifacts/feishu-migration
 ```
 
-Expected on success: `INVENTORY_PASS`, exactly one legacy Base candidate, exactly eight workbook candidates, target allowlist pass, and `writes: 0`.
+Observed: `INVENTORY_PASS`, exactly one legacy Base candidate, exactly eight
+workbook candidates, target allowlist pass, and `57 / 56 / 0` HTTP/read/write
+counts.
 
-- [ ] **Step 2: Stop and report authorization blockers exactly**
+- [x] **Step 2: Preserve authorization stop behavior**
 
-If Drive listing returns permission denial, record `AUTHORIZATION_BLOCKED`, `identityKind`, `drive:drive.metadata:readonly`, and whether the folder must be shared with the bot or accessed with a user-authorized identity. Do not retry with guessed tokens or explicit overrides.
+Drive listing did not return a permission denial. The implementation still
+records `AUTHORIZATION_BLOCKED`, `identityKind`, and the exact returned scope
+without retrying with guessed tokens or explicit overrides.
 
-- [ ] **Step 3: If inventory passes, run the existing gates in order**
+- [x] **Step 3: Run the existing gates in order until the first blocker**
 
-Run `migrate:plan`, schema-only bootstrap, per-table canary, readback, full apply, full verify, and a second apply/verify idempotency check. Stop on any schema mismatch, readback mismatch, partial success, external target change, or non-zero write reconciliation.
+`migrate:plan` completed with 903 source records. Schema-only bootstrap then
+returned `SCHEMA_BLOCKED` for `Customers.Source Channel` /
+`FIELD_OPTIONS_MISMATCH` with `writes: 0`. Canary, readback, full apply, full
+verify, and the second apply/verify idempotency check were not run.
 
-- [ ] **Step 4: Run secret scans and verify no write requests outside the target gates**
+- [x] **Step 4: Run secret scans and verify no write requests outside the target gates**
 
-Run the package tests, root verification, staged secret scan, and inspect the redacted report. Report source/Drive writes `0`, pre-gate target writes `0`, and only list target writes after the canary/full gates if they actually occurred.
+Package tests, typecheck, build, smoke, `git diff --check`, and the changed-file
+secret/resource scan passed. Repository-wide verify still reports two existing
+`service-agent-candidate` mojibake assertions. Source/Drive writes and target
+writes were `0`.
 
-- [ ] **Step 5: Commit and push only the task-owned implementation/report files**
+- [x] **Step 5: Commit and push only the task-owned implementation/report files**
 
-Run `git diff --check`, stage the exact changed files, commit, push `codex/busos-feishu-v3` without force, then verify `git ls-remote origin refs/heads/codex/busos-feishu-v3 refs/heads/main`. Do not merge `main` or deploy.
+Run `git diff --check`, stage the exact changed files, commit, push
+`codex/busos-feishu-v3` without force, then verify `git ls-remote origin
+refs/heads/codex/busos-feishu-v3 refs/heads/main`. Do not merge `main` or
+deploy. The code/test commit was already pushed; the report/closure update is
+the final task-owned handoff change for this run.
 
 ## Self-review checklist
 

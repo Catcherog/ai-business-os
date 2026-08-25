@@ -1,57 +1,50 @@
-# Feishu v3 Drive Discovery Resume Closure
+# Feishu v3 Migration Closure
 
 ## Verdict
 
-`CONFIGURATION_BLOCKED`
+`SCHEMA_BLOCKED`
 
-The over-constrained source-token contract has been replaced with a
-read-only, recursive Drive inventory and shared migration preflight. The
-current live attempt stopped before Feishu client construction because the
-approved local runtime did not provide the rotated credentials and required
-resource fields. No previous exposed App Secret was used.
+The existing authorized local credential was accepted and the read-only Drive
+inventory passed. It discovered exactly one legacy Base and eight source
+workbooks, and the target allowlist and identity checks passed.
 
-This is not an observed `AUTHORIZATION_BLOCKED` response: no Drive request was
-sent. The exact permission/identity handoff is implemented for the next run.
+The migration stopped at schema bootstrap because
+`Customers.Source Channel` returned `FIELD_OPTIONS_MISMATCH`: the expected
+and actual field types are both `3`, but the select options differ. Schema
+writes, record writes, source writes, canary, full migration, and idempotency
+were all `0` or `NOT_RUN`.
+
+## Live evidence
+
+- inventory: `INVENTORY_PASS`, 388 resources, 54 folders, 8 workbooks;
+- target identity: 7 tables, allowlist `PASS`;
+- plan: 903 source records; CREATE 1, UPDATE 1, SKIP 1, REVIEW 1;
+- schema fingerprint:
+  `7ecb81ec3014543efa921eebefb9ff80558ad42b19c73134320ed61a7bb3a48e`;
+- fresh live Feishu totals: **258 HTTP / 255 reads / 0 writes**;
+- package verification: 74/74 tests and typecheck passed;
+- repository build and smoke passed, including `SMOKE_FEISHU_V3_OK`;
+- repository-wide verify still exits 1 on two unrelated existing
+  mojibake assertions in `service-agent-candidate`;
+- no old Base mutation, main merge, deployment, or real message.
 
 ## Implementation
 
-- branch: `codex/busos-feishu-v3`
-- baseline: `289a9807f14b66cd3e079d6b1b1bc74f53d47dfc`
-- implementation: `a3ca81b5729e586589ee81d207466172411df2c4`
-- source folder and target Base are runtime-only inputs;
-- source Drive, legacy Base, and workbooks are read-only;
-- target writes remain behind inventory, identity, allowlist, schema, canary,
-  readback, full migration, and idempotency gates.
-
-## Evidence
-
-- Feishu migration package: 10 test files, 72 passed;
-- Feishu migration typecheck: passed;
-- repository build: passed;
-- repository smoke: passed with local `SMOKE_FEISHU_V3_OK`;
-- inventory without rotated runtime configuration: safe exit `1`,
-  `INVENTORY_BLOCKED`, `CONFIGURATION_BLOCKED`, `feishu_writes: 0`;
-- live Feishu HTTP/read/write counts: `0 / 0 / 0`;
-- no old Base mutation, main merge, deployment, or real message.
-
-The full repository verification command also exposed two unrelated existing
-Chinese-encoding assertions in `service-agent-candidate`; those failures are
-recorded in the detailed report and were not changed here.
-
-## Not evidenced
-
-- live source candidate counts and names;
-- target Base identity and allowlist proof;
-- permission response from the owner Drive folder;
-- schema bootstrap, per-table canary, readback, full migration, and
-  idempotency;
-- connected product data or live Feishu browser E2E.
+- branch: `codex/busos-feishu-v3`;
+- code/test tip before closure docs:
+  `c151300d73380f5662e78791899366dd9dfc8e79`;
+- requested origin baseline:
+  `289a9807f14b66cd3e079d6b1b1bc74f53d47dfc`;
+- main remains at:
+  `729108d8059e3e143194a05f43e510af3587d385`;
+- source and target resource values remained runtime-only;
+- source Drive, legacy Base, and workbooks remained read-only;
+- target writes remained behind the schema, canary, readback, full, and
+  idempotency gates.
 
 ## Handoff
 
-The next authorized local runtime must provide the rotated credentials and the
-two resource fields without persisting them. Run the standalone inventory
-first. If Drive denies access, preserve `AUTHORIZATION_BLOCKED` and report the
-returned missing scope plus whether the bot must be granted folder access or a
-user-authorized identity must be used. Do not guess tokens or continue to
-migration writes.
+Owner direction is required for the target select-option contract. This is a
+schema-contract decision, not a credential-rotation request. Until it is
+resolved through an explicitly authorized change, the migration must remain
+stopped before canary/full writes.
