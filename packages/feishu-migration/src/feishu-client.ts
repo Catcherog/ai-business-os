@@ -124,6 +124,7 @@ const DEFAULT_BASE_URL = 'https://open.feishu.cn';
 const DEFAULT_MAX_RETRIES = 3;
 const DEFAULT_BACKOFF_MS = 200;
 const PAGE_SIZE = 500;
+const DRIVE_PAGE_SIZE = 200;
 const RETRY_CODE = 1_254_291;
 
 export class FeishuClient {
@@ -280,7 +281,7 @@ export class FeishuClient {
   async listDriveFiles(folderToken: string, pageToken?: string): Promise<DriveFilesPage> {
     const query = new URLSearchParams({
       folder_token: folderToken,
-      page_size: String(PAGE_SIZE),
+      page_size: String(DRIVE_PAGE_SIZE),
     });
     if (pageToken) query.set('page_token', pageToken);
     const response = await this.read(`/open-apis/drive/v1/files?${query.toString()}`);

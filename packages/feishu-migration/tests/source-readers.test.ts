@@ -316,8 +316,9 @@ describe('FeishuClient read-only transport', () => {
     expect(first.files).toEqual([{ token: 'folder-1', type: 'folder', name: 'Nested' }]);
     expect(first.has_more).toBe(true);
     expect(second.files).toEqual([{ token: 'sheet-2', type: 'sheet', name: 'Workbook Two' }]);
-    expect(fixture.calls.filter((call) => !call.url.pathname.includes('/auth/'))
-      .every((call) => call.method === 'GET')).toBe(true);
+    const driveCalls = fixture.calls.filter((call) => call.url.pathname.endsWith('/drive/v1/files'));
+    expect(driveCalls[0].url.searchParams.get('page_size')).toBe('200');
+    expect(driveCalls.every((call) => call.method === 'GET')).toBe(true);
   });
 
   it('classifies Drive permission denial without exposing the response body', async () => {

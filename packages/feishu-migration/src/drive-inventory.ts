@@ -12,12 +12,14 @@ import {
 export const EXPECTED_SOURCE_WORKBOOK_COUNT = 8;
 
 export type DriveInventoryBlockerCode =
+  | 'CONFIGURATION_BLOCKED'
   | 'AUTHORIZATION_BLOCKED'
   | 'DRIVE_PAGINATION_BLOCKED'
   | 'DRIVE_READ_BLOCKED'
   | 'SOURCE_BASE_CANDIDATE_COUNT'
   | 'SOURCE_WORKBOOK_COUNT'
   | 'SOURCE_OVERRIDE_MISMATCH'
+  | 'TARGET_IDENTITY_BLOCKED'
   | 'TARGET_ALLOWLIST_MISMATCH';
 
 export interface DriveCandidateSummary {
@@ -27,7 +29,7 @@ export interface DriveCandidateSummary {
 
 export interface DriveInventoryReport {
   verdict: 'PASS' | 'BLOCKED';
-  source_mode: 'DRIVE_DISCOVERY';
+  source_mode: 'DRIVE_DISCOVERY' | 'EXPLICIT_OVERRIDE';
   resources_discovered: number;
   folders_discovered: number;
   expected_source_workbooks: number;
@@ -334,4 +336,43 @@ export function assertTargetAllowlist(config: FeishuMigrationConfig): void {
       blocker: 'TARGET_ALLOWLIST_MISMATCH',
     });
   }
+}
+
+export function resolveExplicitSourceConfig(config: FeishuMigrationConfig): {
+  config: ResolvedFeishuMigrationConfig;
+  report: DriveInventoryReport;
+} {
+  const report: DriveInventoryReport = {
+    verdict: 'PASS',
+    source_mode: 'EXPLICIT_OVERRIDE',
+    resources_discovered: 0,
+    folders_discovered: 0,
+    expected_source_workbooks: EXPECTED_SOURCE_WORKBOOK_COUNT,
+    legacy_base_candidates: {
+      count: config.sourceBaseToken ? 1 : 0,
+      candidates: config.sourceBaseToken
+        ? [{ name: '[EXPLICIT_SOURCE_BASE]', type: 'bitable' }]
+        : [],
+    },
+    source_workbook_candidates: {
+      count: config.sourceSheets.length,
+      candidates: config.sourceSheets.map((sheet) => ({
+        name: `[EXPLICIT_${safeCandidateName(sheet.key)}]`,
+        type: 'sheet',
+      })),
+    },
+    resolved_source_workbooks: config.sourceSheets.length,
+  };
+  if (!config.sourceBaseToken || config.sourceSheets.length !== EXPECTED_SOURCE_WORKBOOK_COUNT) {
+    throw blocker('SOURCE_OVERRIDE_MISMATCH', {
+      ...report,
+      verdict: 'BLOCKED',
+      blocker: 'SOURCE_OVERRIDE_MISMATCH',
+    });
+  }
+  assertTargetAllowlist(config);
+  return {
+    config: resolvedConfig(config, config.sourceBaseToken, config.sourceSheets),
+    report,
+  };
 }

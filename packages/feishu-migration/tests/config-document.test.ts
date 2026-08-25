@@ -50,6 +50,19 @@ describe('authorized Feishu config document parser', () => {
     expect(result.config.sourceSheets).toEqual([]);
   });
 
+  it('keeps a target Base URL as the allowlist identity while deriving its token', () => {
+    const targetUrl = 'https://tenant.feishu.cn/base/base-target?table=tbl-target';
+    const result = parseFeishuMigrationConfigDocument([
+      'APP_ID=cli_synthetic_app_id',
+      'APP_SECRET=synthetic_app_secret',
+      'Source Drive Folder=https://tenant.feishu.cn/drive/folder/folder-source',
+      `Target Base URL=${targetUrl}`,
+    ].join('\n'));
+
+    expect(result.config.targetBaseToken).toBe('base-target');
+    expect(result.config.targetBaseUrl).toBe(targetUrl);
+  });
+
   it('normalizes Chinese labels, next-line values and URL-embedded Base tokens', () => {
     const result = parseFeishuMigrationConfigDocument(keyValueDocument());
 

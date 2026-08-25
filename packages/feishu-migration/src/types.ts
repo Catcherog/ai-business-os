@@ -68,6 +68,19 @@ export interface VerificationReport {
 export { stableHash } from './hash.js';
 export { redactForLog } from './redact.js';
 export {
+  assertTargetAllowlist,
+  discoverDriveSourceInventory,
+  DriveInventoryError,
+  resolveExplicitSourceConfig,
+} from './drive-inventory.js';
+export type {
+  DriveCandidateSummary,
+  DriveInventoryBlockerCode,
+  DriveInventoryReport,
+  DriveSourceInventory,
+  ResolvedFeishuMigrationConfig,
+} from './drive-inventory.js';
+export {
   FeishuConfigDocumentError,
   inspectFeishuMigrationConfigDocument,
   parseFeishuMigrationConfigDocument,

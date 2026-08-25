@@ -46,4 +46,14 @@ describe('migration CLI contract', () => {
       config_path: 'D:/safe/feishubase.txt',
     });
   });
+
+  it('accepts the read-only Drive inventory command', () => {
+    expect(parseCliArgs(['inventory', '--output', '.artifacts/feishu-migration']))
+      .toMatchObject({
+        command: 'inventory',
+        output_dir: '.artifacts/feishu-migration',
+        canary: false,
+        schema_only: false,
+      });
+  });
 });

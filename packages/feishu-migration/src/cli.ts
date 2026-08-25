@@ -10,6 +10,15 @@ import {
   parseFeishuMigrationConfigDocument,
 } from './config-document.js';
 import { FeishuClient } from './feishu-client.js';
+import { FeishuAuthorizationError } from './feishu-client.js';
+import {
+  assertTargetAllowlist,
+  discoverDriveSourceInventory,
+  DriveInventoryError,
+  resolveExplicitSourceConfig,
+  type DriveInventoryReport,
+  type ResolvedFeishuMigrationConfig,
+} from './drive-inventory.js';
 import { discoverSourceInventory } from './inventory.js';
 import { createMigrationManifest, type MigrationManifest } from './plan.js';
 import { redactForLog } from './redact.js';
@@ -27,7 +36,7 @@ import {
   type RedactedManifestArtifact,
 } from './artifact.js';
 
-export type MigrationCliCommand = 'plan' | 'bootstrap' | 'apply' | 'verify' | 'config' | 'help';
+export type MigrationCliCommand = 'inventory' | 'plan' | 'bootstrap' | 'apply' | 'verify' | 'config' | 'help';
 export type MigrationVerifyScope = 'canary' | 'full';
 
 export const DEFAULT_OUTPUT_DIR = '.artifacts/feishu-migration';
@@ -49,7 +58,7 @@ export function parseCliArgs(args: string[]): ParsedCliArgs {
     return { command: 'help', canary: false, schema_only: false };
   }
   const command = rawCommand as MigrationCliCommand;
-  if (!['plan', 'bootstrap', 'apply', 'verify', 'config'].includes(command)) {
+  if (!['inventory', 'plan', 'bootstrap', 'apply', 'verify', 'config'].includes(command)) {
     throw new Error(`Unknown migration command: ${command}`);
   }
   let run_id: string | undefined;
@@ -116,6 +125,7 @@ function usage(): string {
     'Usage:',
     '  npm run migrate:plan -- --output .artifacts/feishu-migration',
     '  npm run migrate:plan -- --config-file <local-path> --output .artifacts/feishu-migration',
+    '  npm run migrate:inventory -- --output .artifacts/feishu-migration',
     '  npm run migrate:config -- --config-file <local-path>',
     '  npm run migrate:apply -- --schema-only --run-id <run_id>',
     '  npm run migrate:apply -- --canary --run-id <run_id>',
@@ -190,12 +200,175 @@ async function loadManifestArtifact(path: string): Promise<RedactedManifestArtif
 
 async function loadRehydratedManifest(
   path: string,
-  config: ReturnType<typeof loadFeishuMigrationConfig>,
+  config: ResolvedFeishuMigrationConfig,
   client: FeishuClient,
 ): Promise<MigrationManifest> {
   const artifact = await loadManifestArtifact(path);
   const inventory = await discoverSourceInventory({ config, client });
   return rehydrateMigrationManifest(artifact, inventory);
+}
+
+interface SourceTargetPreflight {
+  config: ResolvedFeishuMigrationConfig;
+  report: DriveInventoryReport;
+  target_table_count: number;
+}
+
+interface InventoryArtifact {
+  verdict: 'INVENTORY_PASS' | 'AUTHORIZATION_BLOCKED' | 'INVENTORY_BLOCKED';
+  source: DriveInventoryReport;
+  target: {
+    allowlist: 'PASS' | 'NOT_CHECKED';
+    identity: 'TARGET_BASE_TOKEN_CONFIGURED' | 'NOT_VERIFIED';
+    table_count: number;
+  };
+  feishu_writes: 0;
+  blocker?: string;
+}
+
+function explicitSourceTargetPreflight(
+  config: ReturnType<typeof loadFeishuMigrationConfig>,
+): { config: ResolvedFeishuMigrationConfig; report: DriveInventoryReport } {
+  if (config.sourceDriveFolderToken) {
+    throw new Error('Drive source configuration requires Drive inventory discovery');
+  }
+  return resolveExplicitSourceConfig(config);
+}
+
+async function runSourceTargetPreflight(
+  config: ReturnType<typeof loadFeishuMigrationConfig>,
+  client: FeishuClient,
+): Promise<SourceTargetPreflight> {
+  const source = config.sourceDriveFolderToken
+    ? await discoverDriveSourceInventory({ client, config })
+    : explicitSourceTargetPreflight(config);
+  assertTargetAllowlist(source.config);
+  let targetTables;
+  try {
+    targetTables = await client.listAllTables(source.config.targetBaseToken);
+  } catch (error) {
+    if (error instanceof FeishuAuthorizationError) throw error;
+    const report: DriveInventoryReport = {
+      ...source.report,
+      verdict: 'BLOCKED',
+      blocker: 'TARGET_IDENTITY_BLOCKED',
+    };
+    throw new DriveInventoryError('TARGET_IDENTITY_BLOCKED', report);
+  }
+  return {
+    config: source.config,
+    report: source.report,
+    target_table_count: targetTables.length,
+  };
+}
+
+function inventoryArtifactFromPreflight(preflight: SourceTargetPreflight): InventoryArtifact {
+  return {
+    verdict: 'INVENTORY_PASS',
+    source: preflight.report,
+    target: {
+      allowlist: 'PASS',
+      identity: 'TARGET_BASE_TOKEN_CONFIGURED',
+      table_count: preflight.target_table_count,
+    },
+    feishu_writes: 0,
+  };
+}
+
+function safeInventoryBlocker(error: unknown): InventoryArtifact {
+  if (error instanceof DriveInventoryError) {
+    return {
+      verdict: error.code === 'AUTHORIZATION_BLOCKED'
+        ? 'AUTHORIZATION_BLOCKED'
+        : 'INVENTORY_BLOCKED',
+      source: error.report,
+      target: {
+        allowlist: error.code === 'TARGET_ALLOWLIST_MISMATCH' ? 'NOT_CHECKED' : 'NOT_CHECKED',
+        identity: 'NOT_VERIFIED',
+        table_count: 0,
+      },
+      feishu_writes: 0,
+      blocker: error.code,
+    };
+  }
+  if (error instanceof FeishuAuthorizationError) {
+    const report: DriveInventoryReport = {
+      verdict: 'BLOCKED',
+      source_mode: 'DRIVE_DISCOVERY',
+      resources_discovered: 0,
+      folders_discovered: 0,
+      expected_source_workbooks: 8,
+      legacy_base_candidates: { count: 0, candidates: [] },
+      source_workbook_candidates: { count: 0, candidates: [] },
+      required_scope: error.missingScopes[0] ?? 'drive:drive.metadata:readonly',
+      identity: error.identityKind,
+      blocker: 'AUTHORIZATION_BLOCKED',
+    };
+    return {
+      verdict: 'AUTHORIZATION_BLOCKED',
+      source: report,
+      target: { allowlist: 'NOT_CHECKED', identity: 'NOT_VERIFIED', table_count: 0 },
+      feishu_writes: 0,
+      blocker: 'AUTHORIZATION_BLOCKED',
+    };
+  }
+  if (error instanceof FeishuConfigDocumentError || (
+    error instanceof Error &&
+    /^(?:Missing required|Expected exactly|Invalid FEISHU|FEISHU_TARGET_BASE_URL)/u.test(error.message)
+  )) {
+    const report: DriveInventoryReport = {
+      verdict: 'BLOCKED',
+      source_mode: 'DRIVE_DISCOVERY',
+      resources_discovered: 0,
+      folders_discovered: 0,
+      expected_source_workbooks: 8,
+      legacy_base_candidates: { count: 0, candidates: [] },
+      source_workbook_candidates: { count: 0, candidates: [] },
+      blocker: 'CONFIGURATION_BLOCKED',
+    };
+    return {
+      verdict: 'INVENTORY_BLOCKED',
+      source: report,
+      target: { allowlist: 'NOT_CHECKED', identity: 'NOT_VERIFIED', table_count: 0 },
+      feishu_writes: 0,
+      blocker: 'CONFIGURATION_BLOCKED',
+    };
+  }
+  const report: DriveInventoryReport = {
+    verdict: 'BLOCKED',
+    source_mode: 'DRIVE_DISCOVERY',
+    resources_discovered: 0,
+    folders_discovered: 0,
+    expected_source_workbooks: 8,
+    legacy_base_candidates: { count: 0, candidates: [] },
+    source_workbook_candidates: { count: 0, candidates: [] },
+    blocker: 'DRIVE_READ_BLOCKED',
+  };
+  return {
+    verdict: 'INVENTORY_BLOCKED',
+    source: report,
+    target: { allowlist: 'NOT_CHECKED', identity: 'NOT_VERIFIED', table_count: 0 },
+    feishu_writes: 0,
+    blocker: 'DRIVE_READ_BLOCKED',
+  };
+}
+
+async function runInventory(args: ParsedCliArgs): Promise<number> {
+  const path = join(outputDirectory(args), 'source-inventory.json');
+  try {
+    const runtimeConfig = await loadRuntimeConfig(args);
+    const client = new FeishuClient({ appId: runtimeConfig.appId, appSecret: runtimeConfig.appSecret });
+    const preflight = await runSourceTargetPreflight(runtimeConfig, client);
+    const artifact = inventoryArtifactFromPreflight(preflight);
+    await writeJsonArtifact(path, artifact);
+    process.stdout.write(`${JSON.stringify({ ...artifact, artifact_path: path }, null, 2)}\n`);
+    return 0;
+  } catch (error) {
+    const artifact = safeInventoryBlocker(error);
+    await writeJsonArtifact(path, artifact);
+    process.stdout.write(`${JSON.stringify({ ...artifact, artifact_path: path }, null, 2)}\n`);
+    return 1;
+  }
 }
 
 async function loadRuntimeConfig(args: ParsedCliArgs): Promise<ReturnType<typeof loadFeishuMigrationConfig>> {
@@ -225,8 +398,10 @@ async function runConfigDiagnostics(args: ParsedCliArgs): Promise<number> {
 }
 
 async function runPlan(args: ParsedCliArgs): Promise<number> {
-  const config = await loadRuntimeConfig(args);
-  const client = new FeishuClient({ appId: config.appId, appSecret: config.appSecret });
+  const runtimeConfig = await loadRuntimeConfig(args);
+  const client = new FeishuClient({ appId: runtimeConfig.appId, appSecret: runtimeConfig.appSecret });
+  const preflight = await runSourceTargetPreflight(runtimeConfig, client);
+  const config = preflight.config;
   const [inventory, targetSnapshot, schemaFingerprint] = await Promise.all([
     discoverSourceInventory({ config, client }),
     readTargetSnapshot(client, config.targetBaseToken),
@@ -248,8 +423,10 @@ async function runPlan(args: ParsedCliArgs): Promise<number> {
 }
 
 async function runSchemaOnly(args: ParsedCliArgs): Promise<number> {
-  const config = await loadRuntimeConfig(args);
-  const client = new FeishuClient({ appId: config.appId, appSecret: config.appSecret });
+  const runtimeConfig = await loadRuntimeConfig(args);
+  const client = new FeishuClient({ appId: runtimeConfig.appId, appSecret: runtimeConfig.appSecret });
+  const preflight = await runSourceTargetPreflight(runtimeConfig, client);
+  const config = preflight.config;
   const result = await bootstrapTargetSchema(client, config.targetBaseToken);
   const path = join(outputDirectory(args), 'schema.json');
   await writeJsonArtifact(path, { run_id: runId(args), ...result });
@@ -265,8 +442,10 @@ async function runApply(args: ParsedCliArgs): Promise<number> {
   if (args.schema_only) {
     return runSchemaOnly(args);
   }
-  const config = await loadRuntimeConfig(args);
-  const client = new FeishuClient({ appId: config.appId, appSecret: config.appSecret });
+  const runtimeConfig = await loadRuntimeConfig(args);
+  const client = new FeishuClient({ appId: runtimeConfig.appId, appSecret: runtimeConfig.appSecret });
+  const preflight = await runSourceTargetPreflight(runtimeConfig, client);
+  const config = preflight.config;
   const manifest = await loadRehydratedManifest(manifestPath(args), config, client);
   if (args.run_id && args.run_id !== manifest.run_id) {
     throw new Error('apply --run-id does not match manifest run_id');
@@ -294,8 +473,10 @@ async function runApply(args: ParsedCliArgs): Promise<number> {
 }
 
 async function runVerify(args: ParsedCliArgs): Promise<number> {
-  const config = await loadRuntimeConfig(args);
-  const client = new FeishuClient({ appId: config.appId, appSecret: config.appSecret });
+  const runtimeConfig = await loadRuntimeConfig(args);
+  const client = new FeishuClient({ appId: runtimeConfig.appId, appSecret: runtimeConfig.appSecret });
+  const preflight = await runSourceTargetPreflight(runtimeConfig, client);
+  const config = preflight.config;
   const manifest = await loadRehydratedManifest(manifestPath(args), config, client);
   if (args.run_id && args.run_id !== manifest.run_id) {
     throw new Error('verify --run-id does not match manifest run_id');
@@ -329,6 +510,7 @@ export async function runCli(args: string[] = process.argv.slice(2)): Promise<nu
     process.stdout.write(`${usage()}\n`);
     return 0;
   }
+  if (parsed.command === 'inventory') return runInventory(parsed);
   if (parsed.command === 'plan') return runPlan(parsed);
   if (parsed.command === 'bootstrap') return runBootstrap(parsed);
   if (parsed.command === 'apply') return runApply(parsed);

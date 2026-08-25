@@ -12,6 +12,7 @@
     "./redact": "./src/redact.ts",
     "./config": "./src/config.ts",
     "./config-document": "./src/config-document.ts",
+    "./drive-inventory": "./src/drive-inventory.ts",
     "./feishu-client": "./src/feishu-client.ts",
     "./base-reader": "./src/base-reader.ts",
     "./sheet-reader": "./src/sheet-reader.ts",
@@ -35,6 +36,7 @@
     "test": "vitest run --no-cache",
     "verify": "npm run typecheck && npm run test",
     "plan": "vite-node --script ./src/cli.ts plan",
+    "inventory": "vite-node --script ./src/cli.ts inventory",
     "bootstrap": "vite-node --script ./src/cli.ts bootstrap",
     "apply": "vite-node --script ./src/cli.ts apply",
     "verify:live": "vite-node --script ./src/cli.ts verify"

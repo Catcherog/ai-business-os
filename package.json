@@ -13,6 +13,7 @@
     "build": "npm run build --workspace=@busos/operator-workspace",
     "smoke": "npm run smoke --workspace=@busos/operator-workspace",
     "migrate:plan": "vite-node --script packages/feishu-migration/src/cli.ts plan",
+    "migrate:inventory": "vite-node --script packages/feishu-migration/src/cli.ts inventory",
     "migrate:config": "vite-node --script packages/feishu-migration/src/cli.ts config",
     "migrate:bootstrap": "vite-node --script packages/feishu-migration/src/cli.ts bootstrap",
     "migrate:apply": "vite-node --script packages/feishu-migration/src/cli.ts apply",
