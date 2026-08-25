@@ -66,6 +66,12 @@ export interface DriveFilesPage {
   next_page_token?: string;
 }
 
+export interface FeishuRequestStats {
+  http_total: number;
+  reads: number;
+  writes: number;
+}
+
 export class FeishuAuthorizationError extends Error {
   readonly status: number;
   readonly code: number | string;
@@ -136,6 +142,11 @@ export class FeishuClient {
   private readonly maxRetries: number;
   private readonly baseBackoffMs: number;
   private tokenCache: TokenCache | null = null;
+  private readonly requestStats: FeishuRequestStats = {
+    http_total: 0,
+    reads: 0,
+    writes: 0,
+  };
 
   constructor(options: FeishuRequest) {
     if (!options.appId || !options.appSecret) {
@@ -148,6 +159,10 @@ export class FeishuClient {
     this.sleep = options.sleep ?? ((milliseconds) => nodeSleep(milliseconds));
     this.maxRetries = options.maxRetries ?? DEFAULT_MAX_RETRIES;
     this.baseBackoffMs = options.baseBackoffMs ?? DEFAULT_BACKOFF_MS;
+  }
+
+  getRequestStats(): FeishuRequestStats {
+    return { ...this.requestStats };
   }
 
   async listAllTables(appToken: string): Promise<BaseTable[]> {
@@ -380,6 +395,12 @@ export class FeishuClient {
     credentialRequest = false,
   ): Promise<FeishuResponse> {
     for (let attempt = 0; attempt <= this.maxRetries; attempt += 1) {
+      const method = (init.method ?? 'GET').toUpperCase();
+      this.requestStats.http_total += 1;
+      if (!credentialRequest && method === 'GET') this.requestStats.reads += 1;
+      if (!credentialRequest && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+        this.requestStats.writes += 1;
+      }
       const response = await this.fetchFn(`${this.baseUrl}${path}`, init);
       let payload: FeishuResponse = {};
       try {

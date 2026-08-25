@@ -9,8 +9,7 @@ import {
   inspectFeishuMigrationConfigDocument,
   parseFeishuMigrationConfigDocument,
 } from './config-document.js';
-import { FeishuClient } from './feishu-client.js';
-import { FeishuAuthorizationError } from './feishu-client.js';
+import { FeishuAuthorizationError, FeishuClient, type FeishuRequestStats } from './feishu-client.js';
 import {
   assertTargetAllowlist,
   discoverDriveSourceInventory,
@@ -222,8 +221,28 @@ interface InventoryArtifact {
     identity: 'TARGET_BASE_TOKEN_CONFIGURED' | 'NOT_VERIFIED';
     table_count: number;
   };
-  feishu_writes: 0;
+  feishu_http_total: number;
+  feishu_reads: number;
+  feishu_writes: number;
   blocker?: string;
+}
+
+interface RequestStatsFields {
+  feishu_http_total: number;
+  feishu_reads: number;
+  feishu_writes: number;
+}
+
+function zeroRequestStats(): FeishuRequestStats {
+  return { http_total: 0, reads: 0, writes: 0 };
+}
+
+function requestStatsFields(stats: FeishuRequestStats): RequestStatsFields {
+  return {
+    feishu_http_total: stats.http_total,
+    feishu_reads: stats.reads,
+    feishu_writes: stats.writes,
+  };
 }
 
 function explicitSourceTargetPreflight(
@@ -262,7 +281,10 @@ async function runSourceTargetPreflight(
   };
 }
 
-function inventoryArtifactFromPreflight(preflight: SourceTargetPreflight): InventoryArtifact {
+function inventoryArtifactFromPreflight(
+  preflight: SourceTargetPreflight,
+  stats: FeishuRequestStats,
+): InventoryArtifact {
   return {
     verdict: 'INVENTORY_PASS',
     source: preflight.report,
@@ -271,11 +293,14 @@ function inventoryArtifactFromPreflight(preflight: SourceTargetPreflight): Inven
       identity: 'TARGET_BASE_TOKEN_CONFIGURED',
       table_count: preflight.target_table_count,
     },
-    feishu_writes: 0,
+    ...requestStatsFields(stats),
   };
 }
 
-function safeInventoryBlocker(error: unknown): InventoryArtifact {
+function safeInventoryBlocker(
+  error: unknown,
+  stats: FeishuRequestStats = zeroRequestStats(),
+): InventoryArtifact {
   if (error instanceof DriveInventoryError) {
     return {
       verdict: error.code === 'AUTHORIZATION_BLOCKED'
@@ -287,7 +312,7 @@ function safeInventoryBlocker(error: unknown): InventoryArtifact {
         identity: 'NOT_VERIFIED',
         table_count: 0,
       },
-      feishu_writes: 0,
+      ...requestStatsFields(stats),
       blocker: error.code,
     };
   }
@@ -308,7 +333,7 @@ function safeInventoryBlocker(error: unknown): InventoryArtifact {
       verdict: 'AUTHORIZATION_BLOCKED',
       source: report,
       target: { allowlist: 'NOT_CHECKED', identity: 'NOT_VERIFIED', table_count: 0 },
-      feishu_writes: 0,
+      ...requestStatsFields(stats),
       blocker: 'AUTHORIZATION_BLOCKED',
     };
   }
@@ -330,7 +355,7 @@ function safeInventoryBlocker(error: unknown): InventoryArtifact {
       verdict: 'INVENTORY_BLOCKED',
       source: report,
       target: { allowlist: 'NOT_CHECKED', identity: 'NOT_VERIFIED', table_count: 0 },
-      feishu_writes: 0,
+      ...requestStatsFields(stats),
       blocker: 'CONFIGURATION_BLOCKED',
     };
   }
@@ -348,23 +373,24 @@ function safeInventoryBlocker(error: unknown): InventoryArtifact {
     verdict: 'INVENTORY_BLOCKED',
     source: report,
     target: { allowlist: 'NOT_CHECKED', identity: 'NOT_VERIFIED', table_count: 0 },
-    feishu_writes: 0,
+    ...requestStatsFields(stats),
     blocker: 'DRIVE_READ_BLOCKED',
   };
 }
 
 async function runInventory(args: ParsedCliArgs): Promise<number> {
   const path = join(outputDirectory(args), 'source-inventory.json');
+  let client: FeishuClient | undefined;
   try {
     const runtimeConfig = await loadRuntimeConfig(args);
-    const client = new FeishuClient({ appId: runtimeConfig.appId, appSecret: runtimeConfig.appSecret });
+    client = new FeishuClient({ appId: runtimeConfig.appId, appSecret: runtimeConfig.appSecret });
     const preflight = await runSourceTargetPreflight(runtimeConfig, client);
-    const artifact = inventoryArtifactFromPreflight(preflight);
+    const artifact = inventoryArtifactFromPreflight(preflight, client.getRequestStats());
     await writeJsonArtifact(path, artifact);
     process.stdout.write(`${JSON.stringify({ ...artifact, artifact_path: path }, null, 2)}\n`);
     return 0;
   } catch (error) {
-    const artifact = safeInventoryBlocker(error);
+    const artifact = safeInventoryBlocker(error, client?.getRequestStats());
     await writeJsonArtifact(path, artifact);
     process.stdout.write(`${JSON.stringify({ ...artifact, artifact_path: path }, null, 2)}\n`);
     return 1;
@@ -418,6 +444,7 @@ async function runPlan(args: ParsedCliArgs): Promise<number> {
     manifest_path: path,
     source_count: manifest.source_count,
     target_schema_fingerprint: manifest.target_schema_fingerprint,
+    ...requestStatsFields(client.getRequestStats()),
   }, null, 2)}\n`);
   return 0;
 }
@@ -430,7 +457,11 @@ async function runSchemaOnly(args: ParsedCliArgs): Promise<number> {
   const result = await bootstrapTargetSchema(client, config.targetBaseToken);
   const path = join(outputDirectory(args), 'schema.json');
   await writeJsonArtifact(path, { run_id: runId(args), ...result });
-  process.stdout.write(`${JSON.stringify({ ...result, artifact_path: path }, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({
+    ...result,
+    ...requestStatsFields(client.getRequestStats()),
+    artifact_path: path,
+  }, null, 2)}\n`);
   return result.status === 'SCHEMA_CONFLICT' ? 1 : 0;
 }
 
@@ -468,7 +499,10 @@ async function runApply(args: ParsedCliArgs): Promise<number> {
   const path = join(outputDirectory(args), artifact);
   const redacted = redactApplyReport(result);
   await writeJsonArtifact(path, redacted);
-  process.stdout.write(`${JSON.stringify(redacted, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({
+    ...redacted,
+    ...requestStatsFields(client.getRequestStats()),
+  }, null, 2)}\n`);
   return result.status === 'PASS' ? 0 : 1;
 }
 
@@ -500,7 +534,10 @@ async function runVerify(args: ParsedCliArgs): Promise<number> {
   });
   const redacted = redactLiveVerificationReport(result);
   await writeJsonArtifact(join(outputDirectory(args), `verify-${scope}.json`), redacted);
-  process.stdout.write(`${JSON.stringify(redacted, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({
+    ...redacted,
+    ...requestStatsFields(client.getRequestStats()),
+  }, null, 2)}\n`);
   return result.status === 'PASS' ? 0 : 1;
 }
 

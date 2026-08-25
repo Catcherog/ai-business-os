@@ -319,6 +319,7 @@ describe('FeishuClient read-only transport', () => {
     const driveCalls = fixture.calls.filter((call) => call.url.pathname.endsWith('/drive/v1/files'));
     expect(driveCalls[0].url.searchParams.get('page_size')).toBe('200');
     expect(driveCalls.every((call) => call.method === 'GET')).toBe(true);
+    expect(client.getRequestStats()).toEqual({ http_total: 3, reads: 2, writes: 0 });
   });
 
   it('classifies Drive permission denial without exposing the response body', async () => {
