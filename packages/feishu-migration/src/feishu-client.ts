@@ -51,6 +51,43 @@ export interface SheetMetadata {
   [key: string]: unknown;
 }
 
+export interface DriveFile {
+  token: string;
+  type: string;
+  name: string;
+  url?: string;
+  parent_token?: string;
+  [key: string]: unknown;
+}
+
+export interface DriveFilesPage {
+  files: DriveFile[];
+  has_more: boolean;
+  next_page_token?: string;
+}
+
+export class FeishuAuthorizationError extends Error {
+  readonly status: number;
+  readonly code: number | string;
+  readonly missingScopes: string[];
+  readonly identityKind: 'bot-tenant-access-token';
+
+  constructor(options: {
+    status: number;
+    code: number | string;
+    missingScopes?: string[];
+  }) {
+    super(`Feishu Drive authorization blocked (status=${options.status}, code=${options.code})`);
+    this.name = 'FeishuAuthorizationError';
+    this.status = options.status;
+    this.code = options.code;
+    this.missingScopes = options.missingScopes?.length
+      ? [...options.missingScopes]
+      : ['drive:drive.metadata:readonly'];
+    this.identityKind = 'bot-tenant-access-token';
+  }
+}
+
 export interface FeishuRequest {
   appId: string;
   appSecret: string;
@@ -66,6 +103,9 @@ interface FeishuResponse {
   data?: Record<string, unknown>;
   tenant_access_token?: string;
   expire?: number;
+  error?: {
+    missing_scopes?: unknown;
+  };
 }
 
 interface TokenCache {
@@ -237,6 +277,32 @@ export class FeishuClient {
     );
   }
 
+  async listDriveFiles(folderToken: string, pageToken?: string): Promise<DriveFilesPage> {
+    const query = new URLSearchParams({
+      folder_token: folderToken,
+      page_size: String(PAGE_SIZE),
+    });
+    if (pageToken) query.set('page_token', pageToken);
+    const response = await this.read(`/open-apis/drive/v1/files?${query.toString()}`);
+    const data = response.data ?? {};
+    if (!Array.isArray(data.files)) {
+      throw new Error('Feishu Drive response missing files collection');
+    }
+    const files = data.files.filter((file): file is DriveFile => (
+      Boolean(file) && typeof file === 'object' &&
+      typeof (file as Record<string, unknown>).token === 'string' &&
+      typeof (file as Record<string, unknown>).type === 'string' &&
+      typeof (file as Record<string, unknown>).name === 'string'
+    ));
+    return {
+      files,
+      has_more: data.has_more === true,
+      next_page_token: typeof data.next_page_token === 'string'
+        ? data.next_page_token
+        : undefined,
+    };
+  }
+
   async readSheetRange(
     spreadsheetToken: string,
     range: string,
@@ -330,6 +396,20 @@ export class FeishuClient {
       const credentialFailure =
         credentialRequest || response.status === 401 || response.status === 403;
       if (!response.ok || payload.code !== 0) {
+        const driveAuthorizationFailure =
+          !credentialRequest &&
+          path.startsWith('/open-apis/drive/') &&
+          (response.status === 401 || response.status === 403 || payload.code === 91403);
+        if (driveAuthorizationFailure) {
+          const missingScopes = Array.isArray(payload.error?.missing_scopes)
+            ? payload.error.missing_scopes.filter((scope): scope is string => typeof scope === 'string')
+            : undefined;
+          throw new FeishuAuthorizationError({
+            status: response.status,
+            code: payload.code ?? 'unknown',
+            missingScopes,
+          });
+        }
         const prefix = credentialFailure ? 'Feishu credential request failed' : 'Feishu read failed';
         throw new Error(
           `${prefix} (status=${response.status}, code=${payload.code ?? 'unknown'})`,

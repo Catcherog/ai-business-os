@@ -2,7 +2,11 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { loadFeishuMigrationConfig } from '../src/config.js';
-import { FeishuClient, type FeishuRequest } from '../src/feishu-client.js';
+import {
+  FeishuAuthorizationError,
+  FeishuClient,
+  type FeishuRequest,
+} from '../src/feishu-client.js';
 import { readBaseSource } from '../src/base-reader.js';
 import { readSpreadsheetSource } from '../src/sheet-reader.js';
 import { discoverSourceInventory } from '../src/inventory.js';
@@ -276,6 +280,67 @@ describe('migration configuration', () => {
 });
 
 describe('FeishuClient read-only transport', () => {
+  it('lists Drive folder pages with GET-only requests and safe resource fields', async () => {
+    const fixture = { calls: [] as RecordedCall[] };
+    const fetchImpl: typeof fetch = async (input, init) => {
+      const url = new URL(requestUrl(input));
+      fixture.calls.push({ method: (init?.method ?? 'GET').toUpperCase(), url });
+      if (url.pathname.endsWith('/auth/v3/tenant_access_token/internal')) {
+        return json({ code: 0, tenant_access_token: 'memory-token', expire: 7200 });
+      }
+      if (url.pathname.endsWith('/drive/v1/files')) {
+        return url.searchParams.get('page_token')
+          ? json({
+            code: 0,
+            data: {
+              files: [{ token: 'sheet-2', type: 'sheet', name: 'Workbook Two' }],
+              has_more: false,
+            },
+          })
+          : json({
+            code: 0,
+            data: {
+              files: [{ token: 'folder-1', type: 'folder', name: 'Nested' }],
+              has_more: true,
+              next_page_token: 'drive-next',
+            },
+          });
+      }
+      return json({ code: 404 }, 404);
+    };
+
+    const client = makeClient(fetchImpl);
+    const first = await client.listDriveFiles('folder-source');
+    const second = await client.listDriveFiles('folder-source', first.next_page_token);
+
+    expect(first.files).toEqual([{ token: 'folder-1', type: 'folder', name: 'Nested' }]);
+    expect(first.has_more).toBe(true);
+    expect(second.files).toEqual([{ token: 'sheet-2', type: 'sheet', name: 'Workbook Two' }]);
+    expect(fixture.calls.filter((call) => !call.url.pathname.includes('/auth/'))
+      .every((call) => call.method === 'GET')).toBe(true);
+  });
+
+  it('classifies Drive permission denial without exposing the response body', async () => {
+    const fetchImpl: typeof fetch = async (input) => {
+      const url = new URL(requestUrl(input));
+      if (url.pathname.endsWith('/auth/v3/tenant_access_token/internal')) {
+        return json({ code: 0, tenant_access_token: 'memory-token', expire: 7200 });
+      }
+      return json({ code: 91403, msg: 'private permission response body' }, 403);
+    };
+
+    const error = await makeClient(fetchImpl).listDriveFiles('folder-source').catch((caught) => caught);
+
+    expect(error).toBeInstanceOf(FeishuAuthorizationError);
+    expect(error).toMatchObject({
+      status: 403,
+      code: 91403,
+      identityKind: 'bot-tenant-access-token',
+      missingScopes: ['drive:drive.metadata:readonly'],
+    });
+    expect((error as Error).message).not.toContain('private permission response body');
+  });
+
   it('is guarded as a Node-only module', () => {
     const source = readFileSync(
       fileURLToPath(new URL('../src/feishu-client.ts', import.meta.url)),
