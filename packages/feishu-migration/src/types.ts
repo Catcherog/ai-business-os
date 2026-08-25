@@ -104,3 +104,19 @@ export type {
 } from './apply.js';
 export { verifyMigration } from './verify-live.js';
 export type { LiveVerificationReport, VerifyOptions } from './verify-live.js';
+export {
+  parseRedactedCanaryArtifact,
+  parseRedactedManifestArtifact,
+  redactApplyReport,
+  redactLiveVerificationReport,
+  redactMigrationManifest,
+  rehydrateCanaryReport,
+  rehydrateMigrationManifest,
+} from './artifact.js';
+export type {
+  RedactedApplyArtifact,
+  RedactedCanaryArtifact,
+  RedactedManifestArtifact,
+  RedactedManifestDecision,
+  RedactedVerificationArtifact,
+} from './artifact.js';

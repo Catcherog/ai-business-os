@@ -24,6 +24,7 @@
     "./target-schema": "./src/target-schema.ts",
     "./bootstrap": "./src/bootstrap.ts",
     "./plan": "./src/plan.ts",
+    "./artifact": "./src/artifact.ts",
     "./apply": "./src/apply.ts",
     "./verify-live": "./src/verify-live.ts",
     "./cli": "./src/cli.ts"
