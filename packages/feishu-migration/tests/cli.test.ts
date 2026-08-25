@@ -32,4 +32,18 @@ describe('migration CLI contract', () => {
       scope: 'canary',
     });
   });
+
+  it('accepts a local authorized config document path without exposing its contents', () => {
+    expect(parseCliArgs(['plan', '--config-file', 'D:/safe/feishubase.txt'])).toMatchObject({
+      command: 'plan',
+      config_path: 'D:/safe/feishubase.txt',
+    });
+  });
+
+  it('supports a safe config diagnostics command', () => {
+    expect(parseCliArgs(['config', '--config-file', 'D:/safe/feishubase.txt'])).toMatchObject({
+      command: 'config',
+      config_path: 'D:/safe/feishubase.txt',
+    });
+  });
 });

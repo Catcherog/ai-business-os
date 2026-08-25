@@ -11,6 +11,7 @@
     "./hash": "./src/hash.ts",
     "./redact": "./src/redact.ts",
     "./config": "./src/config.ts",
+    "./config-document": "./src/config-document.ts",
     "./feishu-client": "./src/feishu-client.ts",
     "./base-reader": "./src/base-reader.ts",
     "./sheet-reader": "./src/sheet-reader.ts",

@@ -68,6 +68,17 @@ export interface VerificationReport {
 export { stableHash } from './hash.js';
 export { redactForLog } from './redact.js';
 export {
+  FeishuConfigDocumentError,
+  inspectFeishuMigrationConfigDocument,
+  parseFeishuMigrationConfigDocument,
+} from './config-document.js';
+export type {
+  ConfigFieldDiagnostic,
+  ConfigPresence,
+  FeishuConfigDiagnostics,
+  FeishuConfigDocumentResult,
+} from './config-document.js';
+export {
   buildMigrationPlan,
   canonicalizeXiaohongshuUrl,
   deduplicateRecords,

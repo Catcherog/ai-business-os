@@ -4,6 +4,11 @@ import { pathToFileURL } from 'node:url';
 import { applyMigration, type ApplyReport } from './apply.js';
 import { bootstrapTargetSchema, getTargetSchemaFingerprint } from './bootstrap.js';
 import { loadFeishuMigrationConfig } from './config.js';
+import {
+  FeishuConfigDocumentError,
+  inspectFeishuMigrationConfigDocument,
+  parseFeishuMigrationConfigDocument,
+} from './config-document.js';
 import { FeishuClient } from './feishu-client.js';
 import { discoverSourceInventory } from './inventory.js';
 import { createMigrationManifest, type MigrationManifest } from './plan.js';
@@ -22,7 +27,7 @@ import {
   type RedactedManifestArtifact,
 } from './artifact.js';
 
-export type MigrationCliCommand = 'plan' | 'bootstrap' | 'apply' | 'verify' | 'help';
+export type MigrationCliCommand = 'plan' | 'bootstrap' | 'apply' | 'verify' | 'config' | 'help';
 export type MigrationVerifyScope = 'canary' | 'full';
 
 export const DEFAULT_OUTPUT_DIR = '.artifacts/feishu-migration';
@@ -31,6 +36,7 @@ export interface ParsedCliArgs {
   command: MigrationCliCommand;
   run_id?: string;
   manifest_path?: string;
+  config_path?: string;
   output_dir?: string;
   canary: boolean;
   schema_only: boolean;
@@ -43,11 +49,12 @@ export function parseCliArgs(args: string[]): ParsedCliArgs {
     return { command: 'help', canary: false, schema_only: false };
   }
   const command = rawCommand as MigrationCliCommand;
-  if (!['plan', 'bootstrap', 'apply', 'verify'].includes(command)) {
+  if (!['plan', 'bootstrap', 'apply', 'verify', 'config'].includes(command)) {
     throw new Error(`Unknown migration command: ${command}`);
   }
   let run_id: string | undefined;
   let manifest_path: string | undefined;
+  let config_path: string | undefined;
   let output_dir: string | undefined;
   let canary = false;
   let schema_only = false;
@@ -58,12 +65,13 @@ export function parseCliArgs(args: string[]): ParsedCliArgs {
       canary = true;
       continue;
     }
-    if (argument === '--run-id' || argument === '--manifest' || argument === '--output') {
+    if (argument === '--run-id' || argument === '--manifest' || argument === '--output' || argument === '--config-file') {
       const value = args[index + 1]?.trim();
       if (!value) throw new Error(`${argument} requires a value`);
       if (argument === '--run-id') run_id = value;
       else if (argument === '--manifest') manifest_path = value;
-      else output_dir = value;
+      else if (argument === '--output') output_dir = value;
+      else config_path = value;
       index += 1;
       continue;
     }
@@ -95,6 +103,7 @@ export function parseCliArgs(args: string[]): ParsedCliArgs {
     command,
     run_id,
     manifest_path,
+    config_path,
     output_dir,
     canary,
     schema_only,
@@ -106,6 +115,8 @@ function usage(): string {
   return [
     'Usage:',
     '  npm run migrate:plan -- --output .artifacts/feishu-migration',
+    '  npm run migrate:plan -- --config-file <local-path> --output .artifacts/feishu-migration',
+    '  npm run migrate:config -- --config-file <local-path>',
     '  npm run migrate:apply -- --schema-only --run-id <run_id>',
     '  npm run migrate:apply -- --canary --run-id <run_id>',
     '  npm run migrate:verify -- --run-id <run_id> --scope canary',
@@ -187,8 +198,34 @@ async function loadRehydratedManifest(
   return rehydrateMigrationManifest(artifact, inventory);
 }
 
+async function loadRuntimeConfig(args: ParsedCliArgs): Promise<ReturnType<typeof loadFeishuMigrationConfig>> {
+  if (!args.config_path) return loadFeishuMigrationConfig();
+  const document = await readFile(resolve(args.config_path), 'utf8');
+  return parseFeishuMigrationConfigDocument(document).config;
+}
+
+async function runConfigDiagnostics(args: ParsedCliArgs): Promise<number> {
+  if (!args.config_path) throw new Error('config requires --config-file');
+  const document = await readFile(resolve(args.config_path), 'utf8');
+  try {
+    const result = parseFeishuMigrationConfigDocument(document);
+    process.stdout.write(`${JSON.stringify({ status: 'PASS', diagnostics: result.diagnostics }, null, 2)}\n`);
+    return 0;
+  } catch (error) {
+    if (!(error instanceof FeishuConfigDocumentError)) throw error;
+    const diagnostics = error.diagnostics ?? inspectFeishuMigrationConfigDocument(document);
+    process.stdout.write(`${JSON.stringify({
+      status: 'BLOCKED',
+      code: error.code,
+      fields: [...error.missing_fields, ...error.conflicting_fields],
+      diagnostics,
+    }, null, 2)}\n`);
+    return 1;
+  }
+}
+
 async function runPlan(args: ParsedCliArgs): Promise<number> {
-  const config = loadFeishuMigrationConfig();
+  const config = await loadRuntimeConfig(args);
   const client = new FeishuClient({ appId: config.appId, appSecret: config.appSecret });
   const [inventory, targetSnapshot, schemaFingerprint] = await Promise.all([
     discoverSourceInventory({ config, client }),
@@ -211,7 +248,7 @@ async function runPlan(args: ParsedCliArgs): Promise<number> {
 }
 
 async function runSchemaOnly(args: ParsedCliArgs): Promise<number> {
-  const config = loadFeishuMigrationConfig();
+  const config = await loadRuntimeConfig(args);
   const client = new FeishuClient({ appId: config.appId, appSecret: config.appSecret });
   const result = await bootstrapTargetSchema(client, config.targetBaseToken);
   const path = join(outputDirectory(args), 'schema.json');
@@ -228,7 +265,7 @@ async function runApply(args: ParsedCliArgs): Promise<number> {
   if (args.schema_only) {
     return runSchemaOnly(args);
   }
-  const config = loadFeishuMigrationConfig();
+  const config = await loadRuntimeConfig(args);
   const client = new FeishuClient({ appId: config.appId, appSecret: config.appSecret });
   const manifest = await loadRehydratedManifest(manifestPath(args), config, client);
   if (args.run_id && args.run_id !== manifest.run_id) {
@@ -257,7 +294,7 @@ async function runApply(args: ParsedCliArgs): Promise<number> {
 }
 
 async function runVerify(args: ParsedCliArgs): Promise<number> {
-  const config = loadFeishuMigrationConfig();
+  const config = await loadRuntimeConfig(args);
   const client = new FeishuClient({ appId: config.appId, appSecret: config.appSecret });
   const manifest = await loadRehydratedManifest(manifestPath(args), config, client);
   if (args.run_id && args.run_id !== manifest.run_id) {
@@ -295,6 +332,7 @@ export async function runCli(args: string[] = process.argv.slice(2)): Promise<nu
   if (parsed.command === 'plan') return runPlan(parsed);
   if (parsed.command === 'bootstrap') return runBootstrap(parsed);
   if (parsed.command === 'apply') return runApply(parsed);
+  if (parsed.command === 'config') return runConfigDiagnostics(parsed);
   return runVerify(parsed);
 }
 
