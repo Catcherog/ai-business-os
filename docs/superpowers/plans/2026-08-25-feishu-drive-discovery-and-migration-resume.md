@@ -59,7 +59,7 @@ Add tests proving:
 ```ts
 const env = {
   FEISHU_APP_ID: 'app',
-  FEISHU_APP_SECRET: 'rotated-secret-test-fixture',
+  FEISHU_APP_SECRET: '<set>',
   FEISHU_SOURCE_DRIVE_FOLDER_TOKEN: 'https://tenant.feishu.cn/drive/folder/folder-source',
   FEISHU_TARGET_BASE_TOKEN: 'https://tenant.feishu.cn/base/base-target?table=tbl-target',
 };
