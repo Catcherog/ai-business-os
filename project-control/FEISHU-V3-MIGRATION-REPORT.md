@@ -1,120 +1,187 @@
-# BUSOS Feishu v3 Live Migration Report
+# BUSOS Feishu v3 Authorized Config Resume Report
+
+Runbook: `BUSOS-R2-FEISHU-V3-AUTHORIZED-CONFIG-RESUME-01`
+
+This report records only the current controlled run. Configuration values,
+token URLs, raw Feishu responses, record IDs, and personal payloads are not
+recorded.
 
 ## A. VERDICT
 
 `AUTHORIZED_CONFIG_BLOCKED`
 
-The unique local `feishubase*` file exists, but it is not safely parseable as
-the configuration shape required by the current migration code. The required
-variables were not present in that file or in the current process. Per the
-runbook, execution stopped before Feishu client construction. No live plan,
-schema bootstrap, migration, readback, or product connected verification was
-attempted.
+The owner-authorized local `feishubase*` document was found and inspected in
+memory. Its App ID and App Secret fields were present, but the required source
+Base token, target Base token, and eight source Sheet tokens were not
+normalized. The fail-closed gate stopped before Feishu client construction.
+No live preflight, migration, readback, connected verification, or browser
+E2E was claimed.
 
-## B. AUTHORITY
+## B. AUTHORITY / SHA CHAIN
 
-- `FROZEN_BASELINE_SHA`: `729108d8059e3e143194a05f43e510af3587d385`
-- `CURRENT_MAIN_SHA`: `729108d8059e3e143194a05f43e510af3587d385`
-- `BRANCH_PRE_LIVE_SHA`: `5c9b565b4caeaa9703ba9514f3f01b00745ebcc1`
-- `LIVE_IMPLEMENTATION_SHA`: `32fad4cc4d5d7f42c1a79d73e49c08a84405923c`
-- `REPORT_SHA`: `125747c7c80d771f2ac04c961f628fbe1b9aba5a` (redacted report checkpoint; this metadata amendment is a follow-on report-only commit)
-- parent of implementation checkpoint: `5c9b565b4caeaa9703ba9514f3f01b00745ebcc1`
-- `origin/codex/busos-feishu-v3` before report update: `5c9b565b4caeaa9703ba9514f3f01b00745ebcc1`
-- `origin/main`: unchanged at `729108d8059e3e143194a05f43e510af3587d385`
-- merge-base: `729108d8059e3e143194a05f43e510af3587d385`
-- coordinator worktree: `C:\Users\Catcher\AppData\Local\Temp\codex-busos-feishu-v3`
-- worktree was clean after the implementation checkpoint; report edits are the only pending local changes.
+- `RUNBOOK`: `BUSOS-R2-FEISHU-V3-AUTHORIZED-CONFIG-RESUME-01`
+- `BRANCH`: `codex/busos-feishu-v3`
+- `PRE_RUN_BRANCH_SHA`: `d33a4433161b7e1ba5b99f2baea5f5be1bbc079f`
+- `IMPLEMENTATION_SHA`: `2740b6f2152ea8c28994b3f30de002bbe4eb5f72`
+- `ORIGIN_MAIN_SHA`: `729108d8059e3e143194a05f43e510af3587d385`
+- `MERGE_BASE`: `729108d8059e3e143194a05f43e510af3587d385`
+- `TARGET_BRANCH_POLICY`: current branch only; no main merge and no force push
+- `COORDINATOR_WORKTREE`: `C:\Users\Catcher\AppData\Local\Temp\codex-busos-feishu-v3`
+- `REPORT_CHECKPOINT`: report-only commit follows this implementation checkpoint
+
+Authority was checked with `git ls-remote`, local branch/HEAD, merge-base, and
+worktree status before implementation. The local authorization document was
+not copied into this worktree and is not part of the Git chain.
 
 ## C. CONFIG SAFETY
 
-- `feishubase*` match count: `1`
-- file path: local `D:\360Downloads\Trae 项目\AI Business OS\feishubase.txt`
+- authorized `feishubase*` match count: `1`
+- local file: owner-authorized file in the initial workspace; not copied to the coordinator
 - tracked: `NO`
 - staged: `NO`
 - present in `HEAD`: `NO`
-- Git history risk: `NO` matching history entry
-- local ignore: `YES` via `.git/info/exclude`; tracked `.gitignore` was not changed
-- `FEISHU_APP_ID = MISSING`
-- `FEISHU_APP_SECRET = MISSING`
-- `FEISHU_SOURCE_BASE_TOKEN = MISSING`
-- `FEISHU_TARGET_BASE_TOKEN = MISSING`
-- `FEISHU_SOURCE_SHEET_*_TOKEN = MISSING`
-- config parse: `MISSING`
-- secret scan: `PASS`
-- client construction: `NOT REACHED`
-- Feishu HTTP calls: `0`
-- Feishu writes: `0`
+- matching Git history entry: `NO`
+- local ignore: `YES` via `.git/info/exclude`
+- parser formats observed: `KEY_VALUE`, `LABEL_NEXT_LINE`
+- safe source field names observed: `App ID`, `App Secret`, `多维表格`, `知识库`
 
-No configuration value, token, Base URL, table ID, or personal payload is
-recorded in this report.
+Normalized diagnostics, with all configuration-derived values omitted:
 
-## D. MIGRATION
+| Field | Status |
+| --- | --- |
+| `FEISHU_APP_ID` | `PRESENT` |
+| `FEISHU_APP_SECRET` | `PRESENT` |
+| `FEISHU_SOURCE_BASE_TOKEN` | `MISSING` |
+| `FEISHU_TARGET_BASE_TOKEN` | `MISSING` |
+| `FEISHU_SOURCE_SHEET_*_TOKEN` | `MISSING` |
 
-| Gate | Verdict | Evidence |
-| --- | --- | --- |
-| Plan | `BLOCKED` | Required authorization was absent; stopped before client construction. |
-| Schema-only | `NOT RUN` | Plan authorization gate did not pass. |
-| Canary | `NOT RUN` | Schema and plan gates did not pass. |
-| Full migration | `NOT RUN` | Canary gate did not pass. |
-| Full verification | `NOT RUN` | No live writes occurred. |
-| Idempotency rerun | `NOT RUN` | No live batch occurred. |
-| Old Base writes | `0` | No Feishu HTTP calls occurred. |
-| Unauthorized-target writes | `0` | No Feishu HTTP calls occurred. |
+The safe diagnostics command returned exit `1` with
+`CONFIG_MISSING: FEISHU_SOURCE_BASE_TOKEN, FEISHU_TARGET_BASE_TOKEN,
+FEISHU_SOURCE_SHEET_*_TOKEN`. The real-config plan command returned the same
+fail-closed error before constructing a Feishu client. No configuration value,
+fingerprint, or URL was printed, persisted, injected into `.env`, or written to
+this report.
 
-No live migration counts, target schema fingerprint, target-before snapshot,
-readback result, or idempotency counts exist and none are claimed.
+## D. SOURCE / TARGET IDENTITY
 
-The implementation checkpoint adds redacted manifest/report artifacts and
-read-only source rehydration. Migration-package tests prove that raw migration
-keys, source payloads, record IDs, and report reasons are not persisted or
-printed by the CLI; this is local engineering evidence, not live evidence.
+`NOT VERIFIED`.
 
-## E. PRODUCT VERIFICATION
+The document did not provide deterministic source and target Base labels that
+could satisfy the required normalized fields. Therefore source/target token
+equality, target allowlist membership, target identity, and target-before
+snapshot were not evaluated. No Base URL or token is recorded here.
 
-- Business Data connected: `NOT RUN`; local smoke confirms fail-closed `BLOCKED` without server configuration.
-- Scheduling connected: `NOT RUN`; local smoke confirms fail-closed `BLOCKED` without server configuration.
-- Outreach: connected verification `NOT RUN`; local contract remains text-only.
-- server probe: local built-server smoke passed with blocked/no-config behavior.
-- bundle secret scan: `PASS` in local smoke; no live credentials were injected.
-- browser E2E: `BROWSER_E2E_NOT_EVIDENCED`.
+## E. READ-ONLY PREFLIGHT
 
-These local checks do not prove NEW test Base connectivity or production
-readiness.
+`NOT RUN` — configuration gate failed before Feishu client construction.
 
-## F. TESTS
+Feishu HTTP: `0`; source reads: `0`; target reads: `0`.
 
-- `npm.cmd run test --workspace=@busos/feishu-migration`: exit `0`; 8 files, 51 passed, 0 failed.
+## F. DRY-RUN
+
+`NOT RUN` — the live dry-run requires a valid normalized configuration and
+read-only preflight first.
+
+## G. CANARY / READBACK
+
+`NOT RUN` — no schema or canary request was sent, and no readback result exists.
+
+## H. FULL MIGRATION
+
+`NOT RUN` — no target schema write, record create, record update, or source
+mutation occurred.
+
+## I. IDEMPOTENCY
+
+`NOT RUN` — there was no live batch to apply a zero-write second run against.
+
+## J. BUSINESS DATA CONNECTED
+
+`NOT RUN`.
+
+The local product smoke path correctly reports Business Data as `BLOCKED`
+without server configuration. This is fail-closed local evidence, not NEW
+test Base connectivity or connected data evidence.
+
+## K. SCHEDULING CONNECTED
+
+`NOT RUN`.
+
+The local product smoke path correctly reports Scheduling as `BLOCKED`
+without server configuration. No connected proposal count or live Feishu
+readback is claimed.
+
+## L. BROWSER E2E
+
+`BROWSER_E2E_NOT_EVIDENCED` for live Feishu migration and connected product
+surfaces. Local UI/product smoke passed its blocked-state contracts only.
+
+## M. TESTS / VERIFICATION
+
+- `npm.cmd run test --workspace=@busos/feishu-migration`: exit `0`; 9 files, 58 passed, 0 failed.
 - `npm.cmd run typecheck --workspace=@busos/feishu-migration`: exit `0`.
-- `$env:PYTHONUTF8='1'; npm.cmd run verify`: exit `0`; all workspace typechecks passed, migration package 51 tests passed, build passed, product integration smoke passed, `SMOKE_FEISHU_V3_OK` passed.
-- `npm run migrate:plan -- --help`: exit `0`; CLI help is accepted after the command.
-- staged secret scan: `PASS`; staged file policy: `PASS`; no authorization file staged.
+- `$env:PYTHONUTF8='1'; npm.cmd run verify`: exit `0` with elevated read access for the isolated worktree; workspace typechecks/tests, build, and smoke completed.
+- root build identity: `2740b6f` with `DEMO` / `BUSOS-R2-BATCH1-CORR-01`.
+- local config diagnostics: exit `1`, expected `CONFIG_MISSING` stop.
+- real-config plan: exit `1`, expected `CONFIG_MISSING` stop; no client construction.
+- bundle secret scan: `PASS`.
+- product smoke: `SMOKE_PRODUCT_INTEGRATION_OK` and `SMOKE_FEISHU_V3_OK`; both are local contract evidence, not live connectivity.
 
-## G. CHANGED FILES
+The first root verification attempt was blocked by sandbox access to the
+isolated worktree's parent path; the same verification passed when rerun with
+the narrowly scoped verification permission. This environment detail does not
+change the migration verdict.
 
-Committed implementation files:
+## N. SECRET / FILE SAFETY SCANS
 
+- staged authorization-value comparison: `PASS`.
+- staged file policy: `PASS`; the local authorization file was not staged.
+- bundle secret/credential scan: `PASS`.
+- no `.env`, credential file, raw token URL, raw Feishu response, or personal
+  payload was added by this run.
+
+## O. CHANGED FILES
+
+Implementation checkpoint:
+
+- `package.json`
 - `packages/feishu-migration/package.json`
-- `packages/feishu-migration/src/artifact.ts`
 - `packages/feishu-migration/src/cli.ts`
+- `packages/feishu-migration/src/config-document.ts`
 - `packages/feishu-migration/src/types.ts`
-- `packages/feishu-migration/tests/artifact.test.ts`
 - `packages/feishu-migration/tests/cli.test.ts`
+- `packages/feishu-migration/tests/config-document.test.ts`
 
-Report files updated in this blocked closure:
+Report update:
 
 - `project-control/FEISHU-V3-MIGRATION-REPORT.md`
 - `project-control/FEISHU-V3-CLOSURE.md`
 
-The local authorization file and local `.git/info/exclude` are not committed.
+The owner-authorized local configuration and `.git/info/exclude` remain outside
+the committed file set.
 
-## H. DEPLOYMENT
+## P. EXACT FEISHU HTTP / READ / WRITE COUNTS
+
+| Scope | HTTP total | Reads | Writes |
+| --- | ---: | ---: | ---: |
+| Feishu API in this run | `0` | `0` | `0` |
+| old/source Base | `0` | `0` | `0` |
+| target Base | `0` | `0` | `0` |
+| unauthorized target | `0` | `0` | `0` |
+
+Local parser tests and mocked client tests do not count as Feishu HTTP and did
+not touch either Base.
+
+## Q. DEPLOYMENT / HANDOFF
 
 - `main` merged: `NO`
 - production deployed: `NO`
 - real messages sent: `NO`
-- old Base modified: `NO`
-- waiting for Owner Review: `YES`
+- old Feishu Base modified: `NO`
+- current branch push: authorized for this run; no force push
+- Owner Review: `PENDING`
 
-The next run requires a safely parseable authorized configuration in the
-current process or the owner-approved local configuration format. Do not paste
-credential values into chat, Git, artifacts, logs, or reports.
+The next live attempt requires the owner-authorized document to contain all
+required normalized fields in an unambiguous supported format. Until then the
+correct state remains `AUTHORIZED_CONFIG_BLOCKED`; no DEMO fallback is used for
+the migration path.
