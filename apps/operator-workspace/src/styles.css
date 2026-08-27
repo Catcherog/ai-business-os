@@ -32,6 +32,7 @@ body {
   grid-template-columns: 248px 1fr;
   min-height: 100vh;
 }
+.sidebar, .content, .nav { min-width: 0; }
 
 /* ---- Sidebar ---- */
 .sidebar {
