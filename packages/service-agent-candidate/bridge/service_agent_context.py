@@ -46,6 +46,13 @@ ALLOWED_AGENT_MODULES = (
 )
 
 
+def _configure_utf8_stdout() -> None:
+    """Keep structured JSON Unicode-safe on Windows console defaults."""
+    reconfigure = getattr(sys.stdout, "reconfigure", None)
+    if reconfigure is not None:
+        reconfigure(encoding="utf-8", errors="strict")
+
+
 def build_context(message: str, agent_src: str) -> dict:
     """Run the agent's real classifier + state factory for one message."""
     if agent_src not in sys.path:
@@ -95,6 +102,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     context = build_context(args.message, agent_src)
+    _configure_utf8_stdout()
     json.dump(context, sys.stdout, ensure_ascii=False)
     sys.stdout.write("\n")
     return 0

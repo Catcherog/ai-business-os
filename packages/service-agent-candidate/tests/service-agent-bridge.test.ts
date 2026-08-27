@@ -85,6 +85,21 @@ describe.skipIf(!agentAvailable)(
       });
       expect(candidate.governance.status).toBe('PENDING_REVIEW');
     });
+
+    it('keeps non-ASCII consultation text intact under a legacy Windows stdout encoding', () => {
+      const encodedRun = spawnSync(
+        PYTHON,
+        [BRIDGE, '--message', CANONICAL_MESSAGE, '--agent-src', AGENT_SRC],
+        {
+          encoding: 'utf8',
+          env: { ...process.env, PYTHONIOENCODING: 'cp936' },
+        },
+      );
+
+      expect(encodedRun.error).toBeUndefined();
+      expect(encodedRun.status).toBe(0);
+      expect(JSON.parse(encodedRun.stdout).message).toBe(CANONICAL_MESSAGE);
+    });
   },
 );
 
