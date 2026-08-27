@@ -42,6 +42,9 @@ describe('workspace router', () => {
       customerId: 'cust_001',
     });
     expect(parseRoute('#/evaluation')).toEqual({ name: 'evaluation' });
+    expect(parseRoute('#/creative')).toEqual({ name: 'creative' });
+    expect(parseRoute('#/automations')).toEqual({ name: 'automations' });
+    expect(parseRoute('#/integrations')).toEqual({ name: 'integrations' });
 
     expect(serializeRoute({ name: 'service-agent' })).toBe('#/service-agent');
     expect(serializeRoute({ name: 'business-data' })).toBe('#/business-data');
@@ -49,6 +52,9 @@ describe('workspace router', () => {
       '#/business-data/cust_001',
     );
     expect(serializeRoute({ name: 'evaluation' })).toBe('#/evaluation');
+    expect(serializeRoute({ name: 'creative' })).toBe('#/creative');
+    expect(serializeRoute({ name: 'automations' })).toBe('#/automations');
+    expect(serializeRoute({ name: 'integrations' })).toBe('#/integrations');
 
     // round-trip
     expect(parseRoute(serializeRoute({ name: 'business-data-detail', customerId: 'cust_001' }))).toEqual({
@@ -62,6 +68,9 @@ describe('workspace router', () => {
     expect(isNavigationActive(detail, 'service-agent')).toBe(false);
     expect(isNavigationActive({ name: 'service-agent' }, 'service-agent')).toBe(true);
     expect(isNavigationActive({ name: 'evaluation' }, 'evaluation')).toBe(true);
+    expect(isNavigationActive({ name: 'creative' }, 'creative')).toBe(true);
+    expect(isNavigationActive({ name: 'automations' }, 'automations')).toBe(true);
+    expect(isNavigationActive({ name: 'integrations' }, 'integrations')).toBe(true);
   });
 
   it('parses and serializes the V3 operations surfaces (Operations/Customers/Orders/Review Queue)', () => {
@@ -115,18 +124,16 @@ describe('workspace router', () => {
     expect(isNavigationActive(route, 'projects')).toBe(false);
     expect(NAVIGATION.map((item) => item.id)).toEqual([
       'overview',
-      'projects',
-      'reviews',
-      'runs',
-      'service-agent',
-      'business-data',
-      'scheduling',
-      'evaluation',
-      'business',
       'customers',
       'orders',
-      'review-queue',
-      'lumen',
+      'projects',
+      'scheduling',
+      'service-agent',
+      'creative',
+      'reviews',
+      'automations',
+      'evaluation',
+      'integrations',
     ]);
   });
 

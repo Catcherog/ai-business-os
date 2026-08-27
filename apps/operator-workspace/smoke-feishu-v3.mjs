@@ -32,7 +32,7 @@ const forbidden = [
 for (const token of forbidden) {
   if (bundle.includes(token)) { console.error(`LEAK: ${token}`); failed = true; }
 }
-for (const label of ['Business Data', 'Scheduling', 'CONNECTED TEST BASE', 'Generate proposals', 'Copy script', 'No demo fallback']) {
+for (const label of ['Business Data', 'Scheduling', 'Creative', 'Integrations', 'Run DEMO', 'No demo fallback']) {
   if (!bundle.includes(label)) { console.error(`Expected v3 label missing: ${label}`); failed = true; }
 }
 

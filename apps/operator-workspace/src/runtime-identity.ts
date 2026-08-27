@@ -1,6 +1,6 @@
 /** Stable UI-facing runtime identity. The server implementation is supplied
  * by WORKSPACE-API-01; UX-01 only defines and renders the view contract. */
-export type RuntimeMode = 'DEMO' | 'CONNECTED' | 'LIVE';
+export type RuntimeMode = 'DEMO' | 'CONNECTED' | 'LIVE' | 'BLOCKED';
 
 export interface RuntimeIdentityView {
   mode: RuntimeMode;
@@ -23,7 +23,7 @@ export function renderRuntimeIdentity(
   host.replaceChildren();
   host.append(
     Object.assign(document.createElement('span'), {
-      className: 'badge badge-demo',
+      className: `badge badge-${identity.mode.toLowerCase()}`,
       textContent: identity.mode,
     }),
     Object.assign(document.createElement('span'), {

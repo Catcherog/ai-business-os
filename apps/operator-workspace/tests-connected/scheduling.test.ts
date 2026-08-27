@@ -86,4 +86,27 @@ describe('connected scheduling routes', () => {
       expect(result.body.data.scriptId).toBe('script-1');
     }
   });
+
+  it('fails closed when confirmation has no authorized canonical assignment mapping', async () => {
+    const result = await api().confirm({
+      projectId: 'project-1',
+      idempotencyKey: 'schedule-idem-1',
+      proposal: {
+        proposalId: 'proposal-1',
+        projectId: 'project-1',
+        requirementId: 'requirement-1',
+        resourceKey: 'resource-model-1',
+        resourceType: 'MODEL',
+        availabilityId: 'availability-1',
+        startAt: availability.start_at!,
+        endAt: availability.end_at!,
+        score: 1000,
+        reasons: [],
+        warnings: [],
+      },
+    });
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({ mode: 'BLOCKED' });
+    if (result.body.mode === 'BLOCKED') expect(result.body.reason).toContain('assignment mapping');
+  });
 });

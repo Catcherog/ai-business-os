@@ -6,7 +6,28 @@
  * top-level shape without adding a second state machine.
  */
 
-export type NavigationId = 'overview' | 'projects' | 'reviews' | 'runs' | 'service-agent' | 'business-data' | 'scheduling' | 'evaluation' | 'business' | 'customers' | 'orders' | 'review-queue' | 'lumen';
+/**
+ * Top-level product navigation. The legacy ids remain in this union so old
+ * deep links and smoke seams can continue to parse while the sidebar presents
+ * the unified V1 information architecture.
+ */
+export type NavigationId =
+  | 'overview'
+  | 'customers'
+  | 'orders'
+  | 'projects'
+  | 'scheduling'
+  | 'service-agent'
+  | 'creative'
+  | 'reviews'
+  | 'automations'
+  | 'evaluation'
+  | 'integrations'
+  | 'runs'
+  | 'business-data'
+  | 'business'
+  | 'review-queue'
+  | 'lumen';
 
 export type Route =
   | { name: 'overview' }
@@ -17,6 +38,9 @@ export type Route =
   | { name: 'runs' }
   | { name: 'run-detail'; processId: string }
   | { name: 'service-agent' }
+  | { name: 'creative' }
+  | { name: 'automations' }
+  | { name: 'integrations' }
   | { name: 'business-data' }
   | { name: 'business-data-detail'; customerId: string }
   | { name: 'scheduling' }
@@ -30,20 +54,47 @@ export type Route =
   | { name: 'review-queue-detail'; reviewId: string }
   | { name: 'lumen' };
 
-export const NAVIGATION: readonly { id: NavigationId; label: string; tag?: string }[] = [
+export type NavigationItem = { id: NavigationId; label: string; tag?: string };
+
+/** Final V1 sidebar grouping. Legacy routes are deliberately not exposed here. */
+export const NAVIGATION_GROUPS: readonly {
+  id: 'business' | 'ai' | 'system';
+  label: string;
+  items: readonly NavigationItem[];
+}[] = [
+  {
+    id: 'business',
+    label: 'Business',
+    items: [
+      { id: 'customers', label: 'Customers', tag: 'DEMO' },
+      { id: 'orders', label: 'Orders', tag: 'DEMO' },
+      { id: 'projects', label: 'Projects', tag: 'DEMO' },
+      { id: 'scheduling', label: 'Scheduling', tag: 'DEMO' },
+    ],
+  },
+  {
+    id: 'ai',
+    label: 'AI',
+    items: [
+      { id: 'service-agent', label: 'Service Agent', tag: 'DEMO' },
+      { id: 'creative', label: 'Creative', tag: 'DEMO' },
+      { id: 'reviews', label: 'Reviews', tag: 'DEMO' },
+    ],
+  },
+  {
+    id: 'system',
+    label: 'System',
+    items: [
+      { id: 'automations', label: 'Automations', tag: 'DEMO' },
+      { id: 'evaluation', label: 'Evaluation', tag: 'DEMO' },
+      { id: 'integrations', label: 'Integrations', tag: 'STATUS' },
+    ],
+  },
+] as const;
+
+export const NAVIGATION: readonly NavigationItem[] = [
   { id: 'overview', label: 'Overview' },
-  { id: 'projects', label: 'Projects', tag: 'DEMO' },
-  { id: 'reviews', label: 'Reviews', tag: 'DEMO' },
-  { id: 'runs', label: 'Runs', tag: 'DEMO' },
-  { id: 'service-agent', label: 'Service Agent', tag: 'DEMO' },
-  { id: 'business-data', label: 'Business Data', tag: 'CONNECTED' },
-  { id: 'scheduling', label: 'Scheduling', tag: 'CONNECTED' },
-  { id: 'evaluation', label: 'Evaluation', tag: 'DEMO' },
-  { id: 'business', label: 'Operations', tag: 'CONNECTED' },
-  { id: 'customers', label: 'Customers', tag: 'CONNECTED' },
-  { id: 'orders', label: 'Orders', tag: 'CONNECTED' },
-  { id: 'review-queue', label: 'Review Queue', tag: 'CONNECTED' },
-  { id: 'lumen', label: 'Lumen', tag: 'DEMO' },
+  ...NAVIGATION_GROUPS.flatMap((group) => group.items),
 ] as const;
 
 const DETAIL_ID = /^[A-Za-z0-9_-]+$/;
@@ -81,6 +132,9 @@ export function parseRoute(hash: string): Route {
     return { name: 'run-detail', processId: parts[1] };
   }
   if (parts.length === 1 && parts[0] === 'service-agent') return { name: 'service-agent' };
+  if (parts.length === 1 && parts[0] === 'creative') return { name: 'creative' };
+  if (parts.length === 1 && parts[0] === 'automations') return { name: 'automations' };
+  if (parts.length === 1 && parts[0] === 'integrations') return { name: 'integrations' };
   if (parts.length === 1 && parts[0] === 'business-data') return { name: 'business-data' };
   if (parts.length === 2 && parts[0] === 'business-data' && validId(parts[1])) {
     return { name: 'business-data-detail', customerId: parts[1] };
@@ -118,6 +172,9 @@ export function serializeRoute(route: Route): string {
     case 'runs': return '#/runs';
     case 'run-detail': return `#/runs/${encodeId(route.processId)}`;
     case 'service-agent': return '#/service-agent';
+    case 'creative': return '#/creative';
+    case 'automations': return '#/automations';
+    case 'integrations': return '#/integrations';
     case 'business-data': return '#/business-data';
     case 'business-data-detail': return `#/business-data/${encodeId(route.customerId)}`;
     case 'scheduling': return '#/scheduling';
@@ -135,12 +192,16 @@ export function serializeRoute(route: Route): string {
 
 export function isNavigationActive(route: Route, navigationId: NavigationId): boolean {
   if (navigationId === 'overview') return route.name === 'overview';
+  if (navigationId === 'reviews') return route.name === 'reviews' || route.name === 'review-detail';
   if (navigationId === 'business-data') {
     return route.name === 'business-data' || route.name === 'business-data-detail';
   }
   if (navigationId === 'review-queue') {
     return route.name === 'review-queue' || route.name === 'review-queue-detail';
   }
+  if (navigationId === 'creative') return route.name === 'creative';
+  if (navigationId === 'automations') return route.name === 'automations';
+  if (navigationId === 'integrations') return route.name === 'integrations';
   return route.name === navigationId || route.name === `${navigationId.slice(0, -1)}-detail`;
 }
 

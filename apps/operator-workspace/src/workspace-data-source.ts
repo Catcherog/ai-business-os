@@ -9,7 +9,7 @@ import type {
   RunSummary,
 } from '@busos/workspace-run';
 
-export type WorkspaceMode = 'DEMO' | 'CONNECTED' | 'LIVE';
+export type WorkspaceMode = 'DEMO' | 'CONNECTED' | 'LIVE' | 'BLOCKED';
 export type WorkspaceStatus = 'READY' | 'BLOCKED' | 'ERROR';
 
 export interface RuntimeIdentityView {
@@ -188,7 +188,7 @@ export function createServerWorkspaceDataSource(
       const body = await response.json() as Partial<WorkspaceEnvelope<T>>;
       if (!response.ok) return workspaceError('CONNECTED', body.buildSha ?? 'unknown', 'WORKSPACE_HTTP_ERROR');
       if (
-        (body.mode !== 'DEMO' && body.mode !== 'CONNECTED' && body.mode !== 'LIVE') ||
+        (body.mode !== 'DEMO' && body.mode !== 'CONNECTED' && body.mode !== 'LIVE' && body.mode !== 'BLOCKED') ||
         (body.status !== 'READY' && body.status !== 'BLOCKED' && body.status !== 'ERROR') ||
         typeof body.buildSha !== 'string'
       ) {

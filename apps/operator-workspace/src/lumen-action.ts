@@ -22,6 +22,13 @@ export interface LumenRunResult {
   mode: LumenRunMode;
 }
 
+export type CreativeConnectedMode = 'CONNECTED' | 'BLOCKED';
+
+export interface CreativeConnectedRunResult {
+  result: LumenWorkflowRunResult;
+  mode: CreativeConnectedMode;
+}
+
 /** In-browser DEMO execution against the FakeRunningHubAdapter (no secrets). */
 export async function runLumenWorkflowDemo(
   input: LumenWorkflowInput,
@@ -83,4 +90,18 @@ export async function runLumenWorkflowLive(input: LumenWorkflowInput): Promise<L
     errorCode: 'LIVE_NO_RESULT',
     errorMessage: 'server returned no result',
   }) as LumenWorkflowRunResult, mode: 'LIVE' };
+}
+
+/**
+ * Unified Creative surface adapter. The legacy Lumen action retains its LIVE
+ * return type for backwards-compatible tests, while the V1 product surface
+ * exposes the truthful operator vocabulary: a server-bound request is either
+ * CONNECTED or explicitly BLOCKED. No blocked request is relabelled DEMO.
+ */
+export async function runLumenWorkflowConnected(
+  input: LumenWorkflowInput,
+): Promise<CreativeConnectedRunResult> {
+  const out = await runLumenWorkflowLive(input);
+  const blocked = out.result.errorCode === 'LIVE_BLOCKED' || out.result.errorCode === 'LIVE_UNREACHABLE';
+  return { result: out.result, mode: blocked ? 'BLOCKED' : 'CONNECTED' };
 }

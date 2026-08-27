@@ -67,7 +67,8 @@ const workspaceApi = createConnectedWorkspaceApi();
 // production SCS configuration is present. No config (or invalid config) keeps
 // the CONNECTED server boundary fail-closed; a production error also fails
 // closed through the adapter. No DEMO fallback is ever returned (OWNER-REVIEW).
-const serviceAgentPort = resolveServiceAgentPort(loadServiceAgentProductionConfig());
+const serviceAgentConfig = loadServiceAgentProductionConfig();
+const serviceAgentPort = resolveServiceAgentPort(serviceAgentConfig);
 
 const saEndpoint = createServiceAgentEndpoint(
   new ServiceAgentRuntime({
@@ -328,6 +329,16 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, result.statusCode, result.body);
       return;
     }
+    if (req.method === 'POST' && pathname === '/api/scheduling/confirm') {
+      let input: unknown;
+      try { input = await readJson(req); } catch {
+        sendJson(res, 400, { mode: 'BLOCKED', reason: 'Invalid JSON body; no scheduling write was performed.' });
+        return;
+      }
+      const result = await canonicalSchedulingApi.confirm(input);
+      sendJson(res, result.statusCode, result.body);
+      return;
+    }
 
     // BUSOS-R2-BATCH2C — Lumen image-workbench CONNECTED boundary (RunningHub).
     // The browser SPA posts the chosen capability + source image; this server
@@ -347,6 +358,44 @@ const server = http.createServer(async (req, res) => {
       }
       const out = await runConnectedLumenWorkflow(valid);
       sendJson(res, 200, out);
+      return;
+    }
+
+    // Sanitized integration inventory. Only booleans and stable capability
+    // labels leave the server; provider URLs, credentials, table ids, and
+    // upstream response bodies never cross this endpoint.
+    if (req.method === 'GET' && pathname === '/api/integrations/health') {
+      const feishuConfigured = canonicalBusinessDataApi.repository !== null;
+      const serviceAgentConfigured = serviceAgentConfig !== null;
+      const runningHubConfigured = Boolean(
+        (process.env.RUNNINGHUB_API_KEY ?? '').trim()
+        && (process.env.RUNNINGHUB_CONFIG_JSON ?? '').trim(),
+      );
+      sendJson(res, 200, {
+        mode: 'CONNECTED',
+        buildSha: BUSINESS_BUILD_SHA,
+        status: 'READY',
+        integrations: [
+          {
+            id: 'feishu',
+            mode: feishuConfigured ? 'CONNECTED' : 'BLOCKED',
+            capability: 'canonical business data and assignment boundary',
+            reason: feishuConfigured ? 'server-side target configured' : 'target Base or adapter configuration is unavailable',
+          },
+          {
+            id: 'service-agent',
+            mode: serviceAgentConfigured ? 'CONNECTED' : 'BLOCKED',
+            capability: 'production SCS ServiceAgentPort binding',
+            reason: serviceAgentConfigured ? 'server-side binding configured' : 'server-side SCS binding is unavailable',
+          },
+          {
+            id: 'creative-provider',
+            mode: runningHubConfigured ? 'CONNECTED' : 'BLOCKED',
+            capability: 'provider-backed Creative workflow binding',
+            reason: runningHubConfigured ? 'server-side workflow mapping configured' : 'provider workflow mapping is unavailable',
+          },
+        ],
+      });
       return;
     }
 

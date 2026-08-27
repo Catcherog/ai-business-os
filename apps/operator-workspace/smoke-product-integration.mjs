@@ -7,14 +7,16 @@
 // the CONNECTED server boundary serves the same product surface routes.
 //
 // Journeys:
-//   A  Navigation discovery — all eight nav surfaces exist and render
-//      (Overview / Projects / Reviews / Runs / Service Agent / Business Data /
-//      Scheduling / Evaluation), driven through the real router (hashchange) AND a real nav
-//      button click.
+//   A  Navigation discovery — the final V1 IA exists and renders
+//      (Overview / Business: Customers, Orders, Projects, Scheduling /
+//      AI: Service Agent, Creative, Reviews / System: Automations, Evaluation,
+//      Integrations), driven through the real router (hashchange) AND a real
+//      nav button click.
 //   B  Service Agent — type a consultation, submit, assert answer / intent /
 //      risk / route / evidence / handoff / run link (KB path + handoff path).
-//   C  Connected Business Data / Scheduling — blocked without server
-//      configuration; no seeded demo fallback is allowed.
+//   C  Scheduling — deterministic DEMO proposal → explicit Confirm slot →
+//      canonical-style VERIFIED readback; the legacy connected Business Data
+//      route remains BLOCKED without server configuration.
 //   D  Evaluation — Golden Set recompute rendered (42 / 28 / 14) AND the
 //      server report API returns the same canonical summary.
 //   E  Legacy regression — Overview / Projects / Project detail / Reviews /
@@ -62,6 +64,7 @@ class ShimEl {
   replaceChildren(...nodes) { this.children = nodes.filter((n) => n != null); return this; }
   replaceWith(node) { this._replaced = node; }
   setAttribute(k, v) { this.attributes[k] = String(v); if (k === 'class') this.className = String(v); }
+  removeAttribute(k) { delete this.attributes[k]; }
   getAttribute(k) { return this.attributes[k] ?? null; }
   addEventListener(type, fn) { (this.listeners[type] ??= []).push(fn); }
   dispatch(type, ev = {}) { for (const fn of this.listeners[type] ?? []) fn(ev); }
@@ -174,13 +177,16 @@ await waitFor(() => {
 // ---- Journey A — Navigation discovery --------------------------------------
 const NAV_EXPECT = [
   ['#/overview', 'Operator Workspace', 'Overview'],
+  ['#/customers', 'Customers', 'Customers'],
+  ['#/orders', 'Orders', 'Orders'],
   ['#/projects', 'Projects', 'Projects'],
-  ['#/reviews', 'Reviews', 'Reviews'],
-  ['#/runs', 'Runs', 'Runs'],
-  ['#/service-agent', 'Service Agent', 'Service Agent'],
-  ['#/business-data', 'Business Data', 'Business Data'],
   ['#/scheduling', 'Scheduling', 'Scheduling'],
+  ['#/service-agent', 'Service Agent', 'Service Agent'],
+  ['#/creative', 'Creative', 'Creative'],
+  ['#/reviews', 'Reviews', 'Reviews'],
+  ['#/automations', 'Automations', 'Automations'],
   ['#/evaluation', 'Evaluation', 'Evaluation'],
+  ['#/integrations', 'Integrations', 'Integrations'],
 ];
 const navText = navHost().text();
 for (const [, , label] of NAV_EXPECT) {
@@ -199,6 +205,34 @@ for (const [hash, expect, label] of NAV_EXPECT) await go(hash, expect, label);
     pass('nav button click → Evaluation renders (real navigation wiring)');
   }
 }
+
+// ---- Journey D1 — Creative DEMO job ----------------------------------------
+await go('#/creative', 'Creative', 'Journey D — Creative');
+{
+  const demo = content().querySelector('button[data-action="creative-demo-run"]');
+  if (!demo) fail('Creative DEMO run button missing');
+  else {
+    demo.dispatch('click');
+    const ok = await waitFor(() => content().text().includes('lumen-demo://') && content().text().includes('creative_job_'), 'Creative DEMO output');
+    if (ok) pass('Creative: project brief → DEMO job → output/history visible');
+  }
+}
+
+// ---- Journey E1 — Automations definition → Run/Trace ----------------------
+await go('#/automations', 'Automations', 'Journey E — Automations');
+{
+  const run = content().querySelector('button[data-action="automation-run"]');
+  if (!run) fail('Automations DEMO run button missing');
+  else {
+    run.dispatch('click');
+    const ok = await waitFor(() => content().text().includes('automation:lead-follow-up:demo'), 'Automation DEMO run trace');
+    if (ok) pass('Automations: definition → DEMO run → trace reference visible');
+  }
+}
+
+await go('#/integrations', 'Integrations', 'Journey E — Integrations');
+if (content().text().includes('Connected gate: BLOCKED')) pass('Integrations: sanitized BLOCKED gates visible');
+else fail('Integrations BLOCKED gates missing');
 
 // ---- Journey B — Service Agent (KB path then handoff path) ------------------
 await go('#/service-agent', 'Service Agent', 'Journey B — Service Agent');
@@ -229,10 +263,40 @@ await go('#/service-agent', 'Service Agent', 'Journey B — Service Agent');
     const markup = content().text();
     if (markup.includes('data-action="governance-review"')) pass('Service Agent governance review button rendered');
     else fail('Service Agent governance review button missing from markup');
+
+    const governance = content().querySelector('button[data-action="governance-review"]');
+    if (!governance) fail('Service Agent native governance action missing');
+    else {
+      governance.dispatch('click');
+      const candidateOk = await waitFor(() => content().text().includes('Candidate captured for governed review'), 'Service Agent candidate governance state');
+      if (candidateOk) pass('Service Agent: candidate captured without direct business-fact write');
+      const openReviews = content().querySelector('button[data-action="open-governed-review"]');
+      if (!openReviews) fail('Service Agent governed review route missing');
+      else {
+        openReviews.dispatch('click');
+        const queueOk = await waitFor(() => content().text().includes('Reviews') && content().text().includes('rev_r1'), 'Service Agent governed review queue');
+        if (queueOk) {
+          const reviewRow = content().querySelector('div.review-row');
+          if (!reviewRow) fail('Governed review queue row missing');
+          else {
+            reviewRow.dispatch('click');
+            const reviewOk = await waitFor(() => content().text().includes('人工决策'), 'Service Agent governed human review');
+            if (reviewOk) pass('Service Agent: governed candidate opens human review decision surface');
+            const approve = content().querySelector('button.btn-approve');
+            if (!approve) fail('Governed review approve action missing');
+            else {
+              approve.dispatch('click');
+              const decided = await waitFor(() => content().text().includes('处理结果'), 'Service Agent review decision');
+              if (decided) pass('Service Agent: human decision returns a governed outcome');
+            }
+          }
+        }
+      }
+    }
   }
 }
 
-// ---- Journey C — connected Business Data + Scheduling ----------------------
+// ---- Journey C — Scheduling + connected Business Data boundary -------------
 await go('#/business-data', 'Business Data', 'Journey C — Business Data');
 {
   const blockedOk = await waitFor(() => {
@@ -244,12 +308,19 @@ await go('#/business-data', 'Business Data', 'Journey C — Business Data');
 }
 await go('#/scheduling', 'Scheduling', 'Journey C — Scheduling');
 {
-  const blockedOk = await waitFor(() => {
+  const demoOk = await waitFor(() => {
     const t = content().text();
-    return t.includes('BLOCKED') && t.includes('No demo proposals');
-  }, 'Scheduling blocked identity');
-  if (blockedOk) pass('Scheduling: BLOCKED without server config; no demo proposals');
-  else fail('Scheduling blocked state missing');
+    return t.includes('DEMO') && t.includes('candidate slot') && t.includes('Confirm slot');
+  }, 'Scheduling DEMO proposal journey');
+  if (demoOk) pass('Scheduling: deterministic DEMO proposals and explicit confirmation are visible');
+  else fail('Scheduling DEMO proposal journey missing');
+  const confirm = content().querySelector('button[data-action="schedule-confirm"]');
+  if (!confirm) fail('Scheduling confirm button missing');
+  else {
+    confirm.dispatch('click');
+    const confirmed = await waitFor(() => content().text().includes('VERIFIED'), 'Scheduling canonical-style readback');
+    if (confirmed) pass('Scheduling: Confirm slot → VERIFIED readback');
+  }
 }
 if (nativeFetch) globalThis.fetch = nativeFetch;
 
@@ -261,6 +332,18 @@ await go('#/evaluation', 'Evaluation', 'Journey D — Evaluation');
     return t.includes('28 PASS') && t.includes('14 NOT_EVALUABLE') && t.includes('42');
   }, 'Evaluation Golden Set recompute rendered');
   if (uiOk) pass('Evaluation UI: canonical Golden Set recompute rendered (42 total / 28 PASS / 14 NOT_EVALUABLE)');
+}
+
+// ---- Journey E — Overview attention → actionable next step -----------------
+await go('#/overview', 'Operator Workspace', 'Journey E — Overview attention');
+{
+  const attention = content().querySelector('button[data-action="needs-attention"]');
+  if (!attention) fail('Overview Needs Attention action missing');
+  else {
+    attention.dispatch('click');
+    const ok = await waitFor(() => content().text().includes('Scheduling') && content().text().includes('Confirm slot'), 'Overview attention action');
+    if (ok) pass('Overview: Needs Attention → scheduling next step');
+  }
 }
 
 // ---- Server registration seam (§10) — the CONNECTED boundary serves the same
@@ -302,6 +385,14 @@ await import(new URL('./server/dist/server.js', import.meta.url).href);
     pass('Service Agent server seam: /api/service-agent/conversations registered (READY envelope, fail-closed stub)');
   } else {
     fail(`Service Agent server seam mismatch: ${saRes.status} ${saBody.slice(0, 120)}`);
+  }
+
+  const healthRes = await fetch('http://localhost:4195/api/integrations/health');
+  const healthBody = await healthRes.json();
+  if (healthRes.status === 200 && healthBody.integrations?.every((item) => item.mode === 'BLOCKED')) {
+    pass('Integrations server seam: sanitized capability health is explicitly BLOCKED without credentials');
+  } else {
+    fail(`Integrations server seam mismatch: ${JSON.stringify(healthBody).slice(0, 200)}`);
   }
 
   const root = await fetch('http://localhost:4195/');

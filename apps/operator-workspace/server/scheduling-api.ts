@@ -1,6 +1,13 @@
 import type { AvailabilitySlot, ProjectAssignment, ProjectRequirement, Resource } from '@busos/contracts';
 import type { OperationsRepositoryPort } from '@busos/business-repository';
-import { draftAvailabilityOutreach, proposeShootSlots, type OutreachDraft, type SchedulingProposal } from '@busos/scheduling';
+import {
+  draftAvailabilityOutreach,
+  proposeShootSlots,
+  type OutreachDraft,
+  type SchedulingConfirmationPort,
+  type SchedulingConfirmationResult,
+  type SchedulingProposal,
+} from '@busos/scheduling';
 import { SchedulingInputError } from '@busos/scheduling';
 
 const SOURCE = 'FEISHU_NEW_BASE' as const;
@@ -17,10 +24,13 @@ export interface SchedulingApiResponse<T> {
 export interface SchedulingApi {
   proposals(body: unknown): Promise<SchedulingApiResponse<SchedulingProposal[]>>;
   draft(body: unknown): Promise<SchedulingApiResponse<OutreachDraft>>;
+  confirm(body: unknown): Promise<SchedulingApiResponse<SchedulingConfirmationResult>>;
 }
 
 export interface SchedulingApiOptions {
   repository: OperationsRepositoryPort | null;
+  /** Only an explicitly authorized canonical assignment adapter may be supplied. */
+  confirmationPort?: SchedulingConfirmationPort | null;
 }
 
 function invalid<T>(message: string): SchedulingApiResponse<T> {
@@ -31,8 +41,8 @@ function failed<T>(): SchedulingApiResponse<T> {
   return { statusCode: 503, body: { mode: 'CONNECTED', source: SOURCE, error: { code: 'BUSINESS_DATA_READ_FAILED', message: 'Connected business data read failed.' } } };
 }
 
-function blocked<T>(): SchedulingApiResponse<T> {
-  return { statusCode: 200, body: { mode: 'BLOCKED', reason: 'Server-side Feishu target Base configuration is unavailable.' } };
+function blocked<T>(reason = 'Server-side Feishu target Base configuration is unavailable.'): SchedulingApiResponse<T> {
+  return { statusCode: 200, body: { mode: 'BLOCKED', reason } };
 }
 
 function objectBody(body: unknown): Record<string, unknown> | null {
@@ -73,6 +83,32 @@ function stringArray(body: Record<string, unknown>, key: string): string[] {
     throw new SchedulingInputError(`${key} must contain canonical ids`);
   }
   return value.map((item) => canonicalId(item, key));
+}
+
+function proposalBody(body: Record<string, unknown>): SchedulingProposal {
+  const proposal = objectBody(body.proposal);
+  if (!proposal) throw new SchedulingInputError('proposal is required');
+  const requiredString = (key: string): string => {
+    const value = proposal[key];
+    if (typeof value !== 'string' || !value.trim()) throw new SchedulingInputError(`proposal.${key} is required`);
+    return value.trim();
+  };
+  const startAt = timestamp(proposal, 'startAt');
+  const endAt = timestamp(proposal, 'endAt');
+  if (Date.parse(startAt) > Date.parse(endAt)) throw new SchedulingInputError('proposal endAt must not precede startAt');
+  return {
+    proposalId: requiredString('proposalId'),
+    projectId: requiredString('projectId'),
+    requirementId: requiredString('requirementId'),
+    resourceKey: requiredString('resourceKey'),
+    resourceType: requiredString('resourceType') as SchedulingProposal['resourceType'],
+    availabilityId: requiredString('availabilityId'),
+    startAt,
+    endAt,
+    score: typeof proposal.score === 'number' && Number.isFinite(proposal.score) ? proposal.score : 0,
+    reasons: Array.isArray(proposal.reasons) && proposal.reasons.every((item) => typeof item === 'string') ? proposal.reasons : [],
+    warnings: Array.isArray(proposal.warnings) && proposal.warnings.every((item) => typeof item === 'string') ? proposal.warnings : [],
+  };
 }
 
 async function loadSchedulingFacts(repository: OperationsRepositoryPort, projectId: string, start: string, end: string): Promise<{
@@ -164,6 +200,36 @@ export function createSchedulingApi(options: SchedulingApiOptions): SchedulingAp
       } catch (error) {
         if (error instanceof SchedulingInputError) return invalid<OutreachDraft>(error.message);
         return failed<OutreachDraft>();
+      }
+    },
+    confirm: async (body) => {
+      if (!options.repository) return blocked<SchedulingConfirmationResult>();
+      try {
+        const input = objectBody(body);
+        if (!input) throw new SchedulingInputError('JSON object body is required');
+        const projectId = canonicalId(String(input.projectId ?? ''), 'projectId');
+        const idempotencyKey = canonicalId(String(input.idempotencyKey ?? ''), 'idempotencyKey');
+        const proposal = proposalBody(input);
+        if (proposal.projectId !== projectId) throw new SchedulingInputError('proposal project does not match projectId');
+        if (!options.confirmationPort) {
+          return blocked<SchedulingConfirmationResult>(
+            'Canonical assignment mapping write/readback is not authorized; no scheduling write was performed.',
+          );
+        }
+        const outcome = await options.confirmationPort.confirm({
+          projectId,
+          proposal,
+          idempotencyKey,
+          actor: typeof input.actor === 'string' ? input.actor : undefined,
+        });
+        if (outcome.mode === 'BLOCKED') return blocked<SchedulingConfirmationResult>(outcome.message);
+        return {
+          statusCode: 200,
+          body: { mode: 'CONNECTED', source: SOURCE, data: outcome },
+        };
+      } catch (error) {
+        if (error instanceof SchedulingInputError) return invalid<SchedulingConfirmationResult>(error.message);
+        return failed<SchedulingConfirmationResult>();
       }
     },
   };

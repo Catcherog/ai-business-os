@@ -65,7 +65,7 @@ if (expected) {
   check('X01-B no unreplaced build-identity identifiers', !bundle.includes('__BUILD_SHA__') && !bundle.includes('__RELEASE__') && !bundle.includes('__BUILD_MODE__'));
 }
 check('X01-A DEMO label present in bundle', bundle.includes('DEMO'));
-check('X01-A release identity present in bundle', bundle.includes('BUSOS-R2-BATCH1-CORR-01'));
+check('X01-A release identity present in bundle', bundle.includes('BUSOS-V1-UNIFIED-OPERATIONAL-PRODUCT-CLOSURE'));
 check('X01-A build-meta placeholder present in deploy html', html.includes('id="build-meta"'));
 check('X01-A DEMO badge present in deploy html', html.includes('badge-demo') && html.includes('DEMO'));
 

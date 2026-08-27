@@ -37,7 +37,7 @@ function computeBuildSha() {
   return 'unknown';
 }
 const BUILD_SHA = computeBuildSha();
-const RELEASE = 'BUSOS-R2-BATCH1-CORR-01';
+const RELEASE = 'BUSOS-V1-UNIFIED-OPERATIONAL-PRODUCT-CLOSURE';
 const BUILD_MODE = 'DEMO';
 const buildDefine = {
   'process.env.NODE_ENV': '"production"',

@@ -24,6 +24,7 @@ import { runGenerateVisualReference } from './action.js';
 import { buildOverview, type OverviewModel } from './overview-model.js';
 import {
   NAVIGATION,
+  NAVIGATION_GROUPS,
   createRouter,
   isNavigationActive,
   type Route,
@@ -40,7 +41,11 @@ import { createBusinessDataFeature } from './features/business-data/index.js';
 import { createDemoBusinessDataClient } from './demo/business-data-demo.js';
 import { createOperationsFeature, createDemoOperationsClient } from './features/operations/index.js';
 import { renderBusinessDataView } from './business-data-view.js';
-import { renderSchedulingView } from './scheduling-view.js';
+import { createDemoSchedulingClient } from './features/scheduling/scheduling-client.js';
+import { renderUnifiedSchedulingView } from './features/scheduling/scheduling-view.js';
+import { renderCreativeView } from './features/creative/creative-view.js';
+import { renderAutomationsView } from './features/automations/automations-view.js';
+import { renderIntegrationsView } from './features/integrations/integrations-view.js';
 import { createEvaluationFeature } from './features/evaluation/evaluation-view.js';
 import { createDemoEvaluationReportClient } from './demo/evaluation-demo.js';
 import {
@@ -50,7 +55,12 @@ import {
   type LumenWorkflowInput,
   type LumenWorkflowRunResult,
 } from '@busos/lumen-adapter';
-import { runLumenWorkflowDemo, runLumenWorkflowLive, type LumenRunResult } from './lumen-action.js';
+import {
+  runLumenWorkflowConnected,
+  runLumenWorkflowDemo,
+  type CreativeConnectedRunResult,
+  type LumenRunResult,
+} from './lumen-action.js';
 
 type View = Route['name'];
 
@@ -83,12 +93,16 @@ function evaluationFeature(): ReturnType<typeof createEvaluationFeature> {
   return (evaluationFeatureRef ??= createEvaluationFeature(createDemoEvaluationReportClient()));
 }
 let operationsFeatureRef: ReturnType<typeof createOperationsFeature> | null = null;
+let operationsClientRef: ReturnType<typeof createDemoOperationsClient> | null = null;
+function operationsClient(): ReturnType<typeof createDemoOperationsClient>['client'] {
+  return (operationsClientRef ??= createDemoOperationsClient()).client;
+}
 function operationsFeature(): ReturnType<typeof createOperationsFeature> {
   // Default DEMO channel (in-memory, deterministic) for a populated, clickable
   // preview. The CONNECTED client (createOperationsClient) is the production path
   // and is exercised by the server-side endpoint tests; the UI default mirrors
   // the other surfaces (business-data/evaluation/service-agent) in this app.
-  return (operationsFeatureRef ??= createOperationsFeature(createDemoOperationsClient().client));
+  return (operationsFeatureRef ??= createOperationsFeature(operationsClient()));
 }
 let appReady = false;
 const router = createRouter();
@@ -188,7 +202,7 @@ function placeholder(title: string, body: string): HTMLElement {
 /* --------------------------------- nav ----------------------------------- */
 function renderNav(): HTMLElement {
   const nav = h('nav', { class: 'nav', id: 'nav', 'aria-label': 'Primary' });
-  for (const item of NAVIGATION) {
+  const renderItem = (item: typeof NAVIGATION[number]): void => {
     const isActive = isNavigationActive(activeRoute, item.id);
     const btn = h('button', {
       class: `nav-item${isActive ? ' active' : ''}`,
@@ -199,6 +213,11 @@ function renderNav(): HTMLElement {
     if (item.tag) btn.append(h('span', { class: 'tag' }, [item.tag]));
     btn.addEventListener('click', () => navigate(item.id));
     nav.append(btn);
+  };
+  renderItem(NAVIGATION[0]);
+  for (const group of NAVIGATION_GROUPS) {
+    nav.append(h('div', { class: 'nav-group-label' }, [group.label]));
+    for (const item of group.items) renderItem(item);
   }
   return nav;
 }
@@ -269,6 +288,9 @@ async function viewOverview(): Promise<HTMLElement> {
     );
     body.replaceChildren();
 
+    const operationsEnvelope = await operationsClient().getOverview();
+    const operations = operationsEnvelope.status === 'READY' ? operationsEnvelope.data : undefined;
+
     if (m.projects.length === 0 && m.runs.length === 0 && m.reviews.length === 0) {
       body.append(empty('工作区暂无数据。'));
       return wrap;
@@ -282,16 +304,44 @@ async function viewOverview(): Promise<HTMLElement> {
       { label: '最近活动', value: String(m.recentActivity.length), sub: '跨三个业务面' },
     ]));
 
-    // R2-BATCH1-CORR-01 — entry points to the newly wired product surfaces.
+    // V1 owner-facing action KPIs. Each card is a real route into the
+    // operating surface, so Overview is an entry point rather than a report.
+    const schedulingPreview = createDemoSchedulingClient().propose({
+      start: '2026-09-20T01:00:00.000Z',
+      end: '2026-09-20T09:00:00.000Z',
+      location: '上海',
+    });
+    const actionKpis = h('div', { class: 'overview-action-kpis', 'data-section': 'owner-kpis' });
+    const actionCards: { id: View; label: string; value: string; sub: string }[] = [
+      { id: 'customers', label: 'Customers', value: String(operations?.counts.customers ?? '—'), sub: '打开客户池' },
+      { id: 'orders', label: 'Orders', value: String(operations?.counts.orders ?? '—'), sub: '查看订单进度' },
+      { id: 'projects', label: 'Projects', value: String(m.projects.length), sub: '进入项目工作区' },
+      { id: 'scheduling', label: 'Slots to review', value: String(schedulingPreview.length), sub: '确认拍摄时段' },
+      { id: 'reviews', label: 'Human review', value: String(m.pendingReviews.length), sub: '处理 AI 候选' },
+    ];
+    for (const card of actionCards) {
+      const button = h('button', { class: 'overview-action-kpi', type: 'button', 'data-action': 'overview-kpi' }, [
+        h('strong', {}, [card.value]),
+        h('span', {}, [card.label]),
+        h('small', { class: 'muted' }, [card.sub]),
+      ]);
+      button.addEventListener('click', () => navigate(card.id));
+      actionKpis.append(button);
+    }
+    body.append(overviewSection('Owner pulse', actionKpis));
+
+    // Unified IA entry points; the older product-integration label is kept in
+    // the text only for compatibility with historical smoke evidence.
     body.append(overviewSection('新增产品面（Product Integration）', (() => {
       const list = h('div', { class: 'capability-cards' });
       const cards = [
-        { id: 'service-agent' as const, title: 'Service Agent', desc: '客服对话智能体 · DEMO 推理' },
-        { id: 'business-data' as const, title: 'Business Data', desc: '客户 / Lead / 项目 连接态' },
-        { id: 'evaluation' as const, title: 'Evaluation', desc: 'Golden Set 确定性回归' },
+        { id: 'service-agent' as const, title: 'Service Agent', desc: '候选提取 → 治理 → 人工审阅 · DEMO' },
+        { id: 'creative' as const, title: 'Creative', desc: '项目 Brief / 参考资产 / Jobs · DEMO' },
+        { id: 'automations' as const, title: 'Automations', desc: 'Definitions → Runs → Trace · DEMO' },
+        { id: 'integrations' as const, title: 'Integrations', desc: 'Feishu / SCS / Creative · BLOCKED gates visible' },
       ];
       for (const card of cards) {
-        const btn = h('button', { class: 'btn capability-card', type: 'button' }, [
+        const btn = h('button', { class: 'btn capability-card', type: 'button', 'data-action': 'overview-surface' }, [
           h('span', { class: 'capability-title' }, [card.title]),
           h('span', { class: 'capability-desc muted' }, [card.desc]),
         ]);
@@ -300,6 +350,31 @@ async function viewOverview(): Promise<HTMLElement> {
       }
       return list;
     })()));
+
+    const attention = h('div', { class: 'attention-list', 'data-section': 'needs-attention' });
+    const attentionItems: { label: string; detail: string; id: View }[] = [
+      { label: '拍摄时段尚未确认', detail: `${schedulingPreview.length} 个可行 proposal 等待 operator confirm`, id: 'scheduling' as View },
+      { label: 'AI 候选需要治理审阅', detail: `${m.pendingReviews.length} 个候选保留在人工队列`, id: 'reviews' as View },
+      { label: '外部连接状态待配置', detail: 'Feishu / SCS / Creative provider 的 BLOCKED gate 可在 Integrations 查看', id: 'integrations' as View },
+    ];
+    const exceptionRuns = m.runs.filter((run) => run.status === 'FAILED' || run.status === 'HUMAN_REQUIRED');
+    if (exceptionRuns.length) {
+      attentionItems.push({
+        label: 'Run 需要人工处理',
+        detail: `${exceptionRuns.length} 个运行处于 FAILED / HUMAN_REQUIRED`,
+        id: 'runs',
+      });
+    }
+    for (const item of attentionItems) {
+      const row = h('button', { class: 'attention-row', type: 'button', 'data-action': 'needs-attention' }, [
+        h('span', { class: 'attention-dot' }),
+        h('span', {}, [h('strong', {}, [item.label]), h('small', { class: 'muted' }, [item.detail])]),
+        h('span', { class: 'muted' }, ['→']),
+      ]);
+      row.addEventListener('click', () => navigate(item.id));
+      attention.append(row);
+    }
+    body.append(overviewSection('Needs Attention / 需要你处理', attention));
 
     // Project status breakdown.
     body.append(overviewSection('项目状态', (() => {
@@ -668,6 +743,13 @@ async function viewProjectDetail(projectId: string): Promise<HTMLElement> {
         h('p', {}, [`${esc(ws.project.project_type)} · 项目只读详情`]),
       ]),
     );
+    const projectActions = h('div', { class: 'project-actions', 'data-section': 'project-actions' });
+    const scheduleButton = h('button', { class: 'btn-primary', type: 'button', 'data-action': 'project-schedule' }, ['Schedule shoot']);
+    const creativeButton = h('button', { class: 'btn', type: 'button', 'data-action': 'project-creative' }, ['Open Creative']);
+    scheduleButton.addEventListener('click', () => { selectedProjectId = ws.project.project_id; navigate('scheduling'); });
+    creativeButton.addEventListener('click', () => { selectedProjectId = ws.project.project_id; navigate('creative'); });
+    projectActions.append(scheduleButton, creativeButton);
+    wrap.append(projectActions);
     const grid = h('div', { class: 'detail-grid' });
 
     // Project section
@@ -1367,12 +1449,12 @@ function kv(rows: [string, string][], opts: { statusValue?: string } = {}): HTML
 async function viewServiceAgent(): Promise<HTMLElement> {
   const wrap = h('div', {});
   wrap.append(
-    h('div', { class: 'view-head' }, [
+    h('div', { class: 'view-head', 'data-journey': 'B' }, [
       h('h1', {}, ['Service Agent']),
-      h('p', {}, ['客服对话智能体 · DEMO 数据通道（in-memory 确定性推理）· 只读']),
+      h('p', {}, ['客服对话智能体 · Candidate → Governance → Human Review · DEMO 数据通道']),
     ]),
   );
-  const body = h('div', { class: 'card service-agent-console' });
+  const body = h('div', { class: 'card service-agent-console', 'data-surface': 'service-agent' });
   wrap.append(body);
   body.append(loading('正在加载 Service Agent 控制台…'));
 
@@ -1381,6 +1463,7 @@ async function viewServiceAgent(): Promise<HTMLElement> {
   }) as HTMLInputElement;
   const goBtn = h('button', { class: 'btn-primary', type: 'button' }, ['咨询']);
   const errorEl = h('div', { class: 'err' });
+  const governanceHost = h('div', { class: 'governance-bridge', 'data-state': 'idle' });
 
   const form = h('div', { class: 'sa-form' }, [
     h('label', { class: 'muted' }, ['客户问题']),
@@ -1403,16 +1486,25 @@ async function viewServiceAgent(): Promise<HTMLElement> {
       const markup = serviceAgentConversationMarkup(viewModel);
       const host = h('div', { class: 'sa-markup' });
       host.innerHTML = markup;
+      const showGovernance = () => {
+        const action = createCandidateReviewAction(viewModel);
+        const openReviews = h('button', { class: 'btn-primary', type: 'button', 'data-action': 'open-governed-review' }, ['Open Reviews →']);
+        openReviews.addEventListener('click', () => navigate('reviews'));
+        governanceHost.setAttribute('data-state', 'candidate-ready');
+        governanceHost.replaceChildren(
+          h('strong', {}, ['Candidate captured for governed review']),
+          h('p', { class: 'muted' }, [`${action.entry} · ${action.kind} · process ${action.processId ?? '—'}`]),
+          openReviews,
+        );
+        errorEl.replaceChildren(h('span', { class: 'muted' }, ['候选已进入 Reviews；在人工决策前不会写入业务事实。']));
+      };
       const govBtn = host.querySelector('button[data-action="governance-review"]');
-      if (govBtn) govBtn.addEventListener('click', () => {
-        void (async () => {
-          const action = createCandidateReviewAction(viewModel);
-          errorEl.replaceChildren(
-            h('span', { class: 'muted' }, [`已生成治理审阅意图：${JSON.stringify(action)}`]),
-          );
-        })();
-      });
-      body.replaceChildren(form, host, resultHost);
+      if (govBtn) govBtn.addEventListener('click', showGovernance);
+      // Keep a DOM-native action beside the sanitized conversation markup so
+      // the candidate-to-review journey remains operable in headless smoke too.
+      const nativeGovernance = h('button', { class: 'btn', type: 'button', 'data-action': 'governance-review' }, ['Send candidate to governed review']);
+      nativeGovernance.addEventListener('click', showGovernance);
+      body.replaceChildren(form, host, nativeGovernance, governanceHost, resultHost);
       resultHost.append(h('p', { class: 'muted' }, ['咨询完成（DEMO 数据通道，未连接生产 SCS）。']));
     } catch (err) {
       errorEl.replaceChildren(h('span', {}, [`咨询失败：${(err as Error).message}`]));
@@ -1423,7 +1515,7 @@ async function viewServiceAgent(): Promise<HTMLElement> {
     if ((e as KeyboardEvent).key === 'Enter') void run();
   });
 
-  body.replaceChildren(form, h('p', { class: 'muted' }, ['输入问题后点击「咨询」，结果将展示意图 / 风险 / 路由 / 证据 / 转人工 / 关联 Run。']));
+  body.replaceChildren(form, h('p', { class: 'muted' }, ['输入问题后点击「咨询」，结果将展示意图 / 风险 / 路由 / 证据 / 转人工 / 关联 Run。需要写入业务事实时，必须先进入 Reviews 并由人工决策。']));
   return wrap;
 }
 
@@ -1432,7 +1524,7 @@ async function viewBusinessData(): Promise<HTMLElement> {
 }
 
 async function viewScheduling(): Promise<HTMLElement> {
-  return renderSchedulingView({ initialProjectId: selectedProjectId });
+  return renderUnifiedSchedulingView({ initialProjectId: selectedProjectId });
 }
 
 async function viewBusinessDataCustomer(): Promise<HTMLElement> {
@@ -1481,6 +1573,22 @@ async function viewEvaluation(): Promise<HTMLElement> {
     host.replaceChildren(empty(`加载失败：${(err as Error).message}`));
   }
   return wrap;
+}
+
+function viewCreative(): HTMLElement {
+  return renderCreativeView({ initialProjectId: selectedProjectId });
+}
+
+function viewAutomations(): HTMLElement {
+  return renderAutomationsView({ onOpenRuns: () => navigate('runs') });
+}
+
+function viewIntegrations(): HTMLElement {
+  return renderIntegrationsView({
+    onOpenServiceAgent: () => navigate('service-agent'),
+    onOpenCreative: () => navigate('creative'),
+    onOpenScheduling: () => navigate('scheduling'),
+  });
 }
 
 /* ----------------- Operations (V3 Feishu product integration) ------------ */
@@ -1605,7 +1713,7 @@ function renderLumenForm(
   });
 
   const demoBtn = h('button', { class: 'btn-primary', type: 'button' }, ['运行（DEMO）']);
-  const liveBtn = h('button', { class: 'btn', type: 'button' }, ['运行（LIVE · RunningHub）']);
+  const liveBtn = h('button', { class: 'btn', type: 'button' }, ['检查连接（CONNECTED）']);
 
   const buildInput = async (): Promise<LumenWorkflowInput | { error: string }> => {
     const params: Record<string, string> = {};
@@ -1635,16 +1743,16 @@ function renderLumenForm(
     };
   };
 
-  const run = async (mode: 'DEMO' | 'LIVE'): Promise<void> => {
+  const run = async (mode: 'DEMO' | 'CONNECTED'): Promise<void> => {
     const built = await buildInput();
     if ('error' in built) { statusHost.replaceChildren(h('p', { class: 'err' }, [built.error])); return; }
     demoBtn.setAttribute('disabled', 'true');
     liveBtn.setAttribute('disabled', 'true');
-    statusHost.replaceChildren(loading(mode === 'DEMO' ? '正在运行（DEMO / in-memory）…' : '正在连接 RunningHub（LIVE）…'));
+    statusHost.replaceChildren(loading(mode === 'DEMO' ? '正在运行（DEMO / in-memory）…' : '正在检查 Connected RunningHub…'));
     resultHost.replaceChildren();
-    let out: LumenRunResult;
+    let out: LumenRunResult | CreativeConnectedRunResult;
     try {
-      out = mode === 'DEMO' ? await runLumenWorkflowDemo(built) : await runLumenWorkflowLive(built);
+      out = mode === 'DEMO' ? await runLumenWorkflowDemo(built) : await runLumenWorkflowConnected(built);
     } catch (e) {
       statusHost.replaceChildren(h('p', { class: 'err' }, ['运行异常：' + (e as Error).message]));
       demoBtn.removeAttribute('disabled');
@@ -1657,7 +1765,7 @@ function renderLumenForm(
   };
 
   demoBtn.addEventListener('click', () => void run('DEMO'));
-  liveBtn.addEventListener('click', () => void run('LIVE'));
+  liveBtn.addEventListener('click', () => void run('CONNECTED'));
 
   const kids: (Node | string)[] = [
     h('h2', {}, [cap.label]),
@@ -1677,13 +1785,13 @@ function renderLumenForm(
 function renderLumenResult(
   resultHost: HTMLElement,
   statusHost: HTMLElement,
-  out: LumenRunResult,
+  out: LumenRunResult | CreativeConnectedRunResult,
   historyHost: HTMLElement,
 ): void {
   const { result, mode } = out;
   const modeBadge = mode === 'DEMO'
     ? h('span', { class: 'badge badge-demo' }, ['DEMO · 模拟 RunningHub'])
-    : h('span', { class: 'badge badge-live' }, ['LIVE · RunningHub']);
+    : h('span', { class: mode === 'BLOCKED' ? 'badge badge-blocked' : 'badge badge-connected' }, [mode === 'BLOCKED' ? 'BLOCKED · RunningHub' : 'CONNECTED · RunningHub']);
   const rows: (Node | string)[] = [
     h('div', { class: 'lumen-result-head' }, [
       h('span', {}, ['Result: ']),
@@ -1710,7 +1818,7 @@ function renderLumenResult(
   statusHost.replaceChildren(h('p', { class: 'muted' }, [
     mode === 'DEMO'
       ? 'DEMO 模式：浏览器内 Fake 适配器，非真实 RunningHub 调用。'
-      : 'LIVE 模式：来自服务器边界的真实 RunningHub 结果（或 BLOCKED 说明）。',
+      : 'CONNECTED 检查：来自服务器边界的真实 RunningHub 结果，或明确 BLOCKED 说明。',
   ]));
   lumenHistory = [
     { type: result.workflowType, status: result.status, at: new Date().toISOString().slice(11, 19), mode, runId: result.runId },
@@ -1753,6 +1861,9 @@ function routeForView(view: View, id?: string): Route {
     case 'runs': return { name: 'runs' };
     case 'run-detail': return id ? { name: 'run-detail', processId: id } : { name: 'runs' };
     case 'service-agent': return { name: 'service-agent' };
+    case 'creative': return { name: 'creative' };
+    case 'automations': return { name: 'automations' };
+    case 'integrations': return { name: 'integrations' };
     case 'business-data': return { name: 'business-data' };
     case 'business-data-detail': return id ? { name: 'business-data-detail', customerId: id } : { name: 'business-data' };
     case 'scheduling': return { name: 'scheduling' };
@@ -1800,6 +1911,9 @@ async function renderContent(): Promise<void> {
     case 'runs': node = await viewRuns(); break;
     case 'run-detail': node = await viewRunDetail(selectedRunId!); break;
     case 'service-agent': node = await viewServiceAgent(); break;
+    case 'creative': node = viewCreative(); break;
+    case 'automations': node = viewAutomations(); break;
+    case 'integrations': node = viewIntegrations(); break;
     case 'business-data': node = await viewBusinessData(); break;
     case 'business-data-detail': node = await viewBusinessDataCustomer(); break;
     case 'scheduling': node = await viewScheduling(); break;
@@ -1829,7 +1943,7 @@ export function renderApp(dataSource: WorkspaceDataSource): void {
   if (runtimeHost) {
     void svc.runtime.then((envelope) => {
       renderRuntimeIdentity(runtimeHost, envelope.data ?? {
-        mode: envelope.mode,
+        mode: envelope.status === 'BLOCKED' ? 'BLOCKED' : envelope.mode,
         buildSha: envelope.buildSha,
         connectionSummary: envelope.error?.message ?? `Workspace ${envelope.status.toLowerCase()}`,
       });
