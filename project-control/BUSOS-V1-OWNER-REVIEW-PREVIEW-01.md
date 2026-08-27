@@ -225,3 +225,86 @@ This task pushed only `codex/busos-v1-owner-review-preview-01`. It did not push,
 ```text
 PRODUCT = ENGINEERING_COMPLETE_LIVE_BLOCKED
 ```
+
+## Preview Browser Access Closure
+
+This appended section records the current browser-access closure. The earlier
+`PREVIEW_BLOCKED` statements remain preserved as historical evidence; this
+section is the superseding result for the refreshed review Preview.
+
+```text
+REVIEW_BRANCH = codex/busos-v1-owner-review-preview-01
+SOURCE_COMMIT = cd799cd1338cf2e29944849b859c770341a867e2
+IMPLEMENTATION_ANCESTRY = ca340863eace6aee36aa611a76314abbe5dc888e
+DEPLOYMENT_ID = dpl_7BWyU1d3GWC4XzLSFL17cjzvyJb9
+PREVIEW_URL = https://ai-business-os-demo-7lgm2wds1-catcher1.vercel.app
+VERCEL_TARGET = preview
+VERCEL_STATE = Ready
+```
+
+Preview access used the existing supported project automation-bypass entry in
+process memory for the browser request. Deployment Protection remained enabled;
+no protection setting, project configuration, alias, or Production deployment
+was changed. The access value was not printed, stored, committed, or placed in
+application code.
+
+Browser evidence was captured against the deployment above:
+
+| Check | Result |
+| --- | --- |
+| Preview title and shell render | PASS — `AI Business OS · Operator Workspace` |
+| Desktop browser smoke at 1440×900 | PASS |
+| Mobile browser smoke at 390×844 | PASS |
+| SPA navigation and deployed route surfaces | PASS |
+| Console and page-error diagnostics after clear | PASS — no entries |
+| Browser-visible secret-pattern sanity check | PASS |
+| Local bundle secret scan | PASS |
+| Runtime identity | PASS — `DEMO`, `DEMO · NO OUTBOUND WRITES`, Build `cd799cd` |
+| External integration truthfulness | PASS — Feishu / Service Agent / Creative remain `BLOCKED` where unconfigured |
+
+The initial mobile check found a real layout defect: the app grid expanded to a
+1793px document at a 390px viewport. The smallest root-cause fix was committed
+as `cd799cd1338cf2e29944849b859c770341a867e2`, adding `min-width: 0` to the
+`.sidebar`, `.content`, and `.nav` layout items, with the regression contract in
+`apps/operator-workspace/tests-workspace-ui/responsive-layout.test.ts`. After
+the fix, the deployed mobile document measured 375px wide at a 390px viewport
+with `horizontalOverflow=false`; the refreshed Preview was then verified.
+
+## Deployed Owner Journey Closure
+
+| Journey | Deployed browser result | Evidence boundary |
+| --- | --- | --- |
+| A | PASS | Overview → Needs Attention → Scheduling; two deterministic proposals visible |
+| B | PASS | Service Agent `SUCCEEDED` with Intent `I05`, Risk `R1`, Route `KB_PATH`, evidence, Run, governance handoff, Reviews detail, and human decision controls |
+| C | PASS | Project → Tasks `(3)` / Assets `(1)` → Scheduling → Creative; Creative DEMO job `SUCCEEDED` with provider-safe output/history |
+| D | PASS | Unscheduled project → parsed availability/resources → ranked explanation → Confirm → `Slot confirmed · VERIFIED`, `readback VERIFIED`, and `1 canonical-style assignment(s)` |
+| E | PASS | Automations definitions → explicit DEMO run/trace route → Reviews/Evaluation → Integrations; product definitions remain distinct from Run/Trace and integrations remain BLOCKED |
+
+The deployed visual surface is ready for owner inspection, not self-approved
+owner acceptance:
+
+```text
+VISUAL = PASS — rendered editorial operating-desk surface; owner acceptance pending
+NAVIGATION = PASS — visible SPA routes and linked next actions
+INFORMATION_DENSITY = PASS — readable at desktop and mobile; owner judgment pending
+CTA = PASS — Needs Attention, Confirm slot, governance, Creative DEMO, and Run/Trace actions visible
+ENGINEERING_DEMO_FEEL = PASS — DEMO / NO OUTBOUND WRITES is explicit; no LIVE claim
+RESPONSIVE = PASS — no document horizontal overflow at 390×844
+VISUAL_REVIEW_READY = PASS
+```
+
+The full post-fix repository `npm run verify` passed, including typecheck,
+workspace/API/connected tests, build, smoke, route/journey checks, server seams,
+and bundle secret scanning. No Production deployment, main push, merge, force
+push, or LIVE upgrade was performed.
+
+```text
+PREVIEW_ACCESS = PASS
+BROWSER_SMOKE = PASS
+OWNER_JOURNEY = A PASS / B PASS / C PASS / D PASS / E PASS
+PRODUCT_DEFECT = NONE after the scoped responsive fix
+MAIN_UNCHANGED = PASS
+PRODUCTION_UNCHANGED = PASS
+FINAL = OWNER_REVIEW_PREVIEW_READY
+PRODUCT = ENGINEERING_COMPLETE_LIVE_BLOCKED
+```
