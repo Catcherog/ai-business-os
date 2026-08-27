@@ -6,14 +6,24 @@ function installDom(): { textOf: (node: any) => string } {
     const node: any = {
       tagName,
       children: [],
+      parentNode: null,
       attrs: {},
       className: '',
       textContent: '',
       value: '',
       _handlers: {} as Record<string, Function[]>,
-      append(...children: any[]) { this.children.push(...children); },
-      appendChild(child: any) { this.children.push(child); },
-      replaceChildren(...children: any[]) { this.children = children; },
+      append(...children: any[]) { children.forEach((child) => { if (child && typeof child === 'object') child.parentNode = this; }); this.children.push(...children); },
+      appendChild(child: any) { if (child && typeof child === 'object') child.parentNode = this; this.children.push(child); },
+      replaceChildren(...children: any[]) { children.forEach((child) => { if (child && typeof child === 'object') child.parentNode = this; }); this.children = children; },
+      replaceWith(replacement: any) {
+        const parent = this.parentNode;
+        if (!parent) return;
+        const index = parent.children.indexOf(this);
+        if (index >= 0) {
+          if (replacement && typeof replacement === 'object') replacement.parentNode = parent;
+          parent.children.splice(index, 1, replacement);
+        }
+      },
       setAttribute(key: string, value: string) { this.attrs[key] = value; },
       removeAttribute(key: string) { delete this.attrs[key]; },
       addEventListener(type: string, handler: Function) { (this._handlers[type] ||= []).push(handler); },
@@ -57,5 +67,6 @@ describe('unified scheduling view', () => {
     await confirm.click();
     expect(textOf(view)).toContain('VERIFIED');
     expect(textOf(view)).toContain('confirmed');
+    expect(textOf(view)).toContain('1 canonical-style assignment(s)');
   });
 });

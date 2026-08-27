@@ -74,6 +74,7 @@ function proposalCard(
   proposal: SchedulingProposal,
   resourceName: string,
   resultHost: HTMLElement,
+  onConfirmation?: () => void,
 ): HTMLElement {
   const card = el('article', {
     class: 'card scheduling-proposal',
@@ -107,6 +108,7 @@ function proposalCard(
       actor: 'operator_demo',
     }).then((outcome) => {
       if (outcome.status === 'CONFIRMED' || outcome.status === 'ALREADY_CONFIRMED') {
+        onConfirmation?.();
         statusHost.replaceChildren(
           pill(outcome.status),
           el('span', { class: 'muted' }, [` ${outcome.message} · readback ${outcome.readbackStatus}`]),
@@ -135,6 +137,7 @@ function renderProposals(
   snapshot: SchedulingSnapshot,
   proposals: SchedulingProposal[],
   resultHost: HTMLElement,
+  onConfirmation?: () => void,
 ): HTMLElement {
   const root = el('section', { class: 'section scheduling-proposals', 'data-section': 'proposals' });
   root.append(el('div', { class: 'panel-head' }, [
@@ -148,7 +151,7 @@ function renderProposals(
   const list = el('div', { class: 'scheduling-proposal-list' });
   for (const proposal of proposals) {
     const resource = snapshot.resources.find((item) => item.resource_key === proposal.resourceKey);
-    list.append(proposalCard(client, proposal, resource?.name ?? proposal.resourceKey, resultHost));
+    list.append(proposalCard(client, proposal, resource?.name ?? proposal.resourceKey, resultHost, onConfirmation));
   }
   root.append(list);
   return root;
@@ -161,6 +164,12 @@ export function renderUnifiedSchedulingView(options: UnifiedSchedulingViewOption
     projectTitle: options.projectTitle,
   });
   const snapshot = client.getSnapshot();
+  let context = projectContext(snapshot);
+  const refreshContext = (): void => {
+    const nextContext = projectContext(client.getSnapshot());
+    context.replaceWith(nextContext);
+    context = nextContext;
+  };
   const root = el('section', { class: 'section scheduling-view', 'data-surface': 'scheduling', 'data-journey': 'A' });
   root.append(el('div', { class: 'view-head' }, [
     el('span', { class: 'eyebrow' }, ['BUSINESS / SCHEDULING']),
@@ -168,7 +177,7 @@ export function renderUnifiedSchedulingView(options: UnifiedSchedulingViewOption
     el('p', {}, ['Deterministic slot suggestions → explicit operator confirmation → canonical-style readback.']),
   ]));
   root.append(el('div', { class: 'runtime-strip' }, [badge('DEMO'), el('span', { class: 'muted' }, ['Local canonical-style store · no Feishu write'])]));
-  root.append(projectContext(snapshot));
+  root.append(context);
 
   const start = el('input', { class: 'field', type: 'datetime-local', 'aria-label': 'Window start' }) as HTMLInputElement;
   const end = el('input', { class: 'field', type: 'datetime-local', 'aria-label': 'Window end' }) as HTMLInputElement;
@@ -200,7 +209,7 @@ export function renderUnifiedSchedulingView(options: UnifiedSchedulingViewOption
     }
     error.textContent = '';
     const proposals = client.propose({ start: startIso, end: endIso, location: location.value.trim() || null });
-    proposalsHost.replaceChildren(renderProposals(client, client.getSnapshot(), proposals, resultHost));
+    proposalsHost.replaceChildren(renderProposals(client, client.getSnapshot(), proposals, resultHost, refreshContext));
   };
   propose.addEventListener('click', runProposal);
   // The preview uses an explicit UTC fixture so it remains deterministic across
@@ -210,6 +219,6 @@ export function renderUnifiedSchedulingView(options: UnifiedSchedulingViewOption
     end: '2026-09-20T09:00:00.000Z',
     location: '上海',
   });
-  proposalsHost.replaceChildren(renderProposals(client, client.getSnapshot(), previewProposals, resultHost));
+  proposalsHost.replaceChildren(renderProposals(client, client.getSnapshot(), previewProposals, resultHost, refreshContext));
   return root;
 }
