@@ -179,3 +179,26 @@ Before changing the verdict to a LIVE or production-complete status, the owner s
 5. Capture real provider output and production deployment evidence, then re-evaluate the closure verdict.
 
 No external LIVE claim is made until those gates have independent evidence.
+
+## Remote Evidence Closure — 2026-08-27
+
+The original closure report was authored before remote authentication was restored. Its historical statements that remote verification was unavailable, that no push had been performed, and that remote branch state was not yet verified describe the state at report-authoring time and are intentionally preserved as historical evidence.
+
+Subsequent independent GitHub verification supersedes those statements for the current remote state:
+
+```text
+REMOTE_MAIN_SHA = 729108d8059e3e143194a05f43e510af3587d385
+REMOTE_BRANCH_SHA = 87b27d9607417990c08141a7fa73287faa62bd25
+IMPLEMENTATION_SHA = ca340863eace6aee36aa611a76314abbe5dc888e
+REPORT_SHA = 87b27d9607417990c08141a7fa73287faa62bd25
+
+remote implementation commit: PASS
+remote report commit: PASS
+remote report file: PASS
+main unchanged by closure push: PASS
+
+Remote verdict:
+REMOTE_EVIDENCE_PASS
+```
+
+The implementation commit is `ca340863eace6aee36aa611a76314abbe5dc888e`; the closure/report commit and branch tip are `87b27d9607417990c08141a7fa73287faa62bd25`. The product runtime verdict remains `ENGINEERING_COMPLETE_LIVE_BLOCKED`.
